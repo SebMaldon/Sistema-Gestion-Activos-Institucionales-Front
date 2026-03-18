@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --color-imss-green: #006341;
+  --color-imss-green-dark: #004d32;
+  --color-imss-green-light: #007a4f;
+  --color-imss-gold: #c9a227;
+  --color-imss-gold-light: #f0c040;
+  --color-sidebar-bg: #00472e;
+  --color-sidebar-hover: #005238;
+  --color-sidebar-active: #006341;
+}
+
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Safe area inset for notched phones */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background-color: #f0f4f8;
+  color: #1a202c;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #006341;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #004d32;
+}
+
+/* Smooth transitions */
+.sidebar-link {
+  transition: all 0.2s ease;
+}
+
+/* QR Scanner animation */
+@keyframes scan-line {
+  0% { top: 10%; }
+  50% { top: 85%; }
+  100% { top: 10%; }
+}
+
+.scan-line {
+  animation: scan-line 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 99, 65, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 99, 65, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 99, 65, 0); }
+}
+
+.pulse-ring {
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Toast notification */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.toast-enter {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Kanban card hover */
+.kanban-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+/* Status badge colors */
+.badge-activo { background: #dcfce7; color: #166534; }
+.badge-reparacion { background: #fef9c3; color: #854d0e; }
+.badge-baja { background: #fee2e2; color: #991b1b; }
+.badge-pendiente { background: #fef9c3; color: #854d0e; }
+.badge-revision { background: #dbeafe; color: #1e40af; }
+.badge-resuelto { background: #dcfce7; color: #166534; }

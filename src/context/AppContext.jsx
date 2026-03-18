@@ -1,0 +1,49 @@
+import React, { createContext, useContext, useState } from 'react';
+import { ROLES } from '../data/mockData';
+
+const AppContext = createContext(null);
+
+export function AppProvider({ children }) {
+  const [currentRole, setCurrentRole] = useState(ROLES.ADMIN);
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [toast, setToast] = useState(null);
+  const [selectedAsset, setSelectedAsset] = useState(null);
+  const [isFichaOpen, setIsFichaOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type, id: Date.now() });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const openFicha = (asset) => {
+    setSelectedAsset(asset);
+    setIsFichaOpen(true);
+  };
+
+  const closeFicha = () => {
+    setIsFichaOpen(false);
+    setTimeout(() => setSelectedAsset(null), 300);
+  };
+
+  return (
+    <AppContext.Provider value={{
+      currentRole, setCurrentRole,
+      currentPage, setCurrentPage,
+      toast, showToast,
+      selectedAsset, isFichaOpen,
+      openFicha, closeFicha,
+      sidebarOpen, setSidebarOpen,
+      isLoggedIn, setIsLoggedIn,
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+}
+
+export function useApp() {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
+}
