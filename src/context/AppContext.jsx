@@ -1,16 +1,14 @@
 import React, { createContext, useContext, useState } from 'react';
-import { ROLES } from '../data/mockData';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [currentRole, setCurrentRole] = useState(ROLES.ADMIN);
+  const [currentRole, setCurrentRole] = useState('admin'); // se sobreescribirá con el rol real del store
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [toast, setToast] = useState(null);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [isFichaOpen, setIsFichaOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
@@ -35,7 +33,6 @@ export function AppProvider({ children }) {
       selectedAsset, isFichaOpen,
       openFicha, closeFicha,
       sidebarOpen, setSidebarOpen,
-      isLoggedIn, setIsLoggedIn,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,38 +1,40 @@
 import React, { useState } from 'react';
-import { useApp } from '../context/AppContext';
-import { Building2, Shield, Eye, EyeOff, LogIn, Lock, User, ClipboardList } from 'lucide-react';
+import { Building2, Shield, Eye, EyeOff, LogIn, Lock, User, ClipboardList, AlertCircle } from 'lucide-react';
+import { useLogin } from '../hooks/useLogin';
 
-const DEMO_USERS = [
-  { label: 'Administrador', sublabel: 'Jefe / Coordinador', color: '#006341', bg: '#dcfce7', email: 'admin@imss.gob.mx' },
-  { label: 'Usuario Maestro', sublabel: 'Super Administrador', color: '#7c3aed', bg: '#ede9fe', email: 'super@imss.gob.mx' },
-  { label: 'Usuario Común', sublabel: 'Técnico / Auditor', color: '#2563eb', bg: '#dbeafe', email: 'usuario@imss.gob.mx' },
-];
+// Mapeo de códigos de error del backend a mensajes amigables
+const ERROR_MESSAGES = {
+  AUTHENTICATION_ERROR: 'Matrícula o contraseña incorrectos. Verifica tus credenciales.',
+  BAD_USER_INPUT: 'La matrícula y la contraseña son obligatorias.',
+  UNAUTHENTICATED: 'Sesión no válida. Inicia sesión de nuevo.',
+  default: 'Ocurrió un error al conectar con el servidor. Intenta más tarde.',
+};
 
 export default function Login() {
-  const { setIsLoggedIn } = useApp();
-  const [email, setEmail] = useState('admin@imss.gob.mx');
-  const [password, setPassword] = useState('••••••••');
+  const [matricula, setMatricula] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  const { mutate: login, isPending, error } = useLogin();
+
+  // Extraer código de error del servidor
+  const errorCode = error?.response?.errors?.[0]?.extensions?.code;
+  const errorMessage = errorCode
+    ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.default)
+    : error
+    ? ERROR_MESSAGES.default
+    : null;
 
   const handleLogin = (e) => {
     e?.preventDefault();
-    setLoading(true);
-    // Simulate a short "auth" delay for realism
-    setTimeout(() => {
-      setIsLoggedIn(true);
-    }, 900);
-  };
-
-  const selectDemo = (demoEmail) => {
-    setEmail(demoEmail);
-    setPassword('••••••••');
+    if (!matricula.trim() || !password.trim()) return;
+    login({ matricula: matricula.trim(), password });
   };
 
   return (
     <div className="min-h-screen flex fade-in" style={{ background: 'linear-gradient(135deg, #00472e 0%, #006341 50%, #004d32 100%)' }}>
 
-      {/* Left panel — branding (hidden on mobile) */}
+      {/* ── Panel izquierdo — branding (oculto en móvil) ── */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 text-white relative overflow-hidden">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-5"
@@ -86,11 +88,11 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right panel — login form */}
+      {/* ── Panel derecho — formulario ── */}
       <div className="flex-1 flex items-center justify-center p-5 sm:p-8 lg:p-12">
         <div className="w-full max-w-md">
 
-          {/* Mobile logo */}
+          {/* Logo móvil */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
@@ -104,7 +106,7 @@ export default function Login() {
 
           {/* Card */}
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-            {/* Card header */}
+            {/* Cabecera */}
             <div className="px-8 pt-8 pb-6">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
                 style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
@@ -119,27 +121,39 @@ export default function Login() {
             {/* Divider */}
             <div className="h-px bg-gray-100 mx-8" />
 
-            {/* Form */}
+            {/* Formulario */}
             <form onSubmit={handleLogin} className="px-8 py-6 space-y-5">
-              {/* Email */}
+
+              {/* ── Banner de error ── */}
+              {errorMessage && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-xl border border-red-200 bg-red-50">
+                  <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700 leading-snug">{errorMessage}</p>
+                </div>
+              )}
+
+              {/* Matrícula */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Correo Institucional
+                  Matrícula
                 </label>
                 <div className="relative">
                   <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="usuario@imss.gob.mx"
+                    id="login-matricula"
+                    type="text"
+                    value={matricula}
+                    onChange={e => setMatricula(e.target.value)}
+                    placeholder="Ej. ABC12345"
+                    autoComplete="username"
+                    required
                     className="w-full pl-10 pr-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-green-500 transition-all bg-gray-50 focus:bg-white"
                     style={{ '--tw-ring-color': 'rgba(0,99,65,0.3)' }}
                   />
                 </div>
               </div>
 
-              {/* Password */}
+              {/* Contraseña */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -152,10 +166,13 @@ export default function Login() {
                 <div className="relative">
                   <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="current-password"
+                    required
                     className="w-full pl-10 pr-10 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-green-500 transition-all bg-gray-50 focus:bg-white"
                   />
                   <button
@@ -168,14 +185,15 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Login button */}
+              {/* Botón */}
               <button
+                id="login-submit"
                 type="submit"
-                disabled={loading}
-                className="w-full py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70"
+                disabled={isPending || !matricula.trim() || !password.trim()}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2.5 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: 'linear-gradient(135deg, #006341, #004d32)', boxShadow: '0 4px 15px rgba(0,99,65,0.35)' }}
               >
-                {loading ? (
+                {isPending ? (
                   <>
                     <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -192,40 +210,11 @@ export default function Login() {
               </button>
             </form>
 
-            {/* Demo accounts */}
+            {/* Seguridad footer */}
             <div className="px-8 pb-8">
-              <div className="relative mb-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-100" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-xs text-gray-400 font-medium">Acceso rápido (demo)</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {DEMO_USERS.map((u, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => selectDemo(u.email)}
-                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all text-left hover:border-gray-300 ${
-                      email === u.email ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50 hover:bg-white'
-                    }`}
-                  >
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: u.bg }}>
-                      <Shield size={13} style={{ color: u.color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 leading-tight">{u.label}</p>
-                      <p className="text-xs text-gray-400 leading-tight">{u.email}</p>
-                    </div>
-                    {email === u.email && (
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#006341' }} />
-                    )}
-                  </button>
-                ))}
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                <Shield size={12} />
+                <span>Conexión cifrada · JWT HS256 · Sesión de 8 horas</span>
               </div>
             </div>
           </div>

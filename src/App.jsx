@@ -1,6 +1,9 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
-import { ROLES } from './data/mockData';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuthStore } from './store/auth.store';
+
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import Toast from './components/Toast';
@@ -15,6 +18,7 @@ import GestionUsuarios from './pages/GestionUsuarios';
 import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
 
+// ─── Router de páginas internas ────────────────────────────────────
 function PageRouter() {
   const { currentPage } = useApp();
 
@@ -32,6 +36,7 @@ function PageRouter() {
   return pages[currentPage] || <Dashboard />;
 }
 
+// ─── Layout principal (requiere auth) ───────────────────────────────
 function AppLayout() {
   const { sidebarOpen, setSidebarOpen } = useApp();
 
@@ -70,15 +75,46 @@ function AppLayout() {
   );
 }
 
-function AppRouter() {
-  const { isLoggedIn } = useApp();
-  return isLoggedIn ? <AppLayout /> : <Login />;
-}
-
+// ─── Raíz de la app con React Router ───────────────────────────────
 export default function App() {
   return (
-    <AppProvider>
-      <AppRouter />
-    </AppProvider>
+    <BrowserRouter>
+      <AppProvider>
+        <Routes>
+          {/* Ruta pública: login */}
+          <Route path="/login" element={<LoginRoute />} />
+
+          {/* Rutas protegidas */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<AppLayout />} />
+            <Route path="/inventario" element={<AppLayout />} />
+            <Route path="/incidencias" element={<AppLayout />} />
+            <Route path="/movimientos" element={<AppLayout />} />
+            <Route path="/escaner" element={<AppLayout />} />
+            <Route path="/usuarios" element={<AppLayout />} />
+            <Route path="/auditoria" element={<AppLayout />} />
+            <Route path="/configuracion" element={<AppLayout />} />
+          </Route>
+
+          {/* Raíz: redirige según auth */}
+          <Route path="/" element={<RootRedirect />} />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppProvider>
+    </BrowserRouter>
   );
+}
+
+/** Si ya está autenticado y entra a /login, lo manda al dashboard */
+function LoginRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />;
+}
+
+/** / → redirige a /dashboard si autenticado, o /login si no */
+function RootRedirect() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 }
