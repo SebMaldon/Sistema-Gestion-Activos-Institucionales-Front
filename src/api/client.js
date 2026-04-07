@@ -7,16 +7,23 @@ export const gqlClient = new GraphQLClient(GQL_URL, {
   requestMiddleware: async (request) => {
     const token = useAuthStore.getState().token;
     
-    // Convert current headers (which is a Headers instance) to a plain object
+    // Maintain original headers (like Content-Type) and append ours
     const headers = new Headers(request.headers);
     headers.set('apollo-require-preflight', 'true');
+    
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
 
+    // Convert Headers instance to a plain object
+    const plainHeaders = {};
+    headers.forEach((value, key) => {
+      plainHeaders[key] = value;
+    });
+
     return {
       ...request,
-      headers,
+      headers: plainHeaders,
     };
   },
 });

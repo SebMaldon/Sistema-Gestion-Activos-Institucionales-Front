@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockAssets } from '../data/mockData';
+import { useBienes } from '../hooks/useBienes';
 import { useApp } from '../context/AppContext';
 import {
   Search, Filter, QrCode, Eye, Edit, Download, Plus, ChevronLeft, ChevronRight
@@ -18,6 +18,9 @@ const TIPO_BADGE = {
 
 export default function Inventario() {
   const { openFicha, showToast } = useApp();
+  const { data: bienesData, isLoading, isError } = useBienes();
+  const bienes = bienesData || [];
+
   const [activeTab, setActiveTab] = useState('Capitalizable');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
@@ -25,7 +28,7 @@ export default function Inventario() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 5;
 
-  const filtered = mockAssets.filter(a => {
+  const filtered = bienes.filter(a => {
     const matchTab = a.tipo === activeTab;
     const matchSearch = search === '' || [a.numSerie, a.equipo, a.resguardo, a.ubicacion]
       .some(f => f.toLowerCase().includes(search.toLowerCase()));
@@ -36,7 +39,23 @@ export default function Inventario() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const ubicaciones = [...new Set(mockAssets.map(a => a.ubicacion))];
+  const ubicaciones = [...new Set(bienes.map(a => a.ubicacion))];
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 flex justify-center items-center h-full">
+        <p className="text-gray-500">Cargando inventario...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 sm:p-6 flex justify-center items-center h-full">
+        <p className="text-red-500 text-center">Ocurrió un error al cargar el inventario. Por favor, intente nuevamente.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 fade-in">
@@ -70,7 +89,7 @@ export default function Inventario() {
             {tab === 'Capitalizable' ? 'Bienes Capitalizables' : 'Bienes No Capitalizables'}
             <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full"
               style={{ backgroundColor: activeTab === tab ? '#dcfce7' : '#e5e7eb', color: activeTab === tab ? '#006341' : '#6b7280' }}>
-              {mockAssets.filter(a => a.tipo === tab).length}
+              {bienes.filter(a => a.tipo === tab).length}
             </span>
           </button>
         ))}
@@ -128,7 +147,7 @@ export default function Inventario() {
                 <p className="text-xs text-gray-400 mt-0.5">{asset.id}</p>
                 <p className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">{asset.numSerie}</p>
               </div>
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${STATUS_BADGE[asset.estatus]}`}>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${STATUS_BADGE[asset.estatus] || 'bg-gray-100 text-gray-800'}`}>
                 {asset.estatus}
               </span>
             </div>
@@ -201,7 +220,7 @@ export default function Inventario() {
                   <td className="px-5 py-3.5 text-xs text-gray-600 max-w-[160px] truncate">{asset.ubicacion}</td>
                   <td className="px-5 py-3.5 text-xs text-gray-600 max-w-[140px] truncate">{asset.resguardo}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_BADGE[asset.estatus]}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_BADGE[asset.estatus] || 'bg-gray-100 text-gray-800'}`}>
                       {asset.estatus}
                     </span>
                   </td>
