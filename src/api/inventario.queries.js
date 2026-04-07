@@ -7,6 +7,7 @@ export const GET_BIENES_QUERY = gql`
         node {
           id_bien
           num_serie
+          qr_hash
           cantidad
           estatus_operativo
           categoria {

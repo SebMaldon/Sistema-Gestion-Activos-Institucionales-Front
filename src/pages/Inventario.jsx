@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import Barcode from 'react-barcode';
 import { useBienes } from '../hooks/useBienes';
 import { useApp } from '../context/AppContext';
 import {
@@ -26,6 +28,7 @@ export default function Inventario() {
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterUbicacion, setFilterUbicacion] = useState('Todas');
   const [page, setPage] = useState(1);
+  const [qrModalAsset, setQrModalAsset] = useState(null);
   const PER_PAGE = 5;
 
   const filtered = bienes.filter(a => {
@@ -169,7 +172,7 @@ export default function Inventario() {
                 <Edit size={14} /> Editar
               </button>
               <button
-                onClick={() => showToast(`Código QR generado para ${asset.numSerie}`, 'success')}
+                onClick={() => setQrModalAsset(asset)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors text-xs font-semibold"
               >
                 <QrCode size={14} /> QR
@@ -241,8 +244,8 @@ export default function Inventario() {
                         <Edit size={14} />
                       </button>
                       <button
-                        onClick={() => showToast(`Código QR generado para ${asset.numSerie}`, 'success')}
-                        title="Generar QR"
+                        onClick={() => setQrModalAsset(asset)}
+                        title="Ver Identificadores"
                         className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
                       >
                         <QrCode size={14} />
@@ -311,6 +314,42 @@ export default function Inventario() {
               className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal QR / Barras */}
+      {qrModalAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col items-center relative">
+            <h3 className="text-lg font-bold text-gray-900 mb-2 truncate max-w-full">{qrModalAsset.equipo}</h3>
+            <p className="text-sm text-gray-500 mb-6 font-mono">No. Serie: {qrModalAsset.numSerie}</p>
+            
+            {!qrModalAsset.qrHash ? (
+               <div className="text-amber-600 bg-amber-50 p-4 rounded-xl text-sm w-full text-center mb-6 border border-amber-100">
+                 Este equipo no cuenta con un identificador único (qr_hash) en la base de datos.
+               </div>
+            ) : (
+                <div className="flex flex-col gap-6 w-full mb-6">
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center">
+                    <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Código QR</p>
+                    <QRCodeSVG value={qrModalAsset.qrHash} size={160} level="H" includeMargin={false} />
+                    </div>
+                    
+                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col items-center justify-center overflow-hidden">
+                    <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Código de Barras</p>
+                    <Barcode value={qrModalAsset.qrHash} width={1.8} height={50} fontSize={14} background="transparent" margin={0} />
+                    </div>
+                </div>
+            )}
+
+            <button
+              onClick={() => setQrModalAsset(null)}
+              className="w-full py-2.5 rounded-xl text-white font-semibold transition-colors"
+              style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}
+            >
+              Cerrar
             </button>
           </div>
         </div>
