@@ -665,16 +665,20 @@ export default function GestionUsuarios() {
   const [modalDesactivar, setModalDesactivar] = useState(null);
 
   // ── Queries
-  const { data: catRoles } = useQuery({
+  const { data: catRoles = [] } = useQuery({
     queryKey: ['roles'],
-    queryFn: () => gqlClient.request(GET_ROLES),
-    select: d => d.roles ?? [],
+    queryFn: async () => {
+      const d = await gqlClient.request(GET_ROLES);
+      return d.roles ?? [];
+    },
   });
 
-  const { data: catUnidades } = useQuery({
+  const { data: catUnidades = [] } = useQuery({
     queryKey: ['unidades'],
-    queryFn: () => gqlClient.request(GET_UNIDADES),
-    select: d => d.unidades ?? [],
+    queryFn: async () => {
+      const d = await gqlClient.request(GET_UNIDADES);
+      return d.unidades ?? [];
+    },
   });
 
   const { data: usuariosData, isLoading, isError, refetch } = useQuery({
@@ -717,8 +721,8 @@ export default function GestionUsuarios() {
   });
 
   const isAdmin = idRol <= 2;
-  const roles = catRoles ?? [];
-  const unidades = catUnidades ?? [];
+  const roles = catRoles;
+  const unidades = catUnidades;
 
   return (
     <div className="p-4 sm:p-6 space-y-5 fade-in">

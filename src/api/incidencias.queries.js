@@ -120,11 +120,15 @@ export const GET_TIPOS_INCIDENCIA_QUERY = gql`
 
 export const GET_USUARIOS_QUERY = gql`
   query GetUsuariosActivos {
-    usuarios(estatus: true) {
-      id_usuario
-      nombre_completo
-      matricula
-      id_rol
+    usuarios(estatus: true, pagination: { first: 200 }) {
+      edges {
+        node {
+          id_usuario
+          nombre_completo
+          matricula
+          id_rol
+        }
+      }
     }
   }
 `;
