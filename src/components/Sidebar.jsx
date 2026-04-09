@@ -10,25 +10,24 @@ import {
 
 // ─── 1 = Administrador,  2 = Maestro,  3 = Usuario Estándar, 4 = Sin Acceso ──
 const NAV_BY_ROL = {
-  1: [ // Administrador
+  1: [ // Admin / SUPERADMIN
     { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
     { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
-    { path: '/incidencias',   label: 'Incidencias y Garantías', icon: AlertTriangle,   group: 'Gestión' },
+    { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Gestión' },
+    { path: '/garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Gestión' },
     { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Gestión' },
     { path: '/escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
     { path: '/usuarios',      label: 'Gestión de Usuarios',     icon: Users,           group: 'Sistema' },
     { path: '/auditoria',     label: 'Bitácora de Auditoría',   icon: ShieldCheck,     group: 'Sistema' },
     { path: '/configuracion', label: 'Configuración',           icon: Settings,        group: 'Sistema' },
   ],
-  2: [ // Maestro (máximos permisos: crea, edita y elimina bienes)
-    { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
-    { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
-    { path: '/incidencias',   label: 'Incidencias y Garantías', icon: AlertTriangle,   group: 'Gestión' },
-    { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Gestión' },
+  2: [ // Supervisor
+    { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Administración' },
+    { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Administración' },
+    { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Administración' },
+    { path: '/garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Administración' },
+    { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Operación' },
     { path: '/escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
-    { path: '/usuarios',      label: 'Gestión de Usuarios',     icon: Users,           group: 'Sistema' },
-    { path: '/auditoria',     label: 'Bitácora de Auditoría',   icon: ShieldCheck,     group: 'Sistema' },
-    { path: '/configuracion', label: 'Configuración',           icon: Settings,        group: 'Sistema' },
   ],
   3: [ // Usuario Estándar (solo consulta)
     { path: '/dashboard',     label: 'Panel Principal',   icon: LayoutDashboard, group: 'Principal' },

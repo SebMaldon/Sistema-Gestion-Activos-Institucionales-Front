@@ -16,6 +16,7 @@ import EscanerQR from './pages/EscanerQR';
 import GestionUsuarios from './pages/GestionUsuarios';
 import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
+import Garantias from './pages/Garantias';
 
 // ─── Roles reales de BD ──────────────────────────────────────────────────────
 // 1 = Administrador, 2 = Maestro, 3 = Usuario Estándar, 4 = Sin Acceso
@@ -123,23 +124,30 @@ export default function App() {
           } />
 
           {/* Rutas restringidas: Admin (1) y Maestro (2) */}
+          <Route path="/garantias" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="garantias"><Garantias /></AppLayout>
+            </RoleRoute>
+          } />
           <Route path="/movimientos" element={
             <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
               <AppLayout page="movimientos"><Movimientos /></AppLayout>
             </RoleRoute>
           } />
+
+          {/* Rutas restringidas de Sistema: Solo Admin (1) */}
           <Route path="/usuarios" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+            <RoleRoute allowedRoles={[ROL_ADMIN]}>
               <AppLayout page="usuarios"><GestionUsuarios /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/auditoria" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+            <RoleRoute allowedRoles={[ROL_ADMIN]}>
               <AppLayout page="auditoria"><Auditoria /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/configuracion" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+            <RoleRoute allowedRoles={[ROL_ADMIN]}>
               <AppLayout page="configuracion"><Configuracion /></AppLayout>
             </RoleRoute>
           } />
