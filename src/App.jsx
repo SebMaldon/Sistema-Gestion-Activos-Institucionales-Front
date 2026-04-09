@@ -1,7 +1,6 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './store/auth.store';
 
 import Sidebar from './components/Sidebar';
@@ -18,28 +17,48 @@ import GestionUsuarios from './pages/GestionUsuarios';
 import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
 
-// ─── Router de páginas internas ────────────────────────────────────
-function PageRouter() {
-  const { currentPage } = useApp();
+// ─── Roles reales de BD ──────────────────────────────────────────────────────
+// 1 = Administrador, 2 = Maestro, 3 = Usuario Estándar, 4 = Sin Acceso
+const ROL_ADMIN    = 1;
+const ROL_MAESTRO  = 2;
+const ROL_USUARIO  = 3;
 
-  const pages = {
-    dashboard: <Dashboard />,
-    inventario: <Inventario />,
-    incidencias: <Incidencias />,
-    movimientos: <Movimientos />,
-    escaner: <EscanerQR />,
-    usuarios: <GestionUsuarios />,
-    auditoria: <Auditoria />,
-    configuracion: <Configuracion />,
-  };
-
-  return pages[currentPage] || <Dashboard />;
+// ─── Guard: solo requiere sesión activa ─────────────────────────────────────
+function ProtectedRoute({ children }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const location = useLocation();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return children;
 }
 
-// ─── Layout principal (requiere auth) ───────────────────────────────
-function AppLayout() {
-  const { sidebarOpen, setSidebarOpen } = useApp();
+// ─── Guard: sesión + rol específico ─────────────────────────────────────────
+function RoleRoute({ allowedRoles, children }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const usuario = useAuthStore((s) => s.usuario);
+  const location = useLocation();
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (!allowedRoles.includes(usuario?.id_rol)) {
+    // Sesión válida pero rol insuficiente → Dashboard
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+// ─── Adaptador: sincroniza la URL con currentPage del contexto ────────────────
+function PageSync({ page, children }) {
+  const { setCurrentPage } = useApp();
+  React.useEffect(() => { setCurrentPage(page); }, [page]);
+  return children;
+}
+
+// ─── Layout principal ─────────────────────────────────────────────────────────
+function AppLayout({ page, children }) {
+  const { sidebarOpen, setSidebarOpen } = useApp();
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Mobile overlay */}
@@ -49,8 +68,7 @@ function AppLayout() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* Sidebar: drawer on mobile, pinned on desktop */}
+      {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-40 lg:static lg:z-auto
         transform transition-transform duration-300 ease-in-out
@@ -59,44 +77,74 @@ function AppLayout() {
       `}>
         <Sidebar />
       </div>
-
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar />
         <main className="flex-1 overflow-y-auto">
-          <PageRouter />
+          <PageSync page={page}>{children}</PageSync>
         </main>
       </div>
-
-      {/* Global overlay components */}
+      {/* Globales */}
       <FichaTecnica />
       <Toast />
     </div>
   );
 }
 
-// ─── Raíz de la app con React Router ───────────────────────────────
+// ─── Raíz de la app ────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <BrowserRouter>
       <AppProvider>
         <Routes>
-          {/* Ruta pública: login */}
+          {/* Pública */}
           <Route path="/login" element={<LoginRoute />} />
 
-          {/* Rutas protegidas */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<AppLayout />} />
-            <Route path="/inventario" element={<AppLayout />} />
-            <Route path="/incidencias" element={<AppLayout />} />
-            <Route path="/movimientos" element={<AppLayout />} />
-            <Route path="/escaner" element={<AppLayout />} />
-            <Route path="/usuarios" element={<AppLayout />} />
-            <Route path="/auditoria" element={<AppLayout />} />
-            <Route path="/configuracion" element={<AppLayout />} />
-          </Route>
+          {/* Rutas accesibles para todos los roles autenticados (1,2,3) */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <AppLayout page="dashboard"><Dashboard /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/inventario" element={
+            <ProtectedRoute>
+              <AppLayout page="inventario"><Inventario /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/incidencias" element={
+            <ProtectedRoute>
+              <AppLayout page="incidencias"><Incidencias /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/escaner" element={
+            <ProtectedRoute>
+              <AppLayout page="escaner"><EscanerQR /></AppLayout>
+            </ProtectedRoute>
+          } />
 
-          {/* Raíz: redirige según auth */}
+          {/* Rutas restringidas: Admin (1) y Maestro (2) */}
+          <Route path="/movimientos" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="movimientos"><Movimientos /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/usuarios" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="usuarios"><GestionUsuarios /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/auditoria" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="auditoria"><Auditoria /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/configuracion" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="configuracion"><Configuracion /></AppLayout>
+            </RoleRoute>
+          } />
+
+          {/* Raíz */}
           <Route path="/" element={<RootRedirect />} />
 
           {/* Catch-all */}
@@ -107,13 +155,11 @@ export default function App() {
   );
 }
 
-/** Si ya está autenticado y entra a /login, lo manda al dashboard */
 function LoginRoute() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />;
 }
 
-/** / → redirige a /dashboard si autenticado, o /login si no */
 function RootRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;

@@ -3,11 +3,12 @@ import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import { Bell, User, Shield, UserCog, Menu } from 'lucide-react';
 
-// Configuración visual por id_rol: 1=Admin, 2=Supervisor, 3=Usuario
+// Roles reales de BD: 1=Administrador, 2=Maestro, 3=Usuario Estándar, 4=Sin Acceso
 const ROL_CONFIG = {
-  1: { label: 'Administrador',  sublabel: 'Jefe / Coordinador',      icon: Shield,  color: '#006341', bg: '#dcfce7' },
-  2: { label: 'Supervisor',     sublabel: 'Coordinador de área',      icon: UserCog, color: '#7c3aed', bg: '#ede9fe' },
-  3: { label: 'Usuario',        sublabel: 'Técnico / Auditor',        icon: User,    color: '#2563eb', bg: '#dbeafe' },
+  1: { label: 'Administrador',    sublabel: 'Gestión y configuración', icon: Shield,  color: '#006341', bg: '#dcfce7' },
+  2: { label: 'Maestro',          sublabel: 'Control de inventario',   icon: UserCog, color: '#7c3aed', bg: '#ede9fe' },
+  3: { label: 'Usuario Estándar', sublabel: 'Consulta y reporte',      icon: User,    color: '#2563eb', bg: '#dbeafe' },
+  4: { label: 'Sin Acceso',       sublabel: '',                         icon: User,    color: '#6b7280', bg: '#f3f4f6' },
 };
 
 export default function Topbar() {
