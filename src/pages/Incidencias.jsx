@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import {
   AlertTriangle, Clock, CheckCircle, User, Calendar,
-  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye
+  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
