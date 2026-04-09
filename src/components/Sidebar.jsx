@@ -13,7 +13,8 @@ const NAV_BY_ROL = {
   1: [ // Admin / SUPERADMIN
     { id: 'dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
     { id: 'inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
-    { id: 'incidencias',   label: 'Incidencias y Garantías', icon: AlertTriangle,   group: 'Gestión' },
+    { id: 'incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Gestión' },
+    { id: 'garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Gestión' },
     { id: 'movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Gestión' },
     { id: 'escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
     { id: 'usuarios',      label: 'Gestión de Usuarios',     icon: Users,           group: 'Sistema' },
@@ -23,7 +24,8 @@ const NAV_BY_ROL = {
   2: [ // Supervisor
     { id: 'dashboard',   label: 'Panel Principal',         icon: LayoutDashboard, group: 'Administración' },
     { id: 'inventario',  label: 'Inventario de Bienes',    icon: Package,         group: 'Administración' },
-    { id: 'incidencias', label: 'Incidencias y Garantías', icon: AlertTriangle,   group: 'Administración' },
+    { id: 'incidencias', label: 'Incidencias',             icon: AlertTriangle,   group: 'Administración' },
+    { id: 'garantias',   label: 'Garantías',               icon: ShieldCheck,     group: 'Administración' },
     { id: 'movimientos', label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Operación' },
     { id: 'escaner',     label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
   ],

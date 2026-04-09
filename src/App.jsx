@@ -17,6 +17,7 @@ import EscanerQR from './pages/EscanerQR';
 import GestionUsuarios from './pages/GestionUsuarios';
 import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
+import Garantias from './pages/Garantias';
 
 // ─── Router de páginas internas ────────────────────────────────────
 function PageRouter() {
@@ -26,6 +27,7 @@ function PageRouter() {
     dashboard: <Dashboard />,
     inventario: <Inventario />,
     incidencias: <Incidencias />,
+    garantias: <Garantias />,
     movimientos: <Movimientos />,
     escaner: <EscanerQR />,
     usuarios: <GestionUsuarios />,
@@ -89,6 +91,7 @@ export default function App() {
             <Route path="/dashboard" element={<AppLayout />} />
             <Route path="/inventario" element={<AppLayout />} />
             <Route path="/incidencias" element={<AppLayout />} />
+            <Route path="/garantias" element={<AppLayout />} />
             <Route path="/movimientos" element={<AppLayout />} />
             <Route path="/escaner" element={<AppLayout />} />
             <Route path="/usuarios" element={<AppLayout />} />

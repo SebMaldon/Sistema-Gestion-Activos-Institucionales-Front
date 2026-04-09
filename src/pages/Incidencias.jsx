@@ -571,7 +571,7 @@ export default function Incidencias() {
       <div className="flex-shrink-0 z-20 pb-4 mb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 -mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="flex flex-col items-start w-full sm:w-auto">
           <div className="flex items-center justify-between w-full sm:w-auto gap-4 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Incidencias y Garantías</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Incidencias</h1>
             <div className="sm:hidden mt-1">{tab === 'kanban' && contadoresJSX}</div>
           </div>
           {/* Tabs */}
