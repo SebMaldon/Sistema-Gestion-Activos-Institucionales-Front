@@ -20,8 +20,8 @@ export default function NotaModal({ isOpen, onClose, onSave, incidenciaId }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={handleClose}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
 
                 {/* HEADER */}
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-blue-50/50">

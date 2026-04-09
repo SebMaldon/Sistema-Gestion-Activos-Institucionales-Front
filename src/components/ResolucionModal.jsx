@@ -58,8 +58,8 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={handleCerrar}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
 
         {/* HEADER */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-green-50/50">

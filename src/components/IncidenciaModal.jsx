@@ -5,7 +5,7 @@ import {
   useTiposIncidencia,
   useUsuariosActivos,
   useUnidades,
-  useBienPorSerie,
+  useBienPorTermino,
   useRotacionesPorUnidad,
   useCreateIncidencia,
   useCreateTipoIncidencia,
@@ -124,7 +124,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
   // ── Búsqueda de bien ──
   const { data: bienData, isLoading: buscandoBien, isError: bienNoEncontrado, refetch: buscarBien } =
-    useBienPorSerie(numSerie);
+    useBienPorTermino(numSerie);
 
   // Rotación en base a la UNIDAD seleccionada en el select inferior (prioridad sobre la unidad del equipo en sí)
   const targetUnidadRotacion = unidadId ? parseInt(unidadId) : (equipoEncontrado?.unidad?.id_unidad ?? null);
@@ -262,8 +262,8 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   const isSaving = createIncidencia.isPending || pasarAEnProceso.isPending || resolverIncidencia.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
 
         {/* HEADER */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
@@ -289,13 +289,13 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
               <div className="flex gap-4 items-end">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Número de Serie</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Número de Serie o IP</label>
                   <input
                     type="text"
                     value={numSerieInput}
                     onChange={(e) => setNumSerieInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleBuscarSerie())}
-                    placeholder="Ingrese el número de serie..."
+                    placeholder="Ingrese serie o dirección IP..."
                     className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
@@ -328,7 +328,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
               {bienNoEncontrado && numSerie && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200 text-sm text-red-700 fade-in">
                   <AlertCircle size={16} className="flex-shrink-0" />
-                  No se encontró ningún equipo con la serie <strong>"{numSerie}"</strong>
+                  No se encontró ningún equipo con la serie o IP <strong>"{numSerie}"</strong>
                 </div>
               )}
             </section>

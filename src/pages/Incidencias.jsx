@@ -1,14 +1,18 @@
-import React, { useState, useCallback, useMemo, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import {
   AlertTriangle, Clock, CheckCircle, User, Calendar,
-  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw
+  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { GET_INCIDENCIAS_QUERY } from '../api/incidencias.queries';
 import IncidenciaModal from '../components/IncidenciaModal';
 import EditarIncidenciaModal from '../components/EditarIncidenciaModal';
 import ResolucionModal from '../components/ResolucionModal';
 import NotaModal from '../components/NotasModal';
+import DetalleIncidenciaModal from '../components/DetalleIncidenciaModal';
 import {
   useIncidencias,
   useNotasIncidencia,
@@ -17,6 +21,7 @@ import {
   useResolverIncidencia,
   useAgregarNota,
   useDeleteIncidencia,
+  mapIncidenciaNode,
 } from '../hooks/useIncidencias';
 
 // ROLES.ADMIN=1 → Maestro (edita+elimina), ROLES.SUPERVISOR=2 → Admin (edita), ROLES.USUARIO=3 → visualiza
@@ -46,19 +51,21 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota }
           <Loader2 size={12} className="animate-spin" /> Cargando notas...
         </div>
       ) : notas.length > 0 ? (
-        <div className="bg-amber-50 rounded-lg p-2.5 border border-amber-100 space-y-2">
-          <p className="text-amber-600 font-medium text-xs">Notas de Seguimiento</p>
-          {notas.map(nota => (
-            <div key={nota.id_nota} className="border-t border-amber-100 pt-1.5">
-              <p className="text-amber-900 leading-relaxed whitespace-pre-wrap text-xs">{nota.contenido_nota}</p>
-              <p className="text-amber-500 mt-0.5 text-xs">
-                — {nota.usuarioAutor?.nombre_completo || 'Sistema'} ·{' '}
-                {nota.fecha_creacion
-                  ? new Date(nota.fecha_creacion).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
-                  : ''}
-              </p>
-            </div>
-          ))}
+        <div className="bg-amber-50 rounded-lg p-2.5 border border-amber-100">
+          <p className="text-amber-600 font-medium text-xs mb-2">Notas de Seguimiento</p>
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+            {notas.map(nota => (
+              <div key={nota.id_nota} className="border-t border-amber-100 first:border-t-0 pt-1.5 first:pt-0">
+                <p className="text-amber-900 leading-relaxed whitespace-pre-wrap text-xs break-words">{nota.contenido_nota}</p>
+                <p className="text-amber-500 mt-0.5 text-xs">
+                  — {nota.usuarioAutor?.nombre_completo || 'Sistema'} ·{' '}
+                  {nota.fecha_creacion
+                    ? new Date(nota.fecha_creacion).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+                    : ''}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 
@@ -81,6 +88,23 @@ const IncidenciaCard = memo(function IncidenciaCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
+  const cardRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (cardRef.current && !cardRef.current.contains(event.target)) {
+        setExpanded(false);
+        setMenuOpen(false);
+      }
+    };
+
+    if (expanded || menuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [expanded, menuOpen]);
 
   const pBadge = PRIORITY_BADGE[inc.prioridad] ?? PRIORITY_BADGE['Media'];
 
@@ -91,6 +115,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
 
   return (
     <div
+      ref={cardRef}
       className={`bg-white rounded-xl border border-gray-100 p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow relative ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
       onClick={handleCardClick}
     >
@@ -157,6 +182,13 @@ const IncidenciaCard = memo(function IncidenciaCard({
         </div>
       </div>
 
+      {/* Indicador de notas si no está expandido */}
+      {!expanded && inc.estatus === 'En proceso' && (
+        <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-50 w-fit px-1.5 py-0.5 rounded-md">
+          <AlignLeft size={10} /> Ver avances de seguimiento...
+        </div>
+      )}
+
       {/* Detalle expandido */}
       {expanded && (
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 fade-in text-xs">
@@ -175,7 +207,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
 
           <div>
             <p className="text-gray-400 font-medium mb-1">Descripción de la Falla</p>
-            <p className="text-gray-700 leading-relaxed bg-gray-50 p-2.5 rounded-lg border border-gray-100">{inc.falla}</p>
+            <p className="text-gray-700 leading-relaxed bg-gray-50 p-2.5 rounded-lg border border-gray-100 break-words whitespace-pre-wrap">{inc.falla}</p>
           </div>
 
           <div className="flex gap-6 px-1">
@@ -191,9 +223,13 @@ const IncidenciaCard = memo(function IncidenciaCard({
           <NotasPanel incidenciaId={inc.id} estatus={inc.estatus} onAddNota={onAddNota} />
 
           {/* Botones de cambio de estatus */}
-          {canEdit && (
+          {canEdit && inc.estatus !== 'Resuelto' && (
             <div className="flex gap-1.5 mt-2">
-              {COLUMNS.filter(c => c.id !== inc.estatus).map(col => (
+              {COLUMNS.filter(c => {
+                if (inc.estatus === 'Pendiente') return c.id === 'En proceso' || c.id === 'Resuelto';
+                if (inc.estatus === 'En proceso') return c.id === 'Resuelto';
+                return false;
+              }).map(col => (
                 <button
                   key={col.id}
                   onClick={(e) => { e.stopPropagation(); onStatusChange(inc, col.id); }}
@@ -210,6 +246,145 @@ const IncidenciaCard = memo(function IncidenciaCard({
   );
 });
 
+// ─── Componente Tabla Histórico ────────────────────────────────────────────────
+
+function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [cursor, setCursor] = useState(null);
+  const [cursors, setCursors] = useState([]);
+  const PAGE_SIZE = 15;
+
+  const handleSearch = useCallback((val) => {
+    setSearchQuery(val);
+    clearTimeout(window._incidSearchTimer);
+    window._incidSearchTimer = setTimeout(() => {
+      setDebouncedSearch(val);
+      setCursor(null);
+      setCursors([]);
+    }, 400);
+  }, []);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['incidenciasHist', debouncedSearch, cursor],
+    queryFn: async () => {
+      const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
+        estatus_reparacion: 'Resuelto',
+        search: debouncedSearch || undefined,
+        first: PAGE_SIZE,
+        after: cursor ?? undefined,
+      });
+      return res.incidencias;
+    },
+  });
+
+  const incidenciasNodes = data?.edges?.map(e => mapIncidenciaNode(e.node)) ?? [];
+  const pageInfo = data?.pageInfo;
+
+  const handleNextPage = () => {
+    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+      setCursors(p => [...p, cursor]);
+      setCursor(pageInfo.endCursor);
+    }
+  };
+
+  const handlePrevPage = () => {
+    const prev = [...cursors];
+    const prevCursor = prev.pop() ?? null;
+    setCursors(prev);
+    setCursor(prevCursor);
+  };
+
+  if (isError) return <div className="p-4 text-red-500 text-sm">Error cargando incidencias.</div>;
+
+  return (
+    <div className="flex flex-col h-full bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <h3 className="font-bold text-gray-800 text-base">Histórico de Incidencias</h3>
+        <div className="relative min-w-[250px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar serie, falla o persona..."
+            value={searchQuery}
+            onChange={e => handleSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="py-10 text-center text-sm text-gray-400">Cargando incidencias...</div>
+        ) : incidenciasNodes.length === 0 ? (
+          <div className="py-10 text-center text-sm text-gray-400">No hay incidencias.</div>
+        ) : (
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead className="bg-gray-50 text-gray-500 sticky top-0 uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Num Serie</th>
+                <th className="px-4 py-3 font-semibold">Tipo</th>
+                <th className="px-4 py-3 font-semibold">Falla</th>
+                <th className="px-4 py-3 font-semibold">Técnico</th>
+                <th className="px-4 py-3 font-semibold">F. Creación</th>
+                <th className="px-4 py-3 font-semibold">F. Resolución</th>
+                <th className="px-4 py-3 font-semibold text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {incidenciasNodes.map(inc => (
+                <tr key={inc.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-gray-800">{inc.numSerie}</td>
+                  <td className="px-4 py-3 text-blue-600 font-medium">{inc.tipoIncidencia}</td>
+                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
+                  <td className="px-4 py-3 text-gray-700">{inc.tecnico}</td>
+                  <td className="px-4 py-3 text-gray-600 font-medium">{inc.fecha}</td>
+                  <td className="px-4 py-3 text-green-700 font-medium">
+                    {inc.fechaResolucion ? new Date(inc.fechaResolucion).toLocaleDateString('es-MX') : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => onViewDetail(inc)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors" title="Ver Detalles">
+                        <Eye size={13} />
+                      </button>
+                      {canEdit && (
+                        <button onClick={() => onEdit(inc)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Editar">
+                          <Edit2 size={13} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={() => onDelete(inc.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Eliminar">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="p-3 border-t border-gray-100 flex items-center justify-between text-sm bg-gray-50 text-gray-600">
+        <div>
+          Página {cursors.length + 1}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handlePrevPage} disabled={cursors.length === 0}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            <ChevronLeft size={14} /> Anterior
+          </button>
+          <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            Siguiente <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Página Principal ─────────────────────────────────────────────────────────
 
 export default function Incidencias() {
@@ -225,6 +400,7 @@ export default function Incidencias() {
   const deleteIncidencia   = useDeleteIncidencia();
 
   const [movingId, setMovingId] = useState(null);
+  const [tab, setTab] = useState('kanban'); // 'kanban' | 'historico'
 
   const idRol = usuario?.id_rol ?? 3;
   const canCreateIncident = idRol === 1 || idRol === 2;
@@ -238,11 +414,34 @@ export default function Incidencias() {
   const [incidenciaParaResolver, setIncidenciaParaResolver] = useState(null);
   const [isNotaModalOpen,        setIsNotaModalOpen]        = useState(false);
   const [incidenciaParaNota,     setIncidenciaParaNota]     = useState(null);
+  const [incidenciaDetalle,      setIncidenciaDetalle]      = useState(null);
 
-  // ── useMemo: agrupa incidencias por columna (evita .filter() en cada render) ──
+  // ── useMemo: agrupa incidencias por columna y filtra resueltas por semana ──
   const columnedCards = useMemo(() => {
     const map = { Pendiente: [], 'En proceso': [], Resuelto: [] };
-    incidencias.forEach(inc => { if (map[inc.estatus]) map[inc.estatus].push(inc); });
+    
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfWeek = new Date(now.setDate(diff));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    incidencias.forEach(inc => { 
+      if (map[inc.estatus]) {
+        if (inc.estatus === 'Resuelto') {
+          // Asumiendo que mapped.fechaResolucion es ISO o null
+          const resolvedStr = inc.fechaResolucion || inc._raw?.fecha_resolucion || inc._raw?.fecha_actualizacion;
+          if (resolvedStr) {
+            const resolvedDate = new Date(resolvedStr);
+            if (resolvedDate >= startOfWeek) {
+              map[inc.estatus].push(inc);
+            }
+          }
+        } else {
+          map[inc.estatus].push(inc);
+        }
+      } 
+    });
     return map;
   }, [incidencias]);
 
@@ -251,6 +450,10 @@ export default function Incidencias() {
   const handleEdit = useCallback((inc) => {
     setIncidenciaParaEditar(inc);
     setIsEditarModalOpen(true);
+  }, []);
+
+  const handleVerDetalle = useCallback((inc) => {
+    setIncidenciaDetalle(inc);
   }, []);
 
   // Recibe el objeto completo para no depender de `incidencias` en los deps
@@ -369,7 +572,25 @@ export default function Incidencias() {
         <div className="flex flex-col items-start w-full sm:w-auto">
           <div className="flex items-center justify-between w-full sm:w-auto gap-4 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Incidencias y Garantías</h1>
-            <div className="sm:hidden mt-1">{contadoresJSX}</div>
+            <div className="sm:hidden mt-1">{tab === 'kanban' && contadoresJSX}</div>
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mt-3 w-fit">
+            {[
+              { id: 'kanban', label: 'Tablero Kanban', icon: LayoutDashboard },
+              { id: 'historico', label: 'Todas las Incidencias', icon: List },
+            ].map(t => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${tab === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <Icon size={14} /> {t.label}
+                </button>
+              );
+            })}
           </div>
           {canCreateIncident && (
             <button
@@ -381,7 +602,7 @@ export default function Incidencias() {
           )}
         </div>
         <div className="hidden sm:flex items-center gap-3 mt-1">
-          {contadoresJSX}
+          {tab === 'kanban' && contadoresJSX}
           <button
             onClick={() => refetch()}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -392,54 +613,66 @@ export default function Incidencias() {
         </div>
       </div>
 
-      {/* Kanban */}
-      <div className="flex-1 overflow-hidden -mx-4 sm:mx-0">
-        <div className="h-full flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 gap-5 px-4 sm:px-0 scrollbar-hide">
-          {COLUMNS.map(col => {
-            const Icon   = col.icon;
-            const cards  = columnedCards[col.id] ?? [];
-            return (
-              <div key={col.id} className="h-full flex flex-col min-w-[85vw] md:min-w-0 snap-center md:snap-align-none pb-2 md:pb-0">
-                <div
-                  className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 rounded-xl mb-3"
-                  style={{ backgroundColor: col.bg, border: `1px solid ${col.border}` }}
-                >
-                  <Icon size={16} style={{ color: col.color }} />
-                  <h3 className="text-sm font-bold" style={{ color: col.color }}>{col.label}</h3>
-                  <span
-                    className="ml-auto w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    style={{ backgroundColor: col.color }}
+      {/* Contenido principal según la pestaña */}
+      {tab === 'kanban' && (
+        <div className="flex-1 overflow-hidden -mx-4 sm:mx-0">
+          <div className="h-full flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 gap-5 px-4 sm:px-0 scrollbar-hide">
+            {COLUMNS.map(col => {
+              const Icon   = col.icon;
+              const cards  = columnedCards[col.id] ?? [];
+              return (
+                <div key={col.id} className="h-full flex flex-col min-w-[85vw] md:min-w-0 snap-center md:snap-align-none pb-2 md:pb-0">
+                  <div
+                    className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 rounded-xl mb-3"
+                    style={{ backgroundColor: col.bg, border: `1px solid ${col.border}` }}
                   >
-                    {cards.length}
-                  </span>
-                </div>
+                    <Icon size={16} style={{ color: col.color }} />
+                    <h3 className="text-sm font-bold" style={{ color: col.color }}>{col.label}</h3>
+                    <span
+                      className="ml-auto w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                      style={{ backgroundColor: col.color }}
+                    >
+                      {cards.length}
+                    </span>
+                  </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pb-24 md:pb-4 scrollbar-hide pr-1">
-                  {cards.length === 0 ? (
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 text-center text-sm text-gray-300">
-                      Sin incidencias
-                    </div>
-                  ) : (
-                    cards.map(inc => (
-                      <IncidenciaCard
-                        key={inc.id}
-                        inc={inc}
-                        onStatusChange={handleStatusChange}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onAddNota={handleAbrirNotaModal}
-                        canEdit={canEdit}
-                        canDelete={canDelete}
-                        isMoving={movingId === inc.id}
-                      />
-                    ))
-                  )}
+                  <div className="flex-1 overflow-y-auto space-y-3 pb-24 md:pb-4 scrollbar-hide pr-1">
+                    {cards.length === 0 ? (
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 text-center text-sm text-gray-300">
+                        Sin incidencias
+                      </div>
+                    ) : (
+                      cards.map(inc => (
+                        <IncidenciaCard
+                          key={inc.id}
+                          inc={inc}
+                          onStatusChange={handleStatusChange}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onAddNota={handleAbrirNotaModal}
+                          canEdit={canEdit}
+                          canDelete={canDelete}
+                          isMoving={movingId === inc.id}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {tab === 'historico' && (
+        <TablaHistorico 
+          canEdit={idRol === 1} 
+          canDelete={idRol === 1} 
+          onEdit={handleEdit} 
+          onDelete={handleDelete} 
+          onViewDetail={handleVerDetalle}
+        />
+      )}
 
       {canCreateIncident && (
         <button
@@ -472,6 +705,11 @@ export default function Incidencias() {
         onClose={() => { setIsNotaModalOpen(false); setIncidenciaParaNota(null); }}
         onSave={handleGuardarNota}
         incidenciaId={incidenciaParaNota}
+      />
+      <DetalleIncidenciaModal
+        isOpen={!!incidenciaDetalle}
+        onClose={() => setIncidenciaDetalle(null)}
+        incidencia={incidenciaDetalle}
       />
     </div>
   );

@@ -6,7 +6,7 @@ import {
   GET_INCIDENCIAS_QUERY,
   GET_TIPOS_INCIDENCIA_QUERY,
   GET_USUARIOS_QUERY,
-  GET_BIEN_BY_SERIE_QUERY,
+  GET_BIEN_BY_TERMINO_QUERY,
   GET_UNIDADES_QUERY,
   GET_ROTACIONES_POR_UNIDAD_QUERY,
   GET_NOTAS_INCIDENCIA_QUERY,
@@ -38,22 +38,40 @@ export function mapIncidenciaNode(node) {
     prioridad: node.prioridad || 'Media',
     tipoIncidencia: node.tipoIncidencia?.nombre_tipo || 'Sin tipo',
     unidad: node.unidad || '',
-    fecha: node.fecha_reporte
-      ? new Date(node.fecha_reporte).toLocaleDateString('es-MX')
-      : '',
-    horaCreacion: node.fecha_reporte
-      ? new Date(node.fecha_reporte).toLocaleTimeString('es-MX', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : '',
+    fecha: (() => {
+      if (!node.fecha_reporte) return '';
+      let str = node.fecha_reporte;
+      // Si el servidor envía "YYYY-MM-DD HH:mm:ss" sin zona, JS lo toma como local.
+      // SQL Server suele guardarlo en UTC, así que forzamos la 'Z' si falta.
+      if (typeof str === 'string' && !str.includes('Z') && !str.includes('+')) {
+        str = str.replace(' ', 'T') + 'Z';
+      }
+      return new Date(str).toLocaleDateString('es-MX');
+    })(),
+    horaCreacion: (() => {
+      if (!node.fecha_reporte) return '';
+      let str = node.fecha_reporte;
+      if (typeof str === 'string' && !str.includes('Z') && !str.includes('+')) {
+        str = str.replace(' ', 'T') + 'Z';
+      }
+      return new Date(str).toLocaleTimeString('es-MX', {
+        hour: '2-digit', minute: '2-digit', hour12: true
+      });
+    })(),
     reportadoPor: node.usuarioReporta?.nombre_completo || 'Desconocido',
     matriculaReporta: node.usuarioReporta?.matricula || '',
     generadoPor: node.usuarioGeneraReporte?.nombre_completo || '',
     matriculaGenera: node.usuarioGeneraReporte?.matricula || '',
     tecnico: node.usuarioAsignado?.nombre_completo || 'Sin asignar',
     resolucion: node.resolucion_textual || '',
-    fechaResolucion: node.fecha_resolucion || null,
+    fechaResolucion: (() => {
+      if (!node.fecha_resolucion) return null;
+      let str = node.fecha_resolucion;
+      if (typeof str === 'string' && !str.includes('Z') && !str.includes('+')) {
+        str = str.replace(' ', 'T') + 'Z';
+      }
+      return str; // Devolvemos el string normalizado o el objeto date
+    })(),
     notas: node.notas || [],
     _raw: node, // nodo original por si se necesita
   };
@@ -171,20 +189,20 @@ export function useRotacionesPorUnidad(id_unidad) {
   });
 }
 
-// ─── Hook: buscar bien por número de serie ────────────────────────────────────
+// ─── Hook: buscar bien por número de serie o IP ─────────────────────────────────
 
-export function useBienPorSerie(numSerie) {
+export function useBienPorTermino(termino) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useQuery({
-    queryKey: ['bienByNumSerie', numSerie],
-    enabled: !!numSerie && numSerie.trim().length > 0,
+    queryKey: ['bienByTermino', termino],
+    enabled: !!termino && termino.trim().length > 0,
     queryFn: async () => {
       try {
-        const data = await gqlClient.request(GET_BIEN_BY_SERIE_QUERY, {
-          num_serie: numSerie.trim(),
+        const data = await gqlClient.request(GET_BIEN_BY_TERMINO_QUERY, {
+          termino: termino.trim(),
         });
-        return data.bienByNumSerie || null;
+        return data.bienByTermino || null;
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
         if (code === 'UNAUTHENTICATED') clearAuth();

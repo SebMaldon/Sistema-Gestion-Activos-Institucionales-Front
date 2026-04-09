@@ -41,6 +41,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
     $unidad: String
     $search: String
     $first: Int
+    $after: String
   ) {
     incidencias(
       estatus_reparacion: $estatus_reparacion
@@ -48,7 +49,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
       prioridad: $prioridad
       unidad: $unidad
       search: $search
-      pagination: { first: $first }
+      pagination: { first: $first, after: $after }
     ) {
       edges {
         node {
@@ -104,6 +105,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
       pageInfo {
         totalCount
         hasNextPage
+        endCursor
       }
     }
   }
@@ -133,9 +135,9 @@ export const GET_USUARIOS_QUERY = gql`
   }
 `;
 
-export const GET_BIEN_BY_SERIE_QUERY = gql`
-  query GetBienByNumSerie($num_serie: String!) {
-    bienByNumSerie(num_serie: $num_serie) {
+export const GET_BIEN_BY_TERMINO_QUERY = gql`
+  query GetBienByTermino($termino: String!) {
+    bienByTermino(termino: $termino) {
       id_bien
       num_serie
       num_inv
