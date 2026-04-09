@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Search, Save, Loader2, AlertCircle, CheckCircle2, Plus, ChevronDown } from 'lucide-react';
+import { X, Search, Save, Loader2, AlertCircle, CheckCircle2, Plus, ChevronDown, Users } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import {
   useTiposIncidencia,
   useUsuariosActivos,
   useUnidades,
   useBienPorSerie,
+  useRotacionesPorUnidad,
   useCreateIncidencia,
   useCreateTipoIncidencia,
+  usePasarAEnProceso,
+  useResolverIncidencia,
 } from '../hooks/useIncidencias';
 
 const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Crítica'];
@@ -19,10 +22,8 @@ function SearchableSelect({ options, value, onChange, placeholder, loading, disa
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Etiqueta del ítem seleccionado actualmente
   const selectedLabel = options.find(o => String(o.value) === String(value))?.label ?? '';
 
-  // Filtrar por lo que el usuario escribe
   const filtered = query.trim()
     ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
     : options;
@@ -33,7 +34,6 @@ function SearchableSelect({ options, value, onChange, placeholder, loading, disa
     setOpen(false);
   };
 
-  // Cerrar al hacer clic fuera
   useEffect(() => {
     const handleOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -98,56 +98,39 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   // ── Mutations ──
   const createIncidencia = useCreateIncidencia();
   const createTipoIncidencia = useCreateTipoIncidencia();
+  const pasarAEnProceso = usePasarAEnProceso();
+  const resolverIncidencia = useResolverIncidencia();
 
-  // ── Estado del formulario ──
+  // ── Estado Sección 1: Equipo ──
   const [numSerieInput, setNumSerieInput] = useState('');
   const [numSerie, setNumSerie] = useState('');
   const [equipoEncontrado, setEquipoEncontrado] = useState(null);
 
+  // ── Estado Sección 2: Detalles ──
   const [tipoIncidencia, setTipoIncidencia] = useState('');
   const [nuevoTipo, setNuevoTipo] = useState('');
   const [isAddingTipo, setIsAddingTipo] = useState(false);
   const [savingTipo, setSavingTipo] = useState(false);
-
   const [reportanteId, setReportanteId] = useState('');
   const [prioridad, setPrioridad] = useState('Media');
   const [descripcion, setDescripcion] = useState('');
-  const [unidadId, setUnidadId] = useState('');  // id_unidad seleccionado
+  const [unidadId, setUnidadId] = useState('');
 
-  // ── Búsqueda en BD ──
+  // ── Estado Sección 3: Estatus y Resolución ──
+  const [estatus, setEstatus] = useState('Pendiente');
+  const [notaSeguimiento, setNotaSeguimiento] = useState('');     // Si "En proceso"
+  const [resolucionTextual, setResolucionTextual] = useState(''); // Si "Resuelto"
+  const [idUsuarioResuelve, setIdUsuarioResuelve] = useState(''); // Si "Resuelto"
+
+  // ── Búsqueda de bien ──
   const { data: bienData, isLoading: buscandoBien, isError: bienNoEncontrado, refetch: buscarBien } =
     useBienPorSerie(numSerie);
 
-  // Pre-rellenar unidad desde el bien encontrado (convertimos nombre → id)
-  useEffect(() => {
-    if (bienData) {
-      setEquipoEncontrado(bienData);
-      // Si el bien tiene unidad, pre-seleccionarla en el select por id
-      if (bienData.unidad?.id_unidad) {
-        setUnidadId(String(bienData.unidad.id_unidad));
-      }
-    } else if (numSerie) {
-      setEquipoEncontrado(null);
-    }
-  }, [bienData, numSerie]);
+  // Rotación en base a la UNIDAD seleccionada en el select inferior (prioridad sobre la unidad del equipo en sí)
+  const targetUnidadRotacion = unidadId ? parseInt(unidadId) : (equipoEncontrado?.unidad?.id_unidad ?? null);
+  const { data: rotaciones = [], isLoading: loadingRot } = useRotacionesPorUnidad(targetUnidadRotacion);
 
-  // Limpiar formulario al cerrar
-  useEffect(() => {
-    if (!isOpen) {
-      setNumSerieInput('');
-      setNumSerie('');
-      setEquipoEncontrado(null);
-      setTipoIncidencia('');
-      setNuevoTipo('');
-      setIsAddingTipo(false);
-      setReportanteId('');
-      setPrioridad('Media');
-      setDescripcion('');
-      setUnidadId('');
-    }
-  }, [isOpen]);
-
-  // useMemo ANTES del early return — obligatorio por las Rules of Hooks de React
+  // ── useMemo ANTES del early return (Rules of Hooks) ──
   const optsUsuarios = useMemo(() => usuarios.map(u => ({
     value: u.id_usuario,
     label: `${u.nombre_completo} (${u.matricula})`,
@@ -158,9 +141,52 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     label: u.nombre || u.no_ref,
   })), [unidades]);
 
+  // Opciones de "quién resolvió": personal de la rotación de la unidad afectada
+  const optsResuelve = useMemo(() => {
+    if (rotaciones.length > 0) {
+      return rotaciones.map(r => ({
+        value: r.id_usuario,
+        label: `${r.usuario?.nombre_completo}${r.usuario?.matricula ? ` (${r.usuario.matricula})` : ''}`,
+      }));
+    }
+    return usuarios.map(u => ({
+      value: u.id_usuario,
+      label: `${u.nombre_completo} (${u.matricula})`,
+    }));
+  }, [rotaciones, usuarios]);
+
+  // Técnico en turno actual (para mostrarlo como referencia)
+  const tecnicoAutoAsignado = useMemo(() => {
+    if (rotaciones.length === 0) return null;
+    const turno = rotaciones.find(r => r.es_turno_actual);
+    return turno ? turno.usuario?.nombre_completo : rotaciones[0]?.usuario?.nombre_completo;
+  }, [rotaciones]);
+
+  // ── Pre-rellenar unidad desde el bien encontrado ──
+  useEffect(() => {
+    if (bienData) {
+      setEquipoEncontrado(bienData);
+      if (bienData.unidad?.id_unidad) {
+        setUnidadId(String(bienData.unidad.id_unidad));
+      }
+    } else if (numSerie) {
+      setEquipoEncontrado(null);
+    }
+  }, [bienData, numSerie]);
+
+  // ── Limpiar al cerrar ──
+  useEffect(() => {
+    if (!isOpen) {
+      setNumSerieInput(''); setNumSerie(''); setEquipoEncontrado(null);
+      setTipoIncidencia(''); setNuevoTipo(''); setIsAddingTipo(false);
+      setReportanteId(''); setPrioridad('Media'); setDescripcion(''); setUnidadId('');
+      setEstatus('Pendiente'); setNotaSeguimiento(''); setResolucionTextual(''); setIdUsuarioResuelve('');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  // ── Buscar bien ──
+  // ── Handlers ──
   const handleBuscarSerie = () => {
     const val = numSerieInput.trim();
     if (!val) return;
@@ -168,7 +194,6 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     buscarBien();
   };
 
-  // ── Guardar nuevo tipo ──
   const handleGuardarNuevoTipo = async () => {
     if (!nuevoTipo.trim()) return;
     setSavingTipo(true);
@@ -184,25 +209,48 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     }
   };
 
-  // ── Submit ──
   const handleGuardar = async (e) => {
     e.preventDefault();
     if (!equipoEncontrado) { alert('Primero busca y selecciona un equipo por número de serie.'); return; }
-    if (!tipoIncidencia) { alert('Selecciona o agrega un tipo de incidencia.'); return; }
-    if (!reportanteId) { alert('Selecciona el usuario que reporta la falla.'); return; }
+    if (!tipoIncidencia)   { alert('Selecciona o agrega un tipo de incidencia.'); return; }
+    if (!reportanteId)     { alert('Selecciona el usuario que reporta la falla.'); return; }
+    if (estatus === 'Resuelto' && !resolucionTextual.trim()) {
+      alert('Ingresa los detalles de la resolución para marcarla como Resuelta.');
+      return;
+    }
 
-    // Convertir id_unidad → nombre para guardar en el campo texto del historial
     const unidadSeleccionada = unidades.find(u => String(u.id_unidad) === String(unidadId));
 
     try {
-      await createIncidencia.mutateAsync({
-        id_bien: equipoEncontrado.id_bien,
+      // 1) Crear la incidencia (siempre en "Pendiente" inicialmente)
+      const result = await createIncidencia.mutateAsync({
+        id_bien:            equipoEncontrado.id_bien,
         id_usuario_reporta: parseInt(reportanteId),
         id_tipo_incidencia: parseInt(tipoIncidencia),
-        descripcion_falla: descripcion,
+        descripcion_falla:  descripcion,
         prioridad,
-        unidad: unidadSeleccionada?.nombre ?? '',
+        unidad:             unidadSeleccionada?.nombre ?? '',
+        id_unidad_select:   unidadId ? parseInt(unidadId) : undefined,
       });
+
+      const idNueva = result.createIncidencia.id_incidencia;
+
+      // 2) Si el usuario eligió un estatus diferente a Pendiente, aplicar transición
+      if (estatus === 'En proceso') {
+        await pasarAEnProceso.mutateAsync({
+          id_incidencia: String(idNueva),
+          contenido_nota: notaSeguimiento.trim() || undefined,
+        });
+      } else if (estatus === 'Resuelto') {
+        await pasarAEnProceso.mutateAsync({ id_incidencia: String(idNueva) });
+        await resolverIncidencia.mutateAsync({
+          id_incidencia:      String(idNueva),
+          estatus_cierre:     'Resuelto',
+          resolucion_textual: resolucionTextual.trim(),
+          id_usuario_resuelve: idUsuarioResuelve ? parseInt(idUsuarioResuelve) : undefined,
+        });
+      }
+
       onCreated?.();
       onClose();
     } catch (err) {
@@ -211,7 +259,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     }
   };
 
-  const isSaving = createIncidencia.isPending;
+  const isSaving = createIncidencia.isPending || pasarAEnProceso.isPending || resolverIncidencia.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 fade-in">
@@ -335,7 +383,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   )}
                 </div>
 
-                {/* Matrícula quien genera (solo lectura) */}
+                {/* Matrícula (solo lectura) */}
                 <div className="md:col-span-1">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Matrícula (Genera Reporte)</label>
                   <input
@@ -346,7 +394,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   />
                 </div>
 
-                {/* Usuario afectado — combobox con búsqueda */}
+                {/* Usuario afectado */}
                 <div className="md:col-span-1">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Usuario Afectado (Reportante) <span className="text-red-500">*</span>
@@ -361,7 +409,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   {!reportanteId && <p className="text-xs text-gray-400 mt-1">Escribe matrícula o nombre para filtrar</p>}
                 </div>
 
-                {/* Descripción de la falla */}
+                {/* Descripción */}
                 <div className="md:col-span-3">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Descripción de la Falla <span className="text-red-500">*</span>
@@ -384,7 +432,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   </select>
                 </div>
 
-                {/* Unidad — select desde BD, pre-rellenado desde búsqueda de bien */}
+                {/* Unidad */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Unidad
@@ -401,6 +449,111 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   />
                   {!unidadId && <p className="text-xs text-gray-400 mt-1">Escribe para filtrar las unidades</p>}
                 </div>
+              </div>
+            </section>
+
+            {/* ── SECCIÓN 3: Estatus y Resolución ── */}
+            <section className="space-y-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-blue-100 pb-2">
+                <span className="w-6 h-6 rounded bg-blue-200 text-blue-800 flex items-center justify-center text-xs">3</span>
+                Estatus y Resolución
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+                {/* Selector de estatus */}
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Estatus</label>
+                  <select
+                    value={estatus}
+                    onChange={(e) => setEstatus(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-semibold bg-white"
+                  >
+                    <option value="Pendiente">🕐 Pendiente</option>
+                    <option value="En proceso">🔧 En proceso</option>
+                    <option value="Resuelto">✅ Resuelto</option>
+                  </select>
+                </div>
+
+                {/* Técnico auto-asignado (solo lectura, informativo) */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                    <Users size={12} className="text-blue-500" />
+                    Técnico Asignado (Por rotación de la unidad)
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={
+                      !equipoEncontrado
+                        ? 'Busca un equipo para ver el técnico asignado'
+                        : loadingRot
+                          ? 'Consultando rotación...'
+                          : tecnicoAutoAsignado
+                            ? tecnicoAutoAsignado
+                            : 'Sin técnico en rotación para esta unidad'
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* CONDICIONAL: En proceso → Nota de seguimiento */}
+                {estatus === 'En proceso' && (
+                  <div className="md:col-span-3 fade-in">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                      <Plus size={14} className="text-blue-500" /> Nota de Seguimiento (Opcional)
+                    </label>
+                    <textarea
+                      value={notaSeguimiento}
+                      onChange={(e) => setNotaSeguimiento(e.target.value)}
+                      rows="2"
+                      placeholder="Agregue avances o notas sobre lo que se está revisando..."
+                      className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white"
+                    />
+                  </div>
+                )}
+
+                {/* CONDICIONAL: Resuelto → Quién resolvió + Detalle */}
+                {estatus === 'Resuelto' && (
+                  <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-5 fade-in border-t border-blue-200 pt-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                        Personal que Resolvió <span className="text-red-500">*</span>
+                      </label>
+                      {rotaciones.length > 0 ? (
+                        <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full font-medium inline-block mb-1.5">
+                          Personal en rotación de la unidad
+                        </span>
+                      ) : (
+                        <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium inline-block mb-1.5">
+                          Sin rotación — mostrando todo el personal
+                        </span>
+                      )}
+                      <SearchableSelect
+                        options={optsResuelve}
+                        value={idUsuarioResuelve}
+                        onChange={setIdUsuarioResuelve}
+                        placeholder="Buscar técnico..."
+                        loading={loadingRot || loadingUsuarios}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                        Detalles de la Resolución <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={resolucionTextual}
+                        onChange={(e) => setResolucionTextual(e.target.value)}
+                        rows="3"
+                        placeholder="Describa cómo se solucionó el problema, piezas cambiadas, etc..."
+                        required={estatus === 'Resuelto'}
+                        className="w-full px-3 py-2 text-sm border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
               </div>
             </section>
           </form>

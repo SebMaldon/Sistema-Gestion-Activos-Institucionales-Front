@@ -178,6 +178,7 @@ export const CREATE_INCIDENCIA_MUTATION = gql`
     $descripcion_falla: String!
     $prioridad: String
     $unidad: String
+    $id_unidad_select: Int
   ) {
     createIncidencia(
       id_bien: $id_bien
@@ -186,6 +187,7 @@ export const CREATE_INCIDENCIA_MUTATION = gql`
       descripcion_falla: $descripcion_falla
       prioridad: $prioridad
       unidad: $unidad
+      id_unidad_select: $id_unidad_select
     ) {
       id_incidencia
       estatus_reparacion
@@ -307,6 +309,8 @@ export const GET_ROTACIONES_POR_UNIDAD_QUERY = gql`
     rotaciones(estatus: true, id_unidad: $id_unidad) {
       id_rotacion
       id_usuario
+      es_turno_actual
+      posicion
       usuario {
         id_usuario
         nombre_completo
@@ -317,7 +321,7 @@ export const GET_ROTACIONES_POR_UNIDAD_QUERY = gql`
 `;
 
 export const GET_NOTAS_INCIDENCIA_QUERY = gql`
-  query GetNotasIncidencia($id_incidencia: ID!) {
+  query GetNotasIncidencia($id_incidencia: Int!) {
     notasIncidencia(id_incidencia: $id_incidencia) {
       id_nota
       contenido_nota

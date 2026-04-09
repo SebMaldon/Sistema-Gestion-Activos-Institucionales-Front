@@ -205,7 +205,7 @@ export function useNotasIncidencia(id_incidencia) {
     queryFn: async () => {
       try {
         const data = await gqlClient.request(GET_NOTAS_INCIDENCIA_QUERY, {
-          id_incidencia: String(id_incidencia),
+          id_incidencia: parseInt(id_incidencia, 10),
         });
         return data.notasIncidencia ?? [];
       } catch (error) {

@@ -112,9 +112,9 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-400"
             >
               <option value="">{loadingOpts ? 'Cargando...' : 'Seleccione quien resolvió...'}</option>
-              {opciones.map(o => (
-                <option key={o.id} value={o.id}>
-                  {o.nombre}{o.matricula ? ` (${o.matricula})` : ''}
+              {opciones.map(opt => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.nombre}{opt.matricula ? ` (${opt.matricula})` : ''}
                 </option>
               ))}
             </select>
