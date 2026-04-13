@@ -30,6 +30,8 @@ export function EditBienModal({ asset, onClose }) {
   const { mutateAsync: upsertSpecs, isLoading: isSavingSpecs } = useUpsertSpecsTI();
   const isSaving = isSavingData || isSavingSpecs;
 
+  const CATEGORIAS_TI = [1, 3];
+  
   const [activeTab, setActiveTab] = useState('generales'); // 'generales' | 'specs'
   
   const { data: catalogs, isLoading } = useQuery({
@@ -95,6 +97,16 @@ export function EditBienModal({ asset, onClose }) {
     }
   }, [asset]);
 
+  const hasTISpecs = asset.specs?.hasSpecs;
+  const isTICategory = formData.id_categoria ? CATEGORIAS_TI.includes(Number(formData.id_categoria)) : false;
+  const showTITab = hasTISpecs || isTICategory;
+
+  useEffect(() => {
+    if (!showTITab && activeTab === 'specs') {
+      setActiveTab('generales');
+    }
+  }, [showTITab, activeTab]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -146,13 +158,15 @@ export function EditBienModal({ asset, onClose }) {
           >
             Datos Generales
           </button>
-          <button 
-            type="button"
-            className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeTab === 'specs' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('specs')}
-          >
-            Especificaciones TI
-          </button>
+          {showTITab && (
+            <button 
+              type="button"
+              className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeTab === 'specs' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setActiveTab('specs')}
+            >
+              Especificaciones TI
+            </button>
+          )}
         </div>
 
         {isLoading ? (
