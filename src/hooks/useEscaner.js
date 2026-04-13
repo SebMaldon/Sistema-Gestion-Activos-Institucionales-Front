@@ -3,17 +3,17 @@ import { gqlClient } from '../api/client';
 import { GET_BIEN_BY_QR, UPDATE_BIEN, DELETE_BIEN, UPSERT_ESPEC_TI, CREATE_NOTA_BIEN } from '../api/escaner.queries';
 import { useAuthStore } from '../store/auth.store';
 
-export function useBienByQR(qrHash) {
+export function useBienByQR(termino) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useQuery({
-    queryKey: ['bienByQR', qrHash],
+    queryKey: ['bienByQR', termino],
     queryFn: async () => {
       try {
-        const data = await gqlClient.request(GET_BIEN_BY_QR, { qr_hash: qrHash });
-        if (!data.bienByQR) return null;
+        const data = await gqlClient.request(GET_BIEN_BY_QR, { termino });
+        if (!data.bienByTermino) return null;
         
-        const node = data.bienByQR;
+        const node = data.bienByTermino;
         return {
           id: node.id_bien,
           numSerie: node.num_serie || 'N/D',
@@ -55,7 +55,7 @@ export function useBienByQR(qrHash) {
         throw error;
       }
     },
-    enabled: !!qrHash, // Run only when input is present
+    enabled: !!termino, // Run only when input is present
     retry: false,
   });
 }

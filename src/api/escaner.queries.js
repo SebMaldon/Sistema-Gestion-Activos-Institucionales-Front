@@ -1,10 +1,11 @@
 import { gql } from 'graphql-request';
 
-export const GET_BIEN_BY_QR = gql`
-  query GetBienByQR($qr_hash: String!) {
-    bienByQR(qr_hash: $qr_hash) {
+export const GET_BIEN_BY_TERMINO = gql`
+  query GetBienByTermino($termino: String!) {
+    bienByTermino(termino: $termino) {
       id_bien
       num_serie
+      num_inv
       qr_hash
       estatus_operativo
       cantidad
@@ -50,6 +51,9 @@ export const GET_BIEN_BY_QR = gql`
     }
   }
 `;
+
+// Alias para compatibilidad con el escáner USB/QR
+export const GET_BIEN_BY_QR = GET_BIEN_BY_TERMINO;
 
 export const UPDATE_BIEN = gql`
   mutation UpdateBien(

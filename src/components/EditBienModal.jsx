@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import ReactDOM from 'react-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { gql } from 'graphql-request';
-import { Loader2, X, Save } from 'lucide-react';
+import { Loader2, X, Save, Package, ChevronDown, Cpu, Plus, Check } from 'lucide-react';
 import { useEditBien, useUpsertSpecsTI } from '../hooks/useEscaner';
 import { useApp } from '../context/AppContext';
-import UserSearchDropdown from './UserSearchDropdown';
 
 const GET_CATALOGS_QUERY = gql`
   query GetCatalogs {
     catCategoriasActivo { id_categoria nombre_categoria }
     unidades { id_unidad nombre }
-    usuarios(estatus: true, pagination: { first: 300 }) {
+    usuarios(estatus: true, pagination: { first: 20000 }) {
       edges {
         node {
           id_usuario
@@ -24,16 +24,105 @@ const GET_CATALOGS_QUERY = gql`
   }
 `;
 
+const CREATE_UBICACION = gql`
+  mutation CreateUbicacion($id_unidad: Int!, $nombre_ubicacion: String!) {
+    createUbicacion(id_unidad: $id_unidad, nombre_ubicacion: $nombre_ubicacion) {
+      id_ubicacion
+      nombre_ubicacion
+      id_unidad
+    }
+  }
+`;
+
+// ─── Combobox con búsqueda ────────────────────────────────────────────────────
+function SearchableSelect({ options, value, onChange, placeholder, loading, disabled }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const selectedLabel = options.find(o => String(o.value) === String(value))?.label ?? '';
+
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return options.slice(0, 80);
+    return options.filter(o => o.label.toLowerCase().includes(term)).slice(0, 80);
+  }, [query, options]);
+
+  const handleSelect = (opt) => {
+    onChange(opt.value);
+    setQuery('');
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          value={open ? query : selectedLabel}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder={loading ? 'Cargando...' : placeholder}
+          disabled={loading || disabled}
+          className="w-full px-3 py-2 pr-8 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-50 disabled:text-gray-400"
+        />
+        <ChevronDown
+          size={14}
+          className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </div>
+
+      {open && !loading && (
+        <div className="absolute z-30 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-52 overflow-y-auto scrollbar-hide">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-sm text-gray-400 text-center">
+              Sin resultados{query ? ` para "${query}"` : ''}
+            </div>
+          ) : (
+            filtered.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleSelect(opt)}
+                className={`w-full px-3 py-2 text-left text-sm transition-colors hover:bg-green-50 hover:text-green-700 ${String(opt.value) === String(value) ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-700'}`}
+              >
+                {opt.label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Modal Principal ──────────────────────────────────────────────────────────
 export function EditBienModal({ asset, onClose }) {
   const { showToast } = useApp();
+  const queryClient = useQueryClient();
   const { mutateAsync: editBien, isLoading: isSavingData } = useEditBien();
   const { mutateAsync: upsertSpecs, isLoading: isSavingSpecs } = useUpsertSpecsTI();
   const isSaving = isSavingData || isSavingSpecs;
 
   const CATEGORIAS_TI = [1, 3];
-  
-  const [activeTab, setActiveTab] = useState('generales'); // 'generales' | 'specs'
-  
+  const [activeTab, setActiveTab] = useState('generales');
+
+  // Estado para crear nueva ubicación
+  const [isAddingUbicacion, setIsAddingUbicacion] = useState(false);
+  const [nuevaUbicacion, setNuevaUbicacion] = useState('');
+  const [savingUbicacion, setSavingUbicacion] = useState(false);
+
   const { data: catalogs, isLoading } = useQuery({
     queryKey: ['catalogsSelect'],
     queryFn: async () => {
@@ -55,16 +144,8 @@ export function EditBienModal({ asset, onClose }) {
   });
 
   const [specsData, setSpecsData] = useState({
-    nom_pc: '',
-    cpu: '',
-    ram: '',
-    almacenamiento: '',
-    mac_wifi: '',
-    ip: '',
-    mac_eth: '',
-    puerto_red: '',
-    switch_red: '',
-    os: ''
+    nom_pc: '', cpu: '', ram: '', almacenamiento: '',
+    mac_wifi: '', ip: '', mac_eth: '', puerto_red: '', switch_red: '', os: ''
   });
 
   useEffect(() => {
@@ -102,10 +183,50 @@ export function EditBienModal({ asset, onClose }) {
   const showTITab = hasTISpecs || isTICategory;
 
   useEffect(() => {
-    if (!showTITab && activeTab === 'specs') {
-      setActiveTab('generales');
-    }
+    if (!showTITab && activeTab === 'specs') setActiveTab('generales');
   }, [showTITab, activeTab]);
+
+  // Opciones para SearchableSelects
+  const optsUsuarios = useMemo(() =>
+    (catalogs?.usuarios?.edges?.map(e => e.node) || []).map(u => ({
+      value: u.id_usuario,
+      label: `${u.nombre_completo}${u.matricula ? ` (${u.matricula})` : ''}`
+    })), [catalogs]);
+
+  const optsUbicaciones = useMemo(() =>
+    (catalogs?.ubicaciones || [])
+      .filter(u => String(u.id_unidad) === String(formData.id_unidad))
+      .map(u => ({ value: u.id_ubicacion, label: u.nombre_ubicacion })),
+    [catalogs, formData.id_unidad]);
+
+  // Guardar nueva ubicación inline
+  const handleGuardarUbicacion = async () => {
+    if (!nuevaUbicacion.trim() || !formData.id_unidad) return;
+    setSavingUbicacion(true);
+    try {
+      const result = await gqlClient.request(CREATE_UBICACION, {
+        id_unidad: parseInt(formData.id_unidad, 10),
+        nombre_ubicacion: nuevaUbicacion.trim()
+      });
+      const nueva = result.createUbicacion;
+      // Actualizar caché local sin refetch
+      queryClient.setQueryData(['catalogsSelect'], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          ubicaciones: [...(old.ubicaciones || []), nueva]
+        };
+      });
+      setFormData(prev => ({ ...prev, id_ubicacion: String(nueva.id_ubicacion) }));
+      setNuevaUbicacion('');
+      setIsAddingUbicacion(false);
+      showToast(`Ubicación "${nueva.nombre_ubicacion}" creada`, 'success');
+    } catch (err) {
+      showToast('Error al crear la ubicación', 'error');
+    } finally {
+      setSavingUbicacion(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,16 +245,12 @@ export function EditBienModal({ asset, onClose }) {
           fecha_adquisicion: formData.fecha_adquisicion || null
         }
       });
-      
-      // Checar si hay algun campo de specs lleno para proceder a actualizar BD
+
       const hasAnySpec = Object.values(specsData).some(val => val !== null && val !== '');
       if (hasAnySpec || asset.specs?.hasSpecs) {
-        await upsertSpecs({
-          id_bien: asset.id,
-          specs: specsData
-        });
+        await upsertSpecs({ id_bien: asset.id, specs: specsData });
       }
-      
+
       showToast('Actualización exitosa', 'success');
       onClose();
     } catch (e) {
@@ -142,174 +259,331 @@ export function EditBienModal({ asset, onClose }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 fade-in">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl relative max-h-[90vh] overflow-y-auto flex flex-col overflow-hidden">
-        <button onClick={onClose} className="absolute top-5 right-5 text-gray-400 hover:text-gray-600">
-          <X size={20} />
-        </button>
-        <h2 className="text-xl font-bold text-gray-900 mb-4 tracking-tight">Editar Registro</h2>
+  const labelCls = 'block text-xs font-semibold text-gray-600 mb-1.5';
+  const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white';
+  const selectCls = inputCls;
 
-        <div className="flex bg-gray-100 p-1 rounded-lg mb-5 shrink-0">
-          <button 
+  // Portal: render directamente en document.body para centrado real sobre toda la pantalla
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/70 fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* HEADER */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center">
+              <Package size={18} className="text-green-700" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Editar Registro</h2>
+              <p className="text-xs text-gray-500">Serie: {asset.numSerie} — {asset.equipo}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-700 rounded-full transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* TABS */}
+        <div className="px-6 pt-3 flex gap-1 border-b border-gray-100 shrink-0">
+          <button
             type="button"
-            className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeTab === 'generales' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
             onClick={() => setActiveTab('generales')}
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${
+              activeTab === 'generales'
+                ? 'border-green-600 text-green-700 bg-green-50/50'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
           >
             Datos Generales
           </button>
           {showTITab && (
-            <button 
+            <button
               type="button"
-              className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${activeTab === 'specs' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => setActiveTab('specs')}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+                activeTab === 'specs'
+                  ? 'border-blue-600 text-blue-700 bg-blue-50/50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
+              <Cpu size={13} />
               Especificaciones TI
             </button>
           )}
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#006341]" /></div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-            
-            {activeTab === 'generales' && (
-              <div className="space-y-4 fade-in py-1">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Número de Serie</label>
-                    <input required type="text" value={formData.num_serie} onChange={e => setFormData({...formData, num_serie: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Cantidad</label>
-                    <input required type="number" value={formData.cantidad} onChange={e => setFormData({...formData, cantidad: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50" />
-                  </div>
-                </div>
+        {/* BODY */}
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="animate-spin text-green-600" size={28} />
+            </div>
+          ) : (
+            <form id="edit-bien-form" onSubmit={handleSubmit}>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Estatus</label>
-                    <select value={formData.estatus_operativo} onChange={e => setFormData({...formData, estatus_operativo: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50">
-                      <option value="Activo">Activo</option>
-                      <option value="Baja">Baja</option>
-                      <option value="En Reparación">En Reparación</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Categoría</label>
-                    <select value={formData.id_categoria} onChange={e => setFormData({...formData, id_categoria: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50">
-                      <option value="">-- Seleccionar --</option>
-                      {catalogs?.catCategoriasActivo?.map(c => <option key={c.id_categoria} value={c.id_categoria}>{c.nombre_categoria}</option>)}
-                    </select>
-                  </div>
-                </div>
+              {/* ── TAB: Datos Generales ── */}
+              {activeTab === 'generales' && (
+                <div className="space-y-5 fade-in">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Unidad Base</label>
-                    <select value={formData.id_unidad} onChange={e => setFormData({...formData, id_unidad: e.target.value, id_ubicacion: ''})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50">
-                      <option value="">-- Seleccionar --</option>
-                      {catalogs?.unidades?.map(u => <option key={u.id_unidad} value={u.id_unidad}>{u.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Ubicación</label>
-                    <select value={formData.id_ubicacion} disabled={!formData.id_unidad} onChange={e => setFormData({...formData, id_ubicacion: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50 disabled:opacity-50">
-                      <option value="">-- Seleccionar --</option>
-                      {catalogs?.ubicaciones?.filter(u => String(u.id_unidad) === String(formData.id_unidad)).map(u => <option key={u.id_ubicacion} value={u.id_ubicacion}>{u.nombre_ubicacion}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1 relative">
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Usuario de Resguardo</label>
-                  <UserSearchDropdown 
-                    usuarios={catalogs?.usuarios?.edges?.map(e => e.node) || []} 
-                    value={formData.id_usuario_resguardo} 
-                    onChange={val => setFormData({...formData, id_usuario_resguardo: val})} 
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Cve Inmueble</label>
-                    <input type="text" value={formData.clave_inmueble} onChange={e => setFormData({...formData, clave_inmueble: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Adquisición</label>
-                    <input type="date" value={formData.fecha_adquisicion} onChange={e => setFormData({...formData, fecha_adquisicion: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'specs' && (
-              <div className="space-y-4 fade-in py-1">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Nombre Equipo</label>
-                    <input type="text" value={specsData.nom_pc} onChange={e => setSpecsData({...specsData, nom_pc: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-blue-50/20" placeholder="Ej. PC-CAJA-03" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">SO</label>
-                    <input type="text" value={specsData.os} onChange={e => setSpecsData({...specsData, os: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-blue-50/20" placeholder="Win 10, Mac OS..." />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="col-span-1 md:col-span-3 space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">CPU Info</label>
-                    <input type="text" value={specsData.cpu} onChange={e => setSpecsData({...specsData, cpu: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-blue-50/20" placeholder="Core i5 10ma" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">RAM (GB)</label>
-                    <input type="number" value={specsData.ram} onChange={e => setSpecsData({...specsData, ram: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-blue-50/20" placeholder="8" />
-                  </div>
-                  <div className="col-span-1 md:col-span-2 space-y-1">
-                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Almacenaje (GB)</label>
-                    <input type="number" value={specsData.almacenamiento} onChange={e => setSpecsData({...specsData, almacenamiento: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-blue-50/20" placeholder="512" />
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-3 mt-3 border-t border-gray-100">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Red y Conectividad</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-600">Dirección IP</label>
-                      <input type="text" value={specsData.ip} onChange={e => setSpecsData({...specsData, ip: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm font-mono" placeholder="192.168.0.X" />
+                  {/* Número de Serie + Cantidad */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Número de Serie</label>
+                      <input required type="text" value={formData.num_serie}
+                        onChange={e => setFormData({ ...formData, num_serie: e.target.value })}
+                        className={inputCls} />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-600">MAC (Ethernet)</label>
-                      <input type="text" value={specsData.mac_eth} onChange={e => setSpecsData({...specsData, mac_eth: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm font-mono uppercase" placeholder="XX:XX:XX..." />
+                    <div>
+                      <label className={labelCls}>Cantidad</label>
+                      <input required type="number" min="1" value={formData.cantidad}
+                        onChange={e => setFormData({ ...formData, cantidad: e.target.value })}
+                        className={inputCls} />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-600">MAC (WLAN)</label>
-                      <input type="text" value={specsData.mac_wifi} onChange={e => setSpecsData({...specsData, mac_wifi: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm font-mono uppercase" placeholder="XX:XX:XX..." />
+                  </div>
+
+                  {/* Estatus + Categoría */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Estatus</label>
+                      <select value={formData.estatus_operativo}
+                        onChange={e => setFormData({ ...formData, estatus_operativo: e.target.value })}
+                        className={selectCls}>
+                        <option value="Activo">Activo</option>
+                        <option value="Baja">Baja</option>
+                        <option value="En Reparación">En Reparación</option>
+                      </select>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-gray-600">Switch / Puerto</label>
-                      <div className="flex gap-2">
-                         <input type="text" value={specsData.switch_red} onChange={e => setSpecsData({...specsData, switch_red: e.target.value})} className="w-2/3 border border-gray-300 p-2 rounded-lg text-sm" placeholder="ID Switch" />
-                         <input type="text" value={specsData.puerto_red} onChange={e => setSpecsData({...specsData, puerto_red: e.target.value})} className="w-1/3 border border-gray-300 p-2 rounded-lg text-sm" placeholder="Pto." />
+                    <div>
+                      <label className={labelCls}>Categoría</label>
+                      <select value={formData.id_categoria}
+                        onChange={e => setFormData({ ...formData, id_categoria: e.target.value })}
+                        className={selectCls}>
+                        <option value="">-- Seleccionar --</option>
+                        {catalogs?.catCategoriasActivo?.map(c => (
+                          <option key={c.id_categoria} value={c.id_categoria}>{c.nombre_categoria}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Unidad Base */}
+                  <div>
+                    <label className={labelCls}>Unidad Base</label>
+                    <select value={formData.id_unidad}
+                      onChange={e => setFormData({ ...formData, id_unidad: e.target.value, id_ubicacion: '' })}
+                      className={selectCls}>
+                      <option value="">-- Seleccionar --</option>
+                      {catalogs?.unidades?.map(u => (
+                        <option key={u.id_unidad} value={u.id_unidad}>{u.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Ubicación + botón agregar */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={`${labelCls} mb-0`}>
+                        Ubicación
+                        {!formData.id_unidad && (
+                          <span className="ml-1 font-normal text-gray-400">(selecciona unidad primero)</span>
+                        )}
+                      </label>
+                      {formData.id_unidad && !isAddingUbicacion && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingUbicacion(true)}
+                          className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-semibold"
+                        >
+                          <Plus size={12} /> Nueva ubicación
+                        </button>
+                      )}
+                    </div>
+
+                    {isAddingUbicacion ? (
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={nuevaUbicacion}
+                          onChange={e => setNuevaUbicacion(e.target.value)}
+                          placeholder="Nombre de la nueva ubicación..."
+                          autoFocus
+                          className="flex-1 px-3 py-2 text-sm border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleGuardarUbicacion())}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGuardarUbicacion}
+                          disabled={savingUbicacion || !nuevaUbicacion.trim()}
+                          className="px-3 py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {savingUbicacion ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsAddingUbicacion(false); setNuevaUbicacion(''); }}
+                          className="px-3 py-2 text-xs text-red-500 hover:underline"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <SearchableSelect
+                        options={optsUbicaciones}
+                        value={formData.id_ubicacion}
+                        onChange={val => setFormData({ ...formData, id_ubicacion: val })}
+                        placeholder="Buscar ubicación..."
+                        disabled={!formData.id_unidad}
+                      />
+                    )}
+                  </div>
+
+                  {/* Usuario de Resguardo */}
+                  <div>
+                    <label className={labelCls}>Usuario de Resguardo</label>
+                    <SearchableSelect
+                      options={optsUsuarios}
+                      value={formData.id_usuario_resguardo}
+                      onChange={val => setFormData({ ...formData, id_usuario_resguardo: val })}
+                      placeholder="Buscar por nombre o matrícula..."
+                      loading={isLoading}
+                    />
+                  </div>
+
+                  {/* Clave Inmueble + Adquisición */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Cve. Inmueble</label>
+                      <input type="text" value={formData.clave_inmueble}
+                        onChange={e => setFormData({ ...formData, clave_inmueble: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Fecha de Adquisición</label>
+                      <input type="date" value={formData.fecha_adquisicion}
+                        onChange={e => setFormData({ ...formData, fecha_adquisicion: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* ── TAB: Especificaciones TI ── */}
+              {activeTab === 'specs' && (
+                <div className="space-y-5 fade-in">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Nombre del Equipo</label>
+                      <input type="text" value={specsData.nom_pc} placeholder="Ej. PC-CAJA-03"
+                        onChange={e => setSpecsData({ ...specsData, nom_pc: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Sistema Operativo</label>
+                      <input type="text" value={specsData.os} placeholder="Win 10, Mac OS..."
+                        onChange={e => setSpecsData({ ...specsData, os: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelCls}>CPU / Procesador</label>
+                    <input type="text" value={specsData.cpu} placeholder="Core i5 10ma gen, Ryzen 5..."
+                      onChange={e => setSpecsData({ ...specsData, cpu: e.target.value })}
+                      className={inputCls} />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>RAM (GB)</label>
+                      <input type="number" value={specsData.ram} placeholder="8"
+                        onChange={e => setSpecsData({ ...specsData, ram: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Almacenamiento (GB)</label>
+                      <input type="number" value={specsData.almacenamiento} placeholder="512"
+                        onChange={e => setSpecsData({ ...specsData, almacenamiento: e.target.value })}
+                        className={inputCls} />
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Red y Conectividad</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className={labelCls}>Dirección IP</label>
+                        <input type="text" value={specsData.ip} placeholder="192.168.0.X"
+                          className={`${inputCls} font-mono`}
+                          onChange={e => setSpecsData({ ...specsData, ip: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>MAC Ethernet</label>
+                        <input type="text" value={specsData.mac_eth} placeholder="XX:XX:XX:XX:XX:XX"
+                          className={`${inputCls} font-mono uppercase`}
+                          onChange={e => setSpecsData({ ...specsData, mac_eth: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>MAC WiFi</label>
+                        <input type="text" value={specsData.mac_wifi} placeholder="XX:XX:XX:XX:XX:XX"
+                          className={`${inputCls} font-mono uppercase`}
+                          onChange={e => setSpecsData({ ...specsData, mac_wifi: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Switch / Puerto</label>
+                        <div className="flex gap-2">
+                          <input type="text" value={specsData.switch_red} placeholder="ID Switch"
+                            className={`${inputCls} flex-1`}
+                            onChange={e => setSpecsData({ ...specsData, switch_red: e.target.value })} />
+                          <input type="text" value={specsData.puerto_red} placeholder="Pto."
+                            className={`${inputCls} w-20`}
+                            onChange={e => setSpecsData({ ...specsData, puerto_red: e.target.value })} />
+                        </div>
                       </div>
                     </div>
                   </div>
+
                 </div>
+              )}
 
-              </div>
-            )}
+            </form>
+          )}
+        </div>
 
-            <div className="pt-5 mt-5 flex justify-end gap-3 border-t border-gray-100 shrink-0">
-              <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancelar</button>
-              <button type="submit" disabled={isSaving} className="px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-colors flex items-center gap-2" style={{ backgroundColor: '#006341' }}>
-                {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                Guardar Cambios
-              </button>
-            </div>
-          </form>
-        )}
+        {/* FOOTER */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="edit-bien-form"
+            disabled={isSaving}
+            className="px-6 py-2 text-sm font-semibold text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#006341' }}
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body   // ← Portal: monta sobre toda la pantalla, no dentro del scroll/layout
   );
 }
