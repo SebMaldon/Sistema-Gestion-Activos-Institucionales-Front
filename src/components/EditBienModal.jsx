@@ -11,7 +11,15 @@ const GET_CATALOGS_QUERY = gql`
   query GetCatalogs {
     catCategoriasActivo { id_categoria nombre_categoria }
     unidades { id_unidad nombre }
-    usuarios(pagination: { first: 20000 }) { edges { node { id_usuario nombre_completo matricula } } }
+    usuarios(estatus: true, pagination: { first: 300 }) {
+      edges {
+        node {
+          id_usuario
+          nombre_completo
+          matricula
+        }
+      }
+    }
     ubicaciones { id_ubicacion nombre_ubicacion id_unidad }
   }
 `;
@@ -123,8 +131,8 @@ export function EditBienModal({ asset, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm fade-in">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl relative max-h-[90vh] overflow-y-auto flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 fade-in">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl relative max-h-[90vh] overflow-y-auto flex flex-col overflow-hidden">
         <button onClick={onClose} className="absolute top-5 right-5 text-gray-400 hover:text-gray-600">
           <X size={20} />
         </button>
@@ -203,7 +211,7 @@ export function EditBienModal({ asset, onClose }) {
                 <div className="space-y-1 relative">
                   <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Usuario de Resguardo</label>
                   <UserSearchDropdown 
-                    usuarios={catalogs?.usuarios?.edges ? catalogs.usuarios.edges.map(e => e.node) : []} 
+                    usuarios={catalogs?.usuarios?.edges?.map(e => e.node) || []} 
                     value={formData.id_usuario_resguardo} 
                     onChange={val => setFormData({...formData, id_usuario_resguardo: val})} 
                   />
