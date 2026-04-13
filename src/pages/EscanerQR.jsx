@@ -197,7 +197,8 @@ export default function EscanerQR() {
 
                   <div className="bg-gray-800 rounded-xl p-4 md:p-5 space-y-3 text-sm">
                     {[
-                      ['Unidad de Ubicación', foundAsset.ubicacion],
+                      ['Unidad', foundAsset.unidad],
+                      ['Ubicación', foundAsset.ubicacion],
                       ['Matrícula', foundAsset.matricula],
                       ['Resguardo', foundAsset.usuario],
                       ['Actualizado', foundAsset.actualizacion],

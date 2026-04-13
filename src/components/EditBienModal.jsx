@@ -11,7 +11,8 @@ const GET_CATALOGS_QUERY = gql`
   query GetCatalogs {
     catCategoriasActivo { id_categoria nombre_categoria }
     unidades { id_unidad nombre }
-    usuarios { id_usuario nombre_completo matricula }
+    usuarios(pagination: { first: 20000 }) { edges { node { id_usuario nombre_completo matricula } } }
+    ubicaciones { id_ubicacion nombre_ubicacion id_unidad }
   }
 `;
 
@@ -37,6 +38,7 @@ export function EditBienModal({ asset, onClose }) {
     estatus_operativo: asset.estatus || 'Activo',
     id_categoria: asset.idCategoria || '',
     id_unidad: asset.idUnidad || '',
+    id_ubicacion: asset.idUbicacion || '',
     id_usuario_resguardo: asset.idUsuarioResguardo || '',
     clave_inmueble: asset.claveInmueble || '',
     fecha_adquisicion: asset.adquisicion || ''
@@ -63,6 +65,7 @@ export function EditBienModal({ asset, onClose }) {
         estatus_operativo: asset.estatus || 'Activo',
         id_categoria: asset.idCategoria || '',
         id_unidad: asset.idUnidad || '',
+        id_ubicacion: asset.idUbicacion || '',
         id_usuario_resguardo: asset.idUsuarioResguardo || '',
         clave_inmueble: asset.claveInmueble || '',
         fecha_adquisicion: asset.adquisicion || ''
@@ -95,6 +98,7 @@ export function EditBienModal({ asset, onClose }) {
           estatus_operativo: formData.estatus_operativo,
           id_categoria: formData.id_categoria ? parseInt(formData.id_categoria, 10) : undefined,
           id_unidad: formData.id_unidad ? parseInt(formData.id_unidad, 10) : undefined,
+          id_ubicacion: formData.id_ubicacion ? parseInt(formData.id_ubicacion, 10) : undefined,
           id_usuario_resguardo: formData.id_usuario_resguardo ? parseInt(formData.id_usuario_resguardo, 10) : undefined,
           clave_inmueble: formData.clave_inmueble,
           fecha_adquisicion: formData.fecha_adquisicion || null
@@ -179,18 +183,27 @@ export function EditBienModal({ asset, onClose }) {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Unidad Base</label>
-                  <select value={formData.id_unidad} onChange={e => setFormData({...formData, id_unidad: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50">
-                    <option value="">-- Seleccionar --</option>
-                    {catalogs?.unidades?.map(u => <option key={u.id_unidad} value={u.id_unidad}>{u.nombre}</option>)}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Unidad Base</label>
+                    <select value={formData.id_unidad} onChange={e => setFormData({...formData, id_unidad: e.target.value, id_ubicacion: ''})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50">
+                      <option value="">-- Seleccionar --</option>
+                      {catalogs?.unidades?.map(u => <option key={u.id_unidad} value={u.id_unidad}>{u.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Ubicación</label>
+                    <select value={formData.id_ubicacion} disabled={!formData.id_unidad} onChange={e => setFormData({...formData, id_ubicacion: e.target.value})} className="w-full border border-gray-300 p-2 rounded-lg text-sm bg-gray-50/50 disabled:opacity-50">
+                      <option value="">-- Seleccionar --</option>
+                      {catalogs?.ubicaciones?.filter(u => String(u.id_unidad) === String(formData.id_unidad)).map(u => <option key={u.id_ubicacion} value={u.id_ubicacion}>{u.nombre_ubicacion}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="space-y-1 relative">
                   <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Usuario de Resguardo</label>
                   <UserSearchDropdown 
-                    usuarios={catalogs?.usuarios || []} 
+                    usuarios={catalogs?.usuarios?.edges ? catalogs.usuarios.edges.map(e => e.node) : []} 
                     value={formData.id_usuario_resguardo} 
                     onChange={val => setFormData({...formData, id_usuario_resguardo: val})} 
                   />
