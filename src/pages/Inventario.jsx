@@ -14,6 +14,10 @@ import {
   ChevronDown, ChevronUp, Loader2, RefreshCw
 } from 'lucide-react';
 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION } from '../api/inventario.queries';
+
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_MAESTRO  = 2;
 const ROL_ADMIN    = 1;
@@ -56,6 +60,7 @@ const FORM_EMPTY = {
   id_categoria: '',
   id_unidad_medida: '',
   id_unidad: '',
+  id_ubicacion: '',
   num_inv: '',
   cantidad: 1,
   estatus_operativo: 'ACTIVO',
@@ -103,6 +108,34 @@ export default function Inventario() {
   const bienes = bienesData?.items ?? [];
 
   const { data: catalogos, isLoading: loadingCat } = useCatalogosBienes();
+  
+  const qc = useQueryClient();
+  const [isAddingUbicacion, setIsAddingUbicacion] = useState(false);
+  const [newUbicacionName, setNewUbicacionName] = useState('');
+
+  const { data: ubicacionesData } = useQuery({
+    queryKey: ['ubicaciones', form.id_unidad],
+    queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: parseInt(form.id_unidad) }),
+    enabled: !!form.id_unidad,
+  });
+  const ubicacionesUnidad = ubicacionesData?.ubicacionesPorUnidad ?? [];
+
+  const { mutate: createUbicacion, isPending: creatingUbicacion } = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_UBICACION, vars),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['ubicaciones', form.id_unidad] });
+      setForm(f => ({ ...f, id_ubicacion: data.createUbicacion.id_ubicacion }));
+      setIsAddingUbicacion(false);
+      setNewUbicacionName('');
+      showToast('Ubicación agregada correctamente', 'success');
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear ubicación', 'error'),
+  });
+
+  const handleCreateUbicacion = () => {
+    if (!newUbicacionName.trim()) return;
+    createUbicacion({ id_unidad: parseInt(form.id_unidad), nombre_ubicacion: newUbicacionName });
+  };
 
   // ── Mutaciones ─────────────────────────────────────────────────────────────
   const { mutate: createBien, isPending: creating } = useCreateBien({
@@ -163,6 +196,7 @@ export default function Inventario() {
       id_categoria: bien.idCategoria ?? '',
       id_unidad_medida: bien.idUnidadMedida ?? '',
       id_unidad: bien.idUnidad ?? '',
+      id_ubicacion: bien.id_ubicacion ?? '',
       num_inv: bien.numInv === 'N/D' ? '' : (bien.numInv ?? ''),
       cantidad: bien.cantidad ?? 1,
       estatus_operativo: bien.estatusOperativo ?? 'ACTIVO',
@@ -217,6 +251,7 @@ export default function Inventario() {
       id_categoria:      Number(form.id_categoria),
       id_unidad_medida:  Number(form.id_unidad_medida),
       id_unidad:         form.id_unidad ? Number(form.id_unidad) : null,
+      id_ubicacion:      form.id_ubicacion ? Number(form.id_ubicacion) : null,
       num_inv:           form.num_inv || null,
       cantidad:          Number(form.cantidad) || 1,
       estatus_operativo: form.estatus_operativo,
@@ -699,7 +734,11 @@ export default function Inventario() {
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Operativa</label>
                   <select
                     value={form.id_unidad}
-                    onChange={(e) => setForm((f) => ({ ...f, id_unidad: e.target.value }))}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, id_unidad: e.target.value, id_ubicacion: '' }));
+                      setIsAddingUbicacion(false);
+                      setNewUbicacionName('');
+                    }}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
                   >
                     <option value="">Sin unidad</option>
@@ -708,6 +747,50 @@ export default function Inventario() {
                     ))}
                   </select>
                 </div>
+
+                {/* Ubicacion Física (Depende de Unidad) */}
+                {form.id_unidad && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Área / Ubicación Física</label>
+                    {isAddingUbicacion ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newUbicacionName}
+                          onChange={e => setNewUbicacionName(e.target.value)}
+                          placeholder="Nombre de ubicación..."
+                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                          autoFocus
+                        />
+                        <button type="button" onClick={handleCreateUbicacion} disabled={creatingUbicacion || !newUbicacionName.trim()}
+                          className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
+                          Guardar
+                        </button>
+                        <button type="button" onClick={() => { setIsAddingUbicacion(false); setNewUbicacionName(''); }}
+                          className="px-3 py-2 border border-gray-200 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+                          <X size={15} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <select
+                          value={form.id_ubicacion}
+                          onChange={(e) => setForm((f) => ({ ...f, id_ubicacion: e.target.value }))}
+                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                        >
+                          <option value="">Seleccionar ubicación...</option>
+                          {ubicacionesUnidad.map((u) => (
+                            <option key={u.id_ubicacion} value={u.id_ubicacion}>{u.nombre_ubicacion}</option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => setIsAddingUbicacion(true)} title="Añadir nueva ubicación a la Unidad"
+                          className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors">
+                          <Plus size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Inmueble */}
                 <div>
@@ -856,12 +939,15 @@ export default function Inventario() {
 
 // ─── Sub-componentes ───────────────────────────────────────────────────────────
 
+import { createPortal } from 'react-dom';
+
 function Modal({ onClose, title, children, wide = false, small = false }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm fade-in">
-      <div className={`bg-white rounded-2xl shadow-2xl flex flex-col w-full max-h-full sm:max-h-[calc(100vh-4rem)] ${
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" onMouseDown={onClose}>
+      <div className="absolute inset-0 bg-black/50 fade-in" />
+      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${
         small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'
-      }`}>
+      } fade-in`} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <h3 className="font-bold text-gray-900">{title}</h3>
@@ -871,11 +957,12 @@ function Modal({ onClose, title, children, wide = false, small = false }) {
           </button>
         </div>
         {/* Body scrollable */}
-        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

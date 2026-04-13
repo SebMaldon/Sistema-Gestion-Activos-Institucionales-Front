@@ -136,13 +136,23 @@ CREATE TABLE Usuarios (
     CONSTRAINT FK_Usuarios_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
 );
 GO
-
+-- ==========================================
+-- 1. NUEVA TABLA: Ubicaciones (Departamentos por Unidad)
+-- ==========================================
+CREATE TABLE Ubicaciones (
+    id_ubicacion INT IDENTITY(1,1) PRIMARY KEY,
+    id_unidad INT NOT NULL,
+    nombre_ubicacion VARCHAR(150) NOT NULL,
+    CONSTRAINT FK_Ubicaciones_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
+);
+GO
 -- Bienes (Actualizada con enlaces a medida y unidades operativas)
 CREATE TABLE Bienes (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     id_categoria INT NOT NULL,
     id_unidad_medida INT NOT NULL, -- FK a cat�logo de medidas
     id_unidad INT NULL,            -- NUEVA FK: a la tabla de unidades operativas
+	id_ubicacion INT NULL,
     num_serie VARCHAR(50), 
     num_inv VARCHAR(50), 
     cantidad DECIMAL(10,2) DEFAULT 1, 
@@ -160,9 +170,12 @@ CREATE TABLE Bienes (
     CONSTRAINT FK_Bienes_UnidadOperativa FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad),
     CONSTRAINT FK_Bienes_Inmuebles FOREIGN KEY (clave_inmueble) REFERENCES Cat_Inmuebles(clave_inmueble),
     CONSTRAINT FK_Bienes_Modelos FOREIGN KEY (clave_modelo) REFERENCES Cat_Modelos(clave_modelo),
-    CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario)
+    CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario),
+	CONSTRAINT FK_Bienes_Ubicaciones FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion)
 );
 GO
+
+
 
 -- Especificaciones TI
 CREATE TABLE Especificaciones_TI (
@@ -188,6 +201,7 @@ CREATE TABLE rotacion (
     id_unidad INT NOT NULL,                -- FK apuntando a la tabla unidades
     estatus BIT DEFAULT 1,                 -- 1 = Activo, 0 = Inactivo
 	posicion INT DEFAULT 0,
+	es_turno_actual BIT ,
     CONSTRAINT FK_Rotacion_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Rotacion_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
 );
@@ -364,6 +378,7 @@ ALTER TABLE [dbo].[Bienes] CHECK CONSTRAINT [FK_Bienes_InmueblesRef];
 GO
 
 -- Trigger para generar clave presupuestal en Bienes automaticamente
+-- y actualizar fecha_actualizacion en cada UPDATE
 CREATE TRIGGER trg_Bienes_ClavePresupuestal
 ON Bienes
 AFTER INSERT, UPDATE
@@ -375,7 +390,15 @@ BEGIN
     IF EXISTS (SELECT 1 FROM inserted)
     BEGIN
         UPDATE B
-        SET B.clave_presupuestal = ISNULL(U.clave, '') + ISNULL(I.clave, '')
+        SET
+            B.clave_presupuestal = ISNULL(U.clave, '') + ISNULL(I.clave, ''),
+            -- Actualizar la fecha de modificacion solo en UPDATEs
+            -- (en INSERT ya se establece via DEFAULT GETDATE())
+            B.fecha_actualizacion = CASE
+                WHEN EXISTS (SELECT 1 FROM deleted d WHERE d.id_bien = B.id_bien)
+                THEN GETDATE()
+                ELSE B.fecha_actualizacion
+            END
         FROM Bienes B
         INNER JOIN inserted ins ON B.id_bien = ins.id_bien
         LEFT JOIN unidades U ON B.id_unidad = U.id_unidad
@@ -384,3 +407,55 @@ BEGIN
 END;
 GO
 
+
+-- ==========================================
+-- 3. NUEVA TABLA: Bitacora (Log del Sistema)
+-- ==========================================
+CREATE TABLE Bitacora (
+    id_bitacora INT IDENTITY(1,1) PRIMARY KEY,
+    id_usuario INT NOT NULL,                 -- Usuario que realiza la acción
+    accion VARCHAR(50) NOT NULL,             -- Ej: 'CREACION', 'EDICION', 'ELIMINACION'
+    tabla_afectada VARCHAR(100) NOT NULL,    -- Ej: 'Bienes', 'Usuarios', 'Ubicaciones'
+    registro_afectado VARCHAR(100) NULL,     -- ID del registro que fue modificado/creado
+    detalles_movimiento NVARCHAR(MAX) NULL,  -- Descripción textual o un JSON con los valores viejos/nuevos
+    fecha_movimiento DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_Bitacora_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
+);
+GO
+
+-- ==========================================
+-- 1. TABLA PRINCIPAL: El contenido de la notificación
+-- ==========================================
+CREATE TABLE Notificaciones_Mensajes (
+    id_notificacion INT IDENTITY(1,1) PRIMARY KEY,
+    titulo VARCHAR(100) NOT NULL,
+    mensaje NVARCHAR(MAX) NOT NULL,
+    -- Define a quién va dirigida: 'GLOBAL', 'ROL', 'UNIDAD', 'PERSONAL'
+    tipo_audiencia VARCHAR(20) NOT NULL, 
+    -- Guarda el ID correspondiente al tipo_audiencia. 
+    -- Si es GLOBAL, puede ser NULL. Si es ROL, guarda el id_rol, etc.
+    id_audiencia INT NULL, 
+    fecha_creacion DATETIME DEFAULT GETDATE(),
+);
+GO
+
+-- ==========================================
+-- 2. TABLA PIVOTE: Control de lectura por usuario
+-- ==========================================
+CREATE TABLE Notificaciones_Lecturas (
+    id_notificacion INT NOT NULL,
+    id_usuario INT NOT NULL,
+    leida BIT DEFAULT 0,                     -- 1 = Ya la vio
+    fecha_lectura DATETIME NULL,             -- Cuándo la vio
+    oculta BIT DEFAULT 0,                    -- 1 = El usuario le dio "Eliminar/X" en su bandeja
+    
+    -- Llave primaria compuesta para evitar duplicados por usuario
+    CONSTRAINT PK_Notificaciones_Lecturas PRIMARY KEY (id_notificacion, id_usuario),
+    
+    CONSTRAINT FK_NotLecturas_Mensaje FOREIGN KEY (id_notificacion) 
+        REFERENCES Notificaciones_Mensajes(id_notificacion) ON DELETE CASCADE,
+        
+    CONSTRAINT FK_NotLecturas_Usuario FOREIGN KEY (id_usuario) 
+        REFERENCES Usuarios(id_usuario)
+);
+GO

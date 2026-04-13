@@ -37,6 +37,7 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           idCategoria: node.id_categoria,
           idUnidadMedida: node.id_unidad_medida,
           idUnidad: node.id_unidad,
+          id_ubicacion: node.id_ubicacion,
           idUsuarioResguardo: node.id_usuario_resguardo,
           fechaAdquisicion: node.fecha_adquisicion,
           fechaActualizacion: node.fecha_actualizacion,
@@ -44,7 +45,7 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           // — Relaciones resueltas
           equipo: node.modelo?.descrip_disp || node.categoria?.nombre_categoria || 'Sin modelo',
           resguardo: node.usuarioResguardo?.nombre_completo || 'Sin resguardo',
-          ubicacion: node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
+          ubicacion: node.ubicacion?.nombre_ubicacion || node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
 
           // — Categoría
           categoria: node.categoria,

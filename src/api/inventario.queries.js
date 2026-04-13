@@ -16,6 +16,7 @@ const BIEN_FIELDS = gql`
     id_categoria
     id_unidad_medida
     id_unidad
+    id_ubicacion
     id_usuario_resguardo
     fecha_adquisicion
     fecha_actualizacion
@@ -40,6 +41,10 @@ const BIEN_FIELDS = gql`
       id_unidad
       nombre
       clave
+    }
+    ubicacion {
+      id_ubicacion
+      nombre_ubicacion
     }
     inmueble {
       clave_inmueble
@@ -152,6 +157,7 @@ export const CREATE_BIEN_MUTATION = gql`
     $id_categoria: Int!
     $id_unidad_medida: Int!
     $id_unidad: Int
+    $id_ubicacion: Int
     $num_serie: String
     $num_inv: String
     $cantidad: Float
@@ -166,6 +172,7 @@ export const CREATE_BIEN_MUTATION = gql`
       id_categoria: $id_categoria
       id_unidad_medida: $id_unidad_medida
       id_unidad: $id_unidad
+      id_ubicacion: $id_ubicacion
       num_serie: $num_serie
       num_inv: $num_inv
       cantidad: $cantidad
@@ -188,6 +195,7 @@ export const UPDATE_BIEN_MUTATION = gql`
     $id_categoria: Int
     $id_unidad_medida: Int
     $id_unidad: Int
+    $id_ubicacion: Int
     $num_inv: String
     $cantidad: Float
     $estatus_operativo: String
@@ -202,6 +210,7 @@ export const UPDATE_BIEN_MUTATION = gql`
       id_categoria: $id_categoria
       id_unidad_medida: $id_unidad_medida
       id_unidad: $id_unidad
+      id_ubicacion: $id_ubicacion
       num_inv: $num_inv
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
@@ -258,6 +267,25 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
       dir_mac
       mac_address
       modelo_so
+    }
+  }
+`;
+
+export const GET_UBICACIONES_POR_UNIDAD = gql`
+  query GetUbicacionesPorUnidad($id_unidad: Int!) {
+    ubicacionesPorUnidad(id_unidad: $id_unidad) {
+      id_ubicacion
+      nombre_ubicacion
+    }
+  }
+`;
+
+export const CREATE_UBICACION = gql`
+  mutation CreateUbicacion($id_unidad: Int!, $nombre_ubicacion: String!) {
+    createUbicacion(id_unidad: $id_unidad, nombre_ubicacion: $nombre_ubicacion) {
+      id_ubicacion
+      id_unidad
+      nombre_ubicacion
     }
   }
 `;
