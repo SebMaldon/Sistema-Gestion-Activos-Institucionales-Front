@@ -8,7 +8,6 @@ import {
   GET_USUARIOS_QUERY,
   GET_BIEN_BY_TERMINO_QUERY,
   GET_UNIDADES_QUERY,
-  GET_ROTACIONES_POR_UNIDAD_QUERY,
   GET_NOTAS_INCIDENCIA_QUERY,
   CREATE_INCIDENCIA_MUTATION,
   CREATE_TIPO_INCIDENCIA_MUTATION,
@@ -35,9 +34,10 @@ export function mapIncidenciaNode(node) {
       'Equipo sin descripción',
     falla: node.descripcion_falla,
     estatus: node.estatus_reparacion,   // 'Pendiente' | 'En proceso' | 'Resuelto'
-    prioridad: node.prioridad || 'Media',
     tipoIncidencia: node.tipoIncidencia?.nombre_tipo || 'Sin tipo',
-    unidad: node.unidad || '',
+    unidad: node.unidad?.nombre || '',
+    alias: node.alias || '',
+    requerimiento: node.requerimiento || '',
     fecha: (() => {
       if (!node.fecha_reporte) return '';
       let str = node.fecha_reporte;
@@ -58,11 +58,9 @@ export function mapIncidenciaNode(node) {
         hour: '2-digit', minute: '2-digit', hour12: true
       });
     })(),
-    reportadoPor: node.usuarioReporta?.nombre_completo || 'Desconocido',
-    matriculaReporta: node.usuarioReporta?.matricula || '',
     generadoPor: node.usuarioGeneraReporte?.nombre_completo || '',
     matriculaGenera: node.usuarioGeneraReporte?.matricula || '',
-    tecnico: node.usuarioAsignado?.nombre_completo || 'Sin asignar',
+    tecnico: node.usuarioResuelve?.nombre_completo || 'Sin asignar',
     resolucion: node.resolucion_textual || '',
     fechaResolucion: (() => {
       if (!node.fecha_resolucion) return null;
@@ -146,14 +144,14 @@ export function useUsuariosActivos() {
 
 // ─── Hook: unidades de la BD ─────────────────────────────────────────────────
 
-export function useUnidades() {
+export function useUnidades(filtros = {}) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useQuery({
-    queryKey: ['unidades'],
+    queryKey: ['unidades', filtros],
     queryFn: async () => {
       try {
-        const data = await gqlClient.request(GET_UNIDADES_QUERY);
+        const data = await gqlClient.request(GET_UNIDADES_QUERY, filtros);
         return data.unidades;
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
@@ -165,29 +163,7 @@ export function useUnidades() {
   });
 }
 
-// ─── Hook: técnicos en rotación para una unidad ───────────────────────────────
-
-export function useRotacionesPorUnidad(id_unidad) {
-  const clearAuth = useAuthStore((s) => s.clearAuth);
-
-  return useQuery({
-    queryKey: ['rotaciones', id_unidad],
-    enabled: !!id_unidad,
-    queryFn: async () => {
-      try {
-        const data = await gqlClient.request(GET_ROTACIONES_POR_UNIDAD_QUERY, {
-          id_unidad: parseInt(id_unidad),
-        });
-        return data.rotaciones; // [{ id_rotacion, id_usuario, usuario: {...} }]
-      } catch (error) {
-        const code = error?.response?.errors?.[0]?.extensions?.code;
-        if (code === 'UNAUTHENTICATED') clearAuth();
-        throw error;
-      }
-    },
-    staleTime: 30_000,
-  });
-}
+// useRotacionesPorUnidad ha sido removida ya que la rotación ya no existe en el backend
 
 // ─── Hook: buscar bien por número de serie o IP ─────────────────────────────────
 

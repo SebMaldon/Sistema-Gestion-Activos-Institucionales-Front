@@ -5,25 +5,24 @@ export const UPDATE_INCIDENCIA_MUTATION = gql`
     $id_incidencia: ID!
     $id_tipo_incidencia: Int
     $descripcion_falla: String
-    $prioridad: String
-    $unidad: String
-    $id_usuario_reporta: Int
-    $id_usuario_asignado: Int
+    $id_unidad: Int
+    $alias: String
+    $requerimiento: String
   ) {
     updateIncidencia(
       id_incidencia: $id_incidencia
       id_tipo_incidencia: $id_tipo_incidencia
       descripcion_falla: $descripcion_falla
-      prioridad: $prioridad
-      unidad: $unidad
-      id_usuario_reporta: $id_usuario_reporta
-      id_usuario_asignado: $id_usuario_asignado
+      id_unidad: $id_unidad
+      alias: $alias
+      requerimiento: $requerimiento
     ) {
       id_incidencia
       id_tipo_incidencia
       descripcion_falla
-      prioridad
-      unidad
+      id_unidad
+      alias
+      requerimiento
       estatus_reparacion
     }
   }
@@ -37,8 +36,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
   query GetIncidencias(
     $estatus_reparacion: String
     $id_tipo_incidencia: Int
-    $prioridad: String
-    $unidad: String
+    $id_unidad: Int
     $search: String
     $first: Int
     $after: String
@@ -46,8 +44,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
     incidencias(
       estatus_reparacion: $estatus_reparacion
       id_tipo_incidencia: $id_tipo_incidencia
-      prioridad: $prioridad
-      unidad: $unidad
+      id_unidad: $id_unidad
       search: $search
       pagination: { first: $first, after: $after }
     ) {
@@ -56,16 +53,21 @@ export const GET_INCIDENCIAS_QUERY = gql`
           id_incidencia
           id_bien
           id_tipo_incidencia
-          prioridad
           descripcion_falla
           estatus_reparacion
           fecha_reporte
           resolucion_textual
           fecha_resolucion
-          unidad
+          alias
+          requerimiento
+          id_unidad
           tipoIncidencia {
             id_tipo_incidencia
             nombre_tipo
+          }
+          unidad {
+            id_unidad
+            nombre
           }
           bien {
             num_serie
@@ -86,15 +88,6 @@ export const GET_INCIDENCIAS_QUERY = gql`
             id_usuario
             nombre_completo
             matricula
-          }
-          usuarioReporta {
-            id_usuario
-            nombre_completo
-            matricula
-          }
-          usuarioAsignado {
-            id_usuario
-            nombre_completo
           }
           usuarioResuelve {
             id_usuario
@@ -175,25 +168,22 @@ export const GET_BIEN_BY_TERMINO_QUERY = gql`
 export const CREATE_INCIDENCIA_MUTATION = gql`
   mutation CreateIncidencia(
     $id_bien: ID!
-    $id_usuario_reporta: Int!
     $id_tipo_incidencia: Int!
     $descripcion_falla: String!
-    $prioridad: String
-    $unidad: String
-    $id_unidad_select: Int
+    $id_unidad: Int
+    $alias: String
+    $requerimiento: String
   ) {
     createIncidencia(
       id_bien: $id_bien
-      id_usuario_reporta: $id_usuario_reporta
       id_tipo_incidencia: $id_tipo_incidencia
       descripcion_falla: $descripcion_falla
-      prioridad: $prioridad
-      unidad: $unidad
-      id_unidad_select: $id_unidad_select
+      id_unidad: $id_unidad
+      alias: $alias
+      requerimiento: $requerimiento
     ) {
       id_incidencia
       estatus_reparacion
-      prioridad
     }
   }
 `;
@@ -210,12 +200,10 @@ export const CREATE_TIPO_INCIDENCIA_MUTATION = gql`
 export const PASAR_A_EN_PROCESO_MUTATION = gql`
   mutation PasarAEnProceso(
     $id_incidencia: ID!
-    $id_usuario_asignado: Int
     $contenido_nota: String
   ) {
     pasarAEnProceso(
       id_incidencia: $id_incidencia
-      id_usuario_asignado: $id_usuario_asignado
       contenido_nota: $contenido_nota
     ) {
       id_incidencia
@@ -276,19 +264,7 @@ export const UPDATE_ESTATUS_MUTATION = gql`
   }
 `;
 
-export const ASIGNAR_INCIDENCIA_MUTATION = gql`
-  mutation AsignarIncidencia($id_incidencia: ID!, $id_usuario_asignado: Int!) {
-    asignarIncidencia(
-      id_incidencia: $id_incidencia
-      id_usuario_asignado: $id_usuario_asignado
-    ) {
-      id_incidencia
-      usuarioAsignado {
-        nombre_completo
-      }
-    }
-  }
-`;
+// ASIGNAR_INCIDENCIA_MUTATION ha sido removida del backend
 
 export const DELETE_INCIDENCIA_MUTATION = gql`
   mutation DeleteIncidencia($id_incidencia: ID!) {
@@ -306,21 +282,7 @@ export const GET_UNIDADES_QUERY = gql`
   }
 `;
 
-export const GET_ROTACIONES_POR_UNIDAD_QUERY = gql`
-  query GetRotacionesPorUnidad($id_unidad: Int!) {
-    rotaciones(estatus: true, id_unidad: $id_unidad) {
-      id_rotacion
-      id_usuario
-      es_turno_actual
-      posicion
-      usuario {
-        id_usuario
-        nombre_completo
-        matricula
-      }
-    }
-  }
-`;
+// GET_ROTACIONES_POR_UNIDAD_QUERY ha sido removida del backend
 
 export const GET_NOTAS_INCIDENCIA_QUERY = gql`
   query GetNotasIncidencia($id_incidencia: Int!) {

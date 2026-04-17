@@ -85,31 +85,31 @@ export const mockIncidencias = [
   {
     id: 'INC-001', assetId: 'ACT-003', equipo: 'Impresora HP LaserJet M404dw', numSerie: 'SN-HP4Z10W563',
     falla: 'Error de calibración de papel — Código 79.00FE', estatus: 'En Revisión',
-    reportadoPor: 'C.P. Roberto Guzmán Torres', fecha: '2026-03-04', prioridad: 'Alta',
+    fecha: '2026-03-04',
     tecnico: 'Ing. Mario Quiñones', notas: 'Se solicitó refacción de fusor al proveedor.',
   },
   {
     id: 'INC-002', assetId: 'ACT-008', equipo: 'Impresora HP OfficeJet Pro', numSerie: 'SN-HP8V24C615',
     falla: 'Atasco de papel recurrente en bandeja 2', estatus: 'Pendiente',
-    reportadoPor: 'T.A. Fernanda López Díaz', fecha: '2026-03-06', prioridad: 'Media',
+    fecha: '2026-03-06',
     tecnico: 'Sin asignar', notas: '',
   },
   {
     id: 'INC-003', assetId: 'ACT-002', equipo: 'Laptop Lenovo ThinkPad E14', numSerie: 'SN-LN5P30X882',
     falla: 'Pantalla con líneas horizontales intermitentes', estatus: 'Resuelto',
-    reportadoPor: 'L.C. Patricia Ríos Hernández', fecha: '2026-02-28', prioridad: 'Alta',
+    fecha: '2026-02-28',
     tecnico: 'Ing. Carlos Morales Vega', notas: 'Se reemplazó cable de pantalla LVDS. Garantía aplicada.',
   },
   {
     id: 'INC-004', assetId: 'ACT-001', equipo: 'Laptop Dell Latitude 5540', numSerie: 'SN-DL8X92K741',
     falla: 'Batería no carga correctamente, tiempo de vida reducido', estatus: 'Pendiente',
-    reportadoPor: 'Ing. Carlos Morales Vega', fecha: '2026-03-07', prioridad: 'Baja',
+    fecha: '2026-03-07',
     tecnico: 'Sin asignar', notas: '',
   },
   {
     id: 'INC-005', assetId: 'ACT-006', equipo: 'Laptop Dell Inspiron 15', numSerie: 'SN-DL9T12B847',
     falla: 'Falla total de disco duro — S.O. no arranca', estatus: 'Resuelto',
-    reportadoPor: 'Lic. Jorge Espinoza Nuñez', fecha: '2026-01-15', prioridad: 'Crítica',
+    fecha: '2026-01-15',
     tecnico: 'Ing. Mario Quiñones', notas: 'Dado de baja por obsolescencia y costo de reparación elevado.',
   },
 ];

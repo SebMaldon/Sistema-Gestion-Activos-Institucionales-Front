@@ -218,7 +218,7 @@ GO
 CREATE TABLE Incidencias (
     id_incidencia INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
-    id_usuario_genera_reporte INT NOT NULL, -- Es el admministrador o usuario que crea la incidencia, se mantiene para trazabilidad
+    id_usuario_genera_reporte INT NOT NULL, -- Es el admministrador o, usuario que crea la incidencia, se mantiene para trazabilidad
     id_usuario_reporta INT NOT NULL, -- Es el usuario que reporta la falla, puede ser el mismo que genera el reporte o un usuario final
     id_usuario_asignado INT NULL,  -- Es el técnico o responsable asignado para resolver la incidencia, puede ser NULL si aún no se ha asignado
     id_usuario_resuelve INT NULL, -- Es el técnico o responsable que finalmente resuelve la incidencia, puede ser NULL si aún no se ha resuelto

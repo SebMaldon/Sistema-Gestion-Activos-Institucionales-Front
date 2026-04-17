@@ -7,7 +7,7 @@ import {
   useUpdateIncidencia,
 } from '../hooks/useIncidencias';
 
-const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Crítica'];
+
 
 /**
  * EditarIncidenciaModal
@@ -18,29 +18,27 @@ const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Crítica'];
  *   incidencia   – objeto con los datos actuales de la incidencia (shape de mapIncidenciaNode)
  */
 export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, incidencia }) {
-  const { data: tiposIncidencia = [], isLoading: loadingTipos }   = useTiposIncidencia();
-  const { data: usuarios        = [], isLoading: loadingUsuarios } = useUsuariosActivos();
-  const { data: unidades        = [], isLoading: loadingUnidades } = useUnidades();
+  const { data: tiposIncidencia = [], isLoading: loadingTipos } = useTiposIncidencia();
+  const { data: usuarios = [], isLoading: loadingUsuarios } = useUsuariosActivos();
+  const { data: unidades = [], isLoading: loadingUnidades } = useUnidades();
   const updateIncidencia = useUpdateIncidencia();
 
-  const [idTipo,       setIdTipo]       = useState('');
-  const [descripcion,  setDescripcion]  = useState('');
-  const [prioridad,    setPrioridad]    = useState('Media');
-  const [unidadId,     setUnidadId]     = useState('');
-  const [idReporta,    setIdReporta]    = useState('');
-  const [idAsignado,   setIdAsignado]   = useState('');
+  const [idTipo, setIdTipo] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [unidadId, setUnidadId] = useState('');
+  const [alias, setAlias] = useState('');
+  const [requerimiento, setRequerimiento] = useState('');
 
   // Pre-llenar con los datos actuales cada vez que abre o cambia la incidencia
   useEffect(() => {
     if (isOpen && incidencia) {
       setIdTipo(String(incidencia.id_tipo_incidencia ?? ''));
       setDescripcion(incidencia.falla ?? '');
-      setPrioridad(incidencia.prioridad ?? 'Media');
-      setIdReporta(String(incidencia._raw?.id_usuario_reporta ?? ''));
-      setIdAsignado(String(incidencia._raw?.id_usuario_asignado ?? ''));
+      setAlias(incidencia.alias ?? '');
+      setRequerimiento(incidencia.requerimiento ?? '');
 
-      // Resolver el id_unidad desde el nombre almacenado o desde el bien
-      const idU = incidencia._raw?.bien?.unidad?.id_unidad;
+      // Resolver el id_unidad desde el objeto que viene del mapIncidenciaNode o _raw
+      const idU = incidencia._raw?.id_unidad || incidencia._raw?.bien?.unidad?.id_unidad;
       setUnidadId(idU ? String(idU) : '');
     }
   }, [isOpen, incidencia]);
@@ -58,17 +56,14 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    // Obtener el nombre de la unidad seleccionada para guardar el campo texto
-    const unidadSel = unidades.find(u => String(u.id_unidad) === String(unidadId));
     try {
       await updateIncidencia.mutateAsync({
-        id_incidencia:       String(incidencia.id),
-        id_tipo_incidencia:  idTipo     ? parseInt(idTipo)     : undefined,
-        descripcion_falla:   descripcion || undefined,
-        prioridad:           prioridad   || undefined,
-        unidad:              unidadSel?.nombre || undefined,
-        id_usuario_reporta:  idReporta  ? parseInt(idReporta)  : undefined,
-        id_usuario_asignado: idAsignado ? parseInt(idAsignado) : undefined,
+        id_incidencia: String(incidencia.id),
+        id_tipo_incidencia: idTipo ? parseInt(idTipo) : undefined,
+        descripcion_falla: descripcion || undefined,
+        id_unidad: unidadId ? parseInt(unidadId) : undefined,
+        alias: alias || undefined,
+        requerimiento: requerimiento || undefined,
       });
       onUpdated?.();
       onClose();
@@ -76,7 +71,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
       const msg = err?.response?.errors?.[0]?.message || 'Error al actualizar la incidencia';
       alert(msg);
     }
-  }, [incidencia, idTipo, descripcion, prioridad, unidadId, idReporta, idAsignado, unidades, updateIncidencia, onUpdated, onClose]);
+  }, [incidencia, idTipo, descripcion, unidadId, alias, requerimiento, updateIncidencia, onUpdated, onClose]);
 
   if (!isOpen || !incidencia) return null;
 
@@ -137,20 +132,10 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
-              {/* Prioridad */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Prioridad</label>
-                <select
-                  value={prioridad}
-                  onChange={(e) => setPrioridad(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white"
-                >
-                  {PRIORIDADES.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
+
 
               {/* Unidad — select desde BD */}
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Unidad</label>
                 <select
                   value={unidadId}
@@ -165,37 +150,33 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
                 </select>
               </div>
 
-              {/* Usuario reportante */}
+              {/* Alias */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Usuario Reportante</label>
-                <select
-                  value={idReporta}
-                  onChange={(e) => setIdReporta(e.target.value)}
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Alias (Opcional)</label>
+                <input
+                  type="text"
+                  value={alias}
+                  onChange={(e) => setAlias(e.target.value)}
+                  placeholder="Ej: PC-ADM-01"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white"
-                  disabled={loadingUsuarios}
-                >
-                  <option value="">{loadingUsuarios ? 'Cargando...' : 'Seleccione usuario...'}</option>
-                  {optsUsuarios.map(u => (
-                    <option key={u.id} value={u.id}>{u.label}</option>
-                  ))}
-                </select>
+                />
               </div>
 
-              {/* Técnico asignado */}
+              {/* Requerimiento */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Técnico Asignado</label>
-                <select
-                  value={idAsignado}
-                  onChange={(e) => setIdAsignado(e.target.value)}
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Requerimiento</label>
+                <input
+                  type="text"
+                  value={requerimiento}
+                  onChange={(e) => setRequerimiento(e.target.value)}
+                  placeholder="Ej: REQ-2024-001"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white"
-                  disabled={loadingUsuarios}
-                >
-                  <option value="">{loadingUsuarios ? 'Cargando...' : 'Sin asignar'}</option>
-                  {optsUsuarios.map(u => (
-                    <option key={u.id} value={u.id}>{u.label}</option>
-                  ))}
-                </select>
+                />
               </div>
+
+
+
+
             </div>
           </form>
         </div>

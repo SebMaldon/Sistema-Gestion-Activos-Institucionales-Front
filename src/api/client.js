@@ -6,11 +6,11 @@ const GQL_URL = import.meta.env.VITE_GQL_URL ?? 'http://localhost:4000/graphql';
 export const gqlClient = new GraphQLClient(GQL_URL, {
   requestMiddleware: async (request) => {
     const token = useAuthStore.getState().token;
-    
+
     // Maintain original headers (like Content-Type) and append ours
     const headers = new Headers(request.headers);
     headers.set('apollo-require-preflight', 'true');
-    
+
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }

@@ -32,12 +32,7 @@ const COLUMNS = [
   { id: 'Resuelto',   label: 'Resuelto',   icon: CheckCircle,   color: '#16a34a', bg: '#dcfce7', border: '#86efac' },
 ];
 
-const PRIORITY_BADGE = {
-  'Crítica': { bg: '#fee2e2', color: '#991b1b' },
-  'Alta':    { bg: '#ffedd5', color: '#c2410c' },
-  'Media':   { bg: '#fef9c3', color: '#854d0e' },
-  'Baja':    { bg: '#dbeafe', color: '#1e40af' },
-};
+
 
 // ─── NotasPanel: carga notas solo cuando la tarjeta se expande ────────────────
 // Al montar (expanded=true) dispara la query. Si ya está en caché, no re-fetcha.
@@ -106,7 +101,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
     };
   }, [expanded, menuOpen]);
 
-  const pBadge = PRIORITY_BADGE[inc.prioridad] ?? PRIORITY_BADGE['Media'];
+
 
   const handleCardClick = useCallback(() => {
     if (menuOpen) setMenuOpen(false);
@@ -123,14 +118,9 @@ const IncidenciaCard = memo(function IncidenciaCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900 leading-snug">{inc.numSerie}</p>
+          {inc.alias && <p className="text-[10px] font-semibold text-blue-500 truncate" title={inc.alias}>{inc.alias}</p>}
         </div>
-        <div className="flex items-center gap-1.5">
-          <span
-            className="text-xs font-semibold px-2 py-1 rounded-full flex-shrink-0"
-            style={{ backgroundColor: pBadge.bg, color: pBadge.color }}
-          >
-            {inc.prioridad ?? 'Media'}
-          </span>
+
 
           {(canEdit || canDelete) && (
             <div className="relative">
@@ -163,13 +153,18 @@ const IncidenciaCard = memo(function IncidenciaCard({
             </div>
           )}
         </div>
-      </div>
 
-      <p className="text-xs text-gray-600 mt-1.5 truncate flex items-center gap-1.5">
-        <User size={13} className="text-gray-400 flex-shrink-0" />
-        <span>Reporta: <span className="font-semibold text-gray-800">{inc.reportadoPor}</span></span>
-      </p>
-      <p className="text-xs font-semibold text-blue-600 mt-1">{inc.tipoIncidencia}</p>
+      {/* Tipo y Falla */}
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+            {inc.tipoIncidencia}
+          </span>
+        </div>
+        <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed" title={inc.falla}>
+          {inc.falla}
+        </p>
+      </div>
 
       <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -201,7 +196,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
             <div className="bg-blue-50/50 rounded-lg p-2.5 border border-blue-50">
               <p className="text-blue-400 font-medium mb-0.5">Generado por</p>
               <p className="text-blue-900 font-semibold truncate">{inc.generadoPor || 'Usuario del Sistema'}</p>
-              <p className="text-blue-600/70 mt-0.5 truncate">Matrícula: {inc.matriculaGenera || 'S/N'}</p>
+              <p className="text-blue-600/70 mt-0.5 truncate">Requerimiento: {inc.requerimiento || 'S/N'}</p>
             </div>
           </div>
 
@@ -266,7 +261,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
   }, []);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['incidenciasHist', debouncedSearch, cursor],
+    queryKey: ['incidencias', 'historico', debouncedSearch, cursor],
     queryFn: async () => {
       const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
         estatus_reparacion: 'Resuelto',
@@ -323,9 +318,10 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
             <thead className="bg-gray-50 text-gray-500 sticky top-0 uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3 font-semibold">Num Serie</th>
+                <th className="px-4 py-3 font-semibold">Alias</th>
                 <th className="px-4 py-3 font-semibold">Tipo</th>
                 <th className="px-4 py-3 font-semibold">Falla</th>
-                <th className="px-4 py-3 font-semibold">Técnico</th>
+                <th className="px-4 py-3 font-semibold">Requerimiento</th>
                 <th className="px-4 py-3 font-semibold">F. Creación</th>
                 <th className="px-4 py-3 font-semibold">F. Resolución</th>
                 <th className="px-4 py-3 font-semibold text-center">Acciones</th>
@@ -335,9 +331,10 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
               {incidenciasNodes.map(inc => (
                 <tr key={inc.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3 font-semibold text-gray-800">{inc.numSerie}</td>
+                  <td className="px-4 py-3 text-blue-600 font-medium">{inc.alias || '—'}</td>
                   <td className="px-4 py-3 text-blue-600 font-medium">{inc.tipoIncidencia}</td>
                   <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
-                  <td className="px-4 py-3 text-gray-700">{inc.tecnico}</td>
+                  <td className="px-4 py-3 text-gray-700">{inc.requerimiento || '—'}</td>
                   <td className="px-4 py-3 text-gray-600 font-medium">{inc.fecha}</td>
                   <td className="px-4 py-3 text-green-700 font-medium">
                     {inc.fechaResolucion ? new Date(inc.fechaResolucion).toLocaleDateString('es-MX') : '—'}
@@ -592,7 +589,7 @@ export default function Incidencias() {
               );
             })}
           </div>
-          {canCreateIncident && (
+          {canCreateIncident && tab === 'kanban' && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="hidden sm:flex mt-4 sm:mt-5 items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm flex-shrink-0"
@@ -674,7 +671,7 @@ export default function Incidencias() {
         />
       )}
 
-      {canCreateIncident && (
+      {canCreateIncident && tab === 'kanban' && (
         <button
           onClick={() => setIsModalOpen(true)}
           className="fixed bottom-6 right-6 z-50 sm:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full shadow-xl flex items-center justify-center text-white transition-transform active:scale-95"

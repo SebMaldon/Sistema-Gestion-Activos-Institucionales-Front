@@ -36,25 +36,6 @@ export const GET_USUARIOS = gql`
   }
 `;
 
-export const GET_ROTACIONES = gql`
-  query GetRotaciones($estatus: Boolean, $id_unidad: Int) {
-    rotaciones(estatus: $estatus, id_unidad: $id_unidad) {
-      id_rotacion
-      id_usuario
-      id_unidad
-      estatus
-      posicion
-      es_turno_actual
-      usuario {
-        id_usuario
-        nombre_completo
-        matricula
-        correo_electronico
-      }
-    }
-  }
-`;
-
 export const GET_ROLES = gql`
   query GetRoles {
     roles { id_rol nombre_rol }
@@ -64,20 +45,6 @@ export const GET_ROLES = gql`
 export const GET_UNIDADES = gql`
   query GetUnidades {
     unidades { id_unidad nombre no_ref clave }
-  }
-`;
-
-export const GET_USUARIOS_SIN_ROTACION = gql`
-  query GetUsuariosSinRotacion($id_unidad: Int, $pagination: PaginationInput) {
-    usuarios(estatus: true, id_unidad: $id_unidad, pagination: $pagination) {
-      edges {
-        node {
-          id_usuario
-          nombre_completo
-          matricula
-        }
-      }
-    }
   }
 `;
 
@@ -146,40 +113,5 @@ export const DELETE_USUARIO = gql`
 export const RESET_PASSWORD_ADMIN = gql`
   mutation ResetPasswordAdmin($id_usuario_target: ID!, $adminPassword: String!) {
     resetPasswordAdmin(id_usuario_target: $id_usuario_target, adminPassword: $adminPassword)
-  }
-`;
-
-// ─── ROTACIÓN MUTATIONS ───────────────────────────────────────────────────────
-
-export const CREATE_ROTACION = gql`
-  mutation CreateRotacion($id_usuario: Int!, $id_unidad: Int!) {
-    createRotacion(id_usuario: $id_usuario, id_unidad: $id_unidad) {
-      id_rotacion id_usuario id_unidad estatus posicion es_turno_actual
-      usuario { id_usuario nombre_completo matricula correo_electronico }
-    }
-  }
-`;
-
-export const UPDATE_ROTACION_ESTATUS = gql`
-  mutation UpdateRotacionEstatus($id_rotacion: ID!, $estatus: Boolean!) {
-    updateRotacionEstatus(id_rotacion: $id_rotacion, estatus: $estatus) {
-      id_rotacion id_usuario id_unidad estatus posicion es_turno_actual
-      usuario { id_usuario nombre_completo matricula }
-    }
-  }
-`;
-
-export const REORDENAR_ROTACION = gql`
-  mutation ReordenarRotacion($id_unidad: Int!, $orden: [Int!]!) {
-    reordenarRotacion(id_unidad: $id_unidad, orden: $orden) {
-      id_rotacion id_usuario id_unidad estatus posicion es_turno_actual
-      usuario { id_usuario nombre_completo matricula }
-    }
-  }
-`;
-
-export const DELETE_ROTACION = gql`
-  mutation DeleteRotacion($id_rotacion: ID!) {
-    deleteRotacion(id_rotacion: $id_rotacion)
   }
 `;

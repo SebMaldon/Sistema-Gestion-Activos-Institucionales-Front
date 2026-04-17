@@ -8,11 +8,7 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
 
   if (!isOpen || !incidencia) return null;
 
-  const pBadge = 
-    incidencia.prioridad === 'Baja' ? 'bg-blue-100 text-blue-700' :
-    incidencia.prioridad === 'Media' ? 'bg-yellow-100 text-yellow-700' :
-    incidencia.prioridad === 'Alta' ? 'bg-orange-100 text-orange-700' :
-    incidencia.prioridad === 'Crítica' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700';
+
 
   const eBadge =
     incidencia.estatus === 'Resuelto' ? 'bg-green-100 text-green-700' :
@@ -34,9 +30,6 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                 Detalles de Incidencia 
                 <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${eBadge}`}>
                   {incidencia.estatus}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${pBadge}`}>
-                  {incidencia.prioridad || 'Media'}
                 </span>
               </h2>
               <p className="text-sm text-gray-500">ID: {incidencia.id} — Creada el {incidencia.fecha} a las {incidencia.horaCreacion || '--:--'}</p>
@@ -65,6 +58,14 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                     <span className="font-semibold text-gray-900">{incidencia.numSerie}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Alias:</span>
+                    <span className="font-semibold text-blue-600">{incidencia.alias || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Requerimiento:</span>
+                    <span className="font-semibold text-gray-900">{incidencia.requerimiento || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Equipo:</span>
                     <span className="font-semibold text-gray-900 text-right max-w-[200px] truncate" title={incidencia.equipo}>{incidencia.equipo}</span>
                   </div>
@@ -83,18 +84,8 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                   <Users size={16} className="text-purple-500" /> Personal Involucrado
                 </h3>
                 <div className="space-y-4 text-sm bg-gray-50/50 p-3 rounded-lg">
-                  <div>
-                    <span className="block text-xs font-semibold text-gray-500 uppercase mb-0.5">Reportó falla</span>
-                    <span className="font-medium text-gray-800 flex items-center gap-1.5">
-                      <User size={14} className="text-gray-400" /> {incidencia.reportadoPor || 'No registrado'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-semibold text-gray-500 uppercase mb-0.5">Técnico Asignado</span>
-                    <span className="font-medium text-gray-800 flex items-center gap-1.5">
-                      <Wrench size={14} className="text-gray-400" /> {incidencia.tecnico || 'Sin asignar'}
-                    </span>
-                  </div>
+
+
                   <div>
                     <span className="block text-xs font-semibold text-gray-500 uppercase mb-0.5">Registrado en sistema por</span>
                     <span className="font-medium text-gray-800">

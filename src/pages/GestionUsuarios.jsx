@@ -4,13 +4,12 @@ import { gqlClient } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import {
-  GET_USUARIOS, GET_ROTACIONES, GET_ROLES, GET_UNIDADES, GET_USUARIOS_SIN_ROTACION,
+  GET_USUARIOS, GET_ROLES, GET_UNIDADES,
   CREATE_USUARIO, UPDATE_USUARIO, DELETE_USUARIO, RESET_PASSWORD_ADMIN,
-  CREATE_ROTACION, UPDATE_ROTACION_ESTATUS, REORDENAR_ROTACION, DELETE_ROTACION,
 } from '../api/usuarios.queries';
 import {
-  Users, Plus, Edit, UserX, Search, Shield, RefreshCw,
-  ChevronLeft, ChevronRight, RotateCcw, ArrowUp, ArrowDown,
+  Users, Plus, Edit, UserX, Search, RefreshCw,
+  ChevronLeft, ChevronRight, RotateCcw,
   Trash2, UserCheck, UserMinus, X, Eye, EyeOff, Copy, CheckCircle,
 } from 'lucide-react';
 
@@ -400,239 +399,7 @@ function ConfirmDesactivarModal({ usuario, onClose }) {
   );
 }
 
-// ─── Panel de Rotación ────────────────────────────────────────────────────────
-function PanelRotacion({ id_unidad, unidades }) {
-  const qc = useQueryClient();
-  const { showToast } = useApp();
-  const [unidadSel, setUnidadSel] = useState(id_unidad ?? '');
-  const [showAgregar, setShowAgregar] = useState(false);
-  const [usuarioAgregar, setUsuarioAgregar] = useState('');
-
-  const { data: rotData, isLoading } = useQuery({
-    queryKey: ['rotaciones', unidadSel],
-    queryFn: () => gqlClient.request(GET_ROTACIONES, unidadSel ? { id_unidad: parseInt(unidadSel) } : {}),
-    enabled: true,
-    select: (d) => d.rotaciones ?? [],
-  });
-
-  const { data: usuariosUnidad } = useQuery({
-    queryKey: ['usuarios-sin-rotacion', unidadSel],
-    queryFn: () => gqlClient.request(GET_USUARIOS_SIN_ROTACION, unidadSel ? { id_unidad: parseInt(unidadSel) } : {}),
-    enabled: showAgregar,
-    select: (d) => d.usuarios?.edges?.map(e => e.node) ?? [],
-  });
-
-  const cola = rotData ?? [];
-  const enRotacion = new Set(cola.map(r => r.id_usuario));
-  const disponibles = (usuariosUnidad ?? []).filter(u => !enRotacion.has(u.id_usuario));
-
-  const toggleEstatus = useMutation({
-    mutationFn: (vars) => gqlClient.request(UPDATE_ROTACION_ESTATUS, vars),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rotaciones', unidadSel] }),
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error', 'error'),
-  });
-
-  const reordenar = useMutation({
-    mutationFn: (vars) => gqlClient.request(REORDENAR_ROTACION, vars),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rotaciones', unidadSel] }),
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al reordenar', 'error'),
-  });
-
-  const createRot = useMutation({
-    mutationFn: (vars) => gqlClient.request(CREATE_ROTACION, vars),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rotaciones', unidadSel] });
-      setShowAgregar(false);
-      setUsuarioAgregar('');
-      showToast('Técnico agregado a la rotación', 'success');
-    },
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error', 'error'),
-  });
-
-  const deleteRot = useMutation({
-    mutationFn: (vars) => gqlClient.request(DELETE_ROTACION, vars),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rotaciones', unidadSel] });
-      showToast('Técnico removido de la rotación', 'warning');
-    },
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error', 'error'),
-  });
-
-  const handleMover = (idx, direccion) => {
-    const arr = [...cola];
-    const nuevoIdx = idx + direccion;
-    if (nuevoIdx < 0 || nuevoIdx >= arr.length) return;
-    [arr[idx], arr[nuevoIdx]] = [arr[nuevoIdx], arr[idx]];
-    const orden = arr.map(r => parseInt(r.id_rotacion));
-    reordenar.mutate({ id_unidad: parseInt(unidadSel) || 0, orden });
-  };
-
-  const handleAgregar = () => {
-    if (!usuarioAgregar || !unidadSel) return;
-    createRot.mutate({ id_usuario: parseInt(usuarioAgregar), id_unidad: parseInt(unidadSel) });
-  };
-
-  const turnoActual = cola.find(r => r.es_turno_actual && r.estatus);
-
-  return (
-    <div className="space-y-5">
-      {/* Selector de unidad */}
-      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-        <label className="block text-xs font-semibold text-gray-500 mb-2">Unidad Operativa</label>
-        <select
-          value={unidadSel}
-          onChange={e => setUnidadSel(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">— Todas las unidades —</option>
-          {unidades.map(u => (
-            <option key={u.id_unidad} value={u.id_unidad}>{u.nombre || u.no_ref}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Indicador de turno actual */}
-      {turnoActual && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-            style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
-            {getInitials(turnoActual.usuario?.nombre_completo)}
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">🟢 Turno Actual</p>
-            <p className="text-sm font-bold text-gray-900">{turnoActual.usuario?.nombre_completo}</p>
-            <p className="text-xs text-gray-500">Matrícula: {turnoActual.usuario?.matricula}</p>
-          </div>
-          <div className="text-right">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
-              Pos. #{turnoActual.posicion}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Lista de cola */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-          <h3 className="font-bold text-gray-900 text-sm">Cola de Rotación</h3>
-          <button
-            onClick={() => setShowAgregar(p => !p)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
-            style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}
-          >
-            <Plus size={13} /> Agregar técnico
-          </button>
-        </div>
-
-        {/* Panel agregar técnico */}
-        {showAgregar && (
-          <div className="px-5 py-3 border-b border-gray-50 bg-green-50 flex items-center gap-2">
-            <select
-              value={usuarioAgregar}
-              onChange={e => setUsuarioAgregar(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">— Seleccionar técnico —</option>
-              {disponibles.map(u => (
-                <option key={u.id_usuario} value={u.id_usuario}>
-                  {u.nombre_completo} ({u.matricula})
-                </option>
-              ))}
-            </select>
-            <button onClick={handleAgregar} disabled={!usuarioAgregar || createRot.isPending}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-green-700 hover:bg-green-800 disabled:opacity-60 transition-colors">
-              {createRot.isPending ? '...' : 'Agregar'}
-            </button>
-            <button onClick={() => { setShowAgregar(false); setUsuarioAgregar(''); }}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
-              <X size={15} />
-            </button>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="py-10 text-center text-sm text-gray-400">Cargando cola...</div>
-        ) : cola.length === 0 ? (
-          <div className="py-10 text-center">
-            <RotateCcw size={32} className="mx-auto text-gray-200 mb-2" />
-            <p className="text-sm text-gray-400">Sin técnicos en la rotación</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {cola.map((r, idx) => (
-              <div
-                key={r.id_rotacion}
-                className={`flex items-center gap-3 px-5 py-3.5 transition-colors ${r.es_turno_actual ? 'bg-green-50' : 'hover:bg-gray-50'}`}
-              >
-                {/* Número de posición */}
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${r.es_turno_actual ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                  {r.posicion}
-                </div>
-
-                {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${!r.estatus && 'opacity-40'}`}
-                  style={{ background: avatarColor(r.id_usuario) }}>
-                  {getInitials(r.usuario?.nombre_completo)}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate ${!r.estatus && 'text-gray-400 line-through'}`}>
-                    {r.usuario?.nombre_completo}
-                  </p>
-                  <p className="text-xs text-gray-400">{r.usuario?.matricula}</p>
-                </div>
-
-                {/* Estatus badge */}
-                {r.es_turno_actual && r.estatus && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800 flex-shrink-0">
-                    EN TURNO
-                  </span>
-                )}
-                {!r.estatus && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">
-                    INACTIVO
-                  </span>
-                )}
-
-                {/* Acciones */}
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => handleMover(idx, -1)} disabled={idx === 0 || reordenar.isPending}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 transition-colors"
-                    title="Subir">
-                    <ArrowUp size={13} />
-                  </button>
-                  <button onClick={() => handleMover(idx, 1)} disabled={idx === cola.length - 1 || reordenar.isPending}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30 transition-colors"
-                    title="Bajar">
-                    <ArrowDown size={13} />
-                  </button>
-                  <button
-                    onClick={() => toggleEstatus.mutate({ id_rotacion: r.id_rotacion, estatus: !r.estatus })}
-                    disabled={toggleEstatus.isPending}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${r.estatus ? 'text-amber-500 hover:bg-amber-50' : 'text-green-600 hover:bg-green-50'} disabled:opacity-40`}
-                    title={r.estatus ? 'Desactivar de rotación' : 'Activar en rotación'}>
-                    {r.estatus ? <UserMinus size={13} /> : <UserCheck size={13} />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`¿Eliminar a ${r.usuario?.nombre_completo} de la rotación?`))
-                        deleteRot.mutate({ id_rotacion: r.id_rotacion });
-                    }}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors" title="Eliminar de rotación">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
+// Componente principal ─────────────────────────────────────────────────────
 export default function GestionUsuarios() {
   const { showToast } = useApp();
   const usuario = useAuthStore(s => s.usuario);
@@ -730,7 +497,7 @@ export default function GestionUsuarios() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
-          <p className="text-sm text-gray-500 mt-1">Administración de accesos, roles y cola de rotación</p>
+          <p className="text-sm text-gray-500 mt-1">Administración de accesos y roles</p>
         </div>
         {isAdmin && (
           <button
@@ -743,28 +510,8 @@ export default function GestionUsuarios() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {[
-          { id: 'usuarios', label: 'Usuarios', icon: Users },
-          { id: 'rotacion', label: 'Rotación', icon: RotateCcw },
-        ].map(t => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <Icon size={15} /> {t.label}
-            </button>
-          );
-        })}
-      </div>
-
       {/* ── TAB: USUARIOS ──────────────────────────────────────────────────── */}
-      {tab === 'usuarios' && (
-        <div className="space-y-5">
+      <div className="space-y-5">
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             <StatCard label="Totales" val={totalCount} color="#006341" bg="#dcfce7" />
@@ -954,15 +701,7 @@ export default function GestionUsuarios() {
             </div>
           )}
         </div>
-      )}
 
-      {/* ── TAB: ROTACIÓN ──────────────────────────────────────────────────── */}
-      {tab === 'rotacion' && (
-        <PanelRotacion
-          id_unidad={usuario?.id_unidad}
-          unidades={unidades}
-        />
-      )}
 
       {/* ── MODALES ──────────────────────────────────────────────────────── */}
       {modalCrear && (

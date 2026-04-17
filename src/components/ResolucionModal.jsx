@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, Loader2, Users } from 'lucide-react';
-import { useRotacionesPorUnidad, useUsuariosActivos } from '../hooks/useIncidencias';
+import { useUsuariosActivos } from '../hooks/useIncidencias';
 
 /**
  * ResolucionModal
@@ -17,24 +17,13 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
   const [idUsuarioResuelve, setIdUsuarioResuelve] = useState('');
   const [isSaving, setIsSaving]             = useState(false);
 
-  // Obtener id_unidad del bien para consultar la rotación
-  const idUnidad = incidencia?._raw?.bien?.unidad?.id_unidad ?? null;
-
-  // Técnicos en rotación para esa unidad
-  const { data: rotaciones = [], isLoading: loadingRot } = useRotacionesPorUnidad(idUnidad);
-
-  // Fallback: todos los usuarios activos si no hay rotación en esa unidad
+  // Todos los usuarios activos
   const { data: todosUsuarios = [], isLoading: loadingUsuarios } = useUsuariosActivos();
 
   if (!isOpen || !incidencia) return null;
 
-  // Usar técnicos de rotación; si está vacío usar todos los usuarios activos
-  const tieneRotacion = rotaciones.length > 0;
-  const loadingOpts   = tieneRotacion ? loadingRot : loadingUsuarios;
-
-  const opciones = tieneRotacion
-    ? rotaciones.map(r => ({ id: r.id_usuario, nombre: r.usuario?.nombre_completo, matricula: r.usuario?.matricula }))
-    : todosUsuarios.map(u => ({ id: u.id_usuario, nombre: u.nombre_completo, matricula: u.matricula }));
+  const loadingOpts = loadingUsuarios;
+  const opciones    = todosUsuarios.map(u => ({ id: u.id_usuario, nombre: u.nombre_completo, matricula: u.matricula }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,17 +78,13 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
               ¿Quién resolvió la incidencia? <span className="text-red-500">*</span>
             </label>
 
-            {/* Badge: si mostramos desde rotación o desde todos */}
+            {/* Badge: personal disponible */}
             <div className="flex items-center gap-2 mb-2">
               {loadingOpts ? (
                 <span className="text-xs text-gray-400 flex items-center gap-1"><Loader2 size={11} className="animate-spin" /> Cargando personal...</span>
-              ) : tieneRotacion ? (
-                <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full font-medium">
-                  Personal en rotación para esta unidad
-                </span>
               ) : (
-                <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                  Sin rotación configurada — mostrando todos los usuarios
+                <span className="text-xs text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                  Seleccione al personal técnico que atendió el reporte
                 </span>
               )}
             </div>
