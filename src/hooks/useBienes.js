@@ -50,11 +50,11 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           // — Categoría + regla de capitalización
           //   Un bien es Capitalizable si:
           //     1. La categoría tiene es_capitalizable = true, Y
-          //     2. El bien tiene núm. de serie registrado (num_serie no nulo/vacío).
+          //     2. El bien tiene número de inventario registrado (num_inv no nulo/vacío).
           //   Si falta alguna condición se clasifica como No Capitalizable.
           categoria: node.categoria,
-          esCapitalizable: !!(node.categoria?.es_capitalizable && node.num_serie),
-          tipo: (node.categoria?.es_capitalizable && node.num_serie) ? 'Capitalizable' : 'No Capitalizable',
+          esCapitalizable: !!(node.categoria?.es_capitalizable && node.num_inv),
+          tipo: (node.categoria?.es_capitalizable && node.num_inv) ? 'Capitalizable' : 'No Capitalizable',
 
           // — Especificaciones TI (solo si aplica)
           especificacionTI: node.especificacionTI || null,
