@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, Calendar, User, Users, FileText, CheckCircle, Info, Wrench, Monitor, Building2, AlignLeft, Send, Activity } from 'lucide-react';
 import { useNotasIncidencia } from '../hooks/useIncidencias';
+import { parseServerDate } from '../lib/utils';
 
 export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) {
   // Cargar notas de la incidencia (el hook maneja enabled internamente si el id es null)
@@ -135,12 +136,10 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                         <Calendar size={13} className="text-gray-400" />
                         <span className="font-semibold text-gray-500 mr-1">Fecha:</span>
                         <span className="font-medium">
-                          {incidencia._raw?.fecha_resolucion 
-                            ? new Date(incidencia._raw.fecha_resolucion).toLocaleString('es-MX', {
-                                dateStyle: 'long',
-                                timeStyle: 'short'
-                              }) 
-                            : 'Fecha no registrada'}
+                          {(() => {
+                            const d = parseServerDate(incidencia._raw?.fecha_resolucion);
+                            return d ? d.toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' }) : 'Fecha no registrada';
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -176,7 +175,10 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                               <User size={10} /> {n.usuarioAutor?.nombre_completo || 'Sistema'}
                             </span>
                             <span className="flex items-center gap-1 text-gray-400">
-                              <Clock size={10} /> {fecha}
+                              <Clock size={10} /> {(() => {
+                                const d = parseServerDate(n.fecha_creacion);
+                                return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '--:--';
+                              })()}
                             </span>
                           </div>
                         </div>

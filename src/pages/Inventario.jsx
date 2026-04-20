@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { useBienes } from '../hooks/useBienes';
@@ -17,6 +17,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION } from '../api/inventario.queries';
+import { formatDate, formatDateTime } from '../lib/utils';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_MAESTRO  = 2;
@@ -27,14 +28,6 @@ const CATEGORIAS_TI = [1, 3];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(v) { return v || '—'; }
-function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-function fmtDateTime(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 // ─── Badge de Estatus ─────────────────────────────────────────────────────────
 function EstatusBadge({ estatus }) {
@@ -596,8 +589,8 @@ export default function Inventario() {
               <InfoField icon={<Shield size={14}/>}   label="Clave Presupuestal" value={fmt(modalFicha.clavePresupuestal)} mono />
               <InfoField icon={<MapPin size={14}/>}   label="Ubicación"          value={fmt(modalFicha.ubicacion)} />
               <InfoField icon={<User size={14}/>}     label="En Resguardo de"    value={fmt(modalFicha.resguardo)} />
-              <InfoField icon={<Calendar size={14}/>} label="Fecha Adquisición"  value={fmtDate(modalFicha.fechaAdquisicion)} />
-              <InfoField icon={<Calendar size={14}/>} label="Última Actualización" value={fmtDateTime(modalFicha.fechaActualizacion)} />
+              <InfoField icon={<Calendar size={14}/>} label="Fecha Adquisición"  value={formatDate(modalFicha.fechaAdquisicion)} />
+              <InfoField icon={<Calendar size={14}/>} label="Última Actualización" value={formatDateTime(modalFicha.fechaActualizacion)} />
               <InfoField icon={<Package size={14}/>}  label="Cantidad"           value={modalFicha.cantidad} />
             </div>
 

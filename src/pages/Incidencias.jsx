@@ -23,6 +23,7 @@ import {
   useDeleteIncidencia,
   mapIncidenciaNode,
 } from '../hooks/useIncidencias';
+import { parseServerDate } from '../lib/utils';
 
 // ROLES.ADMIN=1 → Maestro (edita+elimina), ROLES.SUPERVISOR=2 → Admin (edita), ROLES.USUARIO=3 → visualiza
 
@@ -36,7 +37,7 @@ const COLUMNS = [
 
 // ─── NotasPanel: carga notas solo cuando la tarjeta se expande ────────────────
 // Al montar (expanded=true) dispara la query. Si ya está en caché, no re-fetcha.
-const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, resolucion }) {
+const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, resolucion, fechaResolucion }) {
   const { data: notas = [], isLoading } = useNotasIncidencia(incidenciaId);
 
   return (
@@ -48,9 +49,14 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
       ) : estatus === 'Resuelto' ? (
         resolucion ? (
           <div className="bg-green-50 rounded-lg p-2.5 border border-green-100">
-            <p className="text-green-600 font-medium text-xs mb-2 flex items-center gap-1.5">
-              <CheckCircle size={12} /> Detalles de Resolución
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-green-600 font-medium text-xs flex items-center gap-1.5">
+                <CheckCircle size={12} /> Detalles de Resolución
+              </p>
+              {fechaResolucion && (
+                <span className="text-[10px] text-green-500 font-semibold">{fechaResolucion}</span>
+              )}
+            </div>
             <p className="text-green-900 leading-relaxed whitespace-pre-wrap text-xs break-words">{resolucion}</p>
           </div>
         ) : (
@@ -67,9 +73,10 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
                 <p className="text-amber-900 leading-relaxed whitespace-pre-wrap text-xs break-words">{nota.contenido_nota}</p>
                 <p className="text-amber-500 mt-0.5 text-xs">
                   — {nota.usuarioAutor?.nombre_completo || 'Sistema'} ·{' '}
-                  {nota.fecha_creacion
-                    ? new Date(nota.fecha_creacion).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
-                    : ''}
+                  {(() => {
+                    const d = parseServerDate(nota.fecha_creacion);
+                    return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '';
+                  })()}
                 </p>
               </div>
             ))}
@@ -228,7 +235,13 @@ const IncidenciaCard = memo(function IncidenciaCard({
           </div>
 
           {/* Notas cargadas lazily cuando se expande */}
-          <NotasPanel incidenciaId={inc.id} estatus={inc.estatus} onAddNota={onAddNota} resolucion={inc.resolucion} />
+          <NotasPanel 
+            incidenciaId={inc.id} 
+            estatus={inc.estatus} 
+            onAddNota={onAddNota} 
+            resolucion={inc.resolucion} 
+            fechaResolucion={inc.fechaResolucion} 
+          />
 
           {/* Botones de cambio de estatus */}
           {canEdit && inc.estatus !== 'Resuelto' && (
@@ -350,7 +363,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
                   <td className="px-4 py-3 text-gray-700">{inc.requerimiento || '—'}</td>
                   <td className="px-4 py-3 text-gray-600 font-medium">{inc.fecha}</td>
                   <td className="px-4 py-3 text-green-700 font-medium">
-                    {inc.fechaResolucion ? new Date(inc.fechaResolucion).toLocaleDateString('es-MX') : '—'}
+                    {inc.fechaResolucion || '—'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-2">

@@ -19,6 +19,8 @@ import {
 } from '../api/incidencias.queries';
 
 
+import { parseServerDate } from '../lib/utils';
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Mapea un nodo de la API al shape que usa la UI del Kanban */
@@ -39,36 +41,22 @@ export function mapIncidenciaNode(node) {
     alias: node.alias || '',
     requerimiento: node.requerimiento || '',
     fecha: (() => {
-      if (!node.fecha_reporte) return '';
-      let str = node.fecha_reporte;
-      // Si el servidor envía "YYYY-MM-DD HH:mm:ss" sin zona, JS lo toma como local.
-      // SQL Server suele guardarlo en UTC, así que forzamos la 'Z' si falta.
-      if (typeof str === 'string' && !str.includes('Z') && !str.includes('+')) {
-        str = str.replace(' ', 'T') + 'Z';
-      }
-      return new Date(str).toLocaleDateString('es-MX');
+      const d = parseServerDate(node.fecha_reporte);
+      return d ? d.toLocaleDateString('es-MX') : '';
     })(),
     horaCreacion: (() => {
-      if (!node.fecha_reporte) return '';
-      let str = node.fecha_reporte;
-      if (typeof str === 'string' && !str.includes('Z') && !str.includes('+')) {
-        str = str.replace(' ', 'T') + 'Z';
-      }
-      return new Date(str).toLocaleTimeString('es-MX', {
+      const d = parseServerDate(node.fecha_reporte);
+      return d ? d.toLocaleTimeString('es-MX', {
         hour: '2-digit', minute: '2-digit', hour12: true
-      });
+      }) : '';
     })(),
     generadoPor: node.usuarioGeneraReporte?.nombre_completo || '',
     matriculaGenera: node.usuarioGeneraReporte?.matricula || '',
     tecnico: node.usuarioResuelve?.nombre_completo || 'Sin asignar',
     resolucion: node.resolucion_textual || '',
     fechaResolucion: (() => {
-      if (!node.fecha_resolucion) return null;
-      let str = node.fecha_resolucion;
-      if (typeof str === 'string' && !str.includes('Z') && !str.includes('+')) {
-        str = str.replace(' ', 'T') + 'Z';
-      }
-      return str; // Devolvemos el string normalizado o el objeto date
+      const d = parseServerDate(node.fecha_resolucion);
+      return d ? d.toLocaleDateString('es-MX') : null; 
     })(),
     notas: node.notas || [],
     _raw: node, // nodo original por si se necesita

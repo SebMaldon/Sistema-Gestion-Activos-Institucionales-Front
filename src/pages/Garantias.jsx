@@ -16,6 +16,7 @@ import {
 import {
   ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box
 } from 'lucide-react';
+import { formatDate } from '../lib/utils';
 
 // ─── Componentes reusables de vista ──────────────────────────────────────────
 
@@ -535,10 +536,10 @@ export default function Garantias() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col text-xs text-gray-600 gap-1">
                           <span className="flex items-center"><span className="w-12 text-gray-400 font-semibold">Inicio:</span> 
-                            {garantia.fecha_inicio ? new Date(garantia.fecha_inicio).toLocaleDateString() : 'N/D'}
+                            {formatDate(garantia.fecha_inicio)}
                           </span>
                           <span className="flex items-center"><span className="w-12 text-gray-400 font-semibold">Fin:</span> 
-                            <span className="font-semibold text-gray-800">{new Date(garantia.fecha_fin).toLocaleDateString()}</span>
+                            <span className="font-semibold text-gray-800">{formatDate(garantia.fecha_fin)}</span>
                           </span>
                       </div>
                     </td>
