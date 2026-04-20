@@ -194,7 +194,7 @@ export function useBienPorTermino(termino) {
 export function useNotasIncidencia(id_incidencia) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   return useQuery({
-    queryKey: ['notasIncidencia', id_incidencia],
+    queryKey: ['notasIncidencia', String(id_incidencia)],
     enabled: !!id_incidencia,
     queryFn: async () => {
       try {
@@ -281,7 +281,7 @@ export function useAgregarNota() {
     mutationFn: (vars) => gqlClient.request(AGREGAR_NOTA_MUTATION, vars),
     // Solo invalida las notas de ESA incidencia, no recarga toda la lista
     onSuccess: (_, { id_incidencia }) =>
-      qc.invalidateQueries({ queryKey: ['notasIncidencia', parseInt(id_incidencia)] }),
+      qc.invalidateQueries({ queryKey: ['notasIncidencia', String(id_incidencia)] }),
   });
 }
 

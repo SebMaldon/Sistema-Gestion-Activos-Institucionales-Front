@@ -36,7 +36,7 @@ const COLUMNS = [
 
 // ─── NotasPanel: carga notas solo cuando la tarjeta se expande ────────────────
 // Al montar (expanded=true) dispara la query. Si ya está en caché, no re-fetcha.
-const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota }) {
+const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, resolucion }) {
   const { data: notas = [], isLoading } = useNotasIncidencia(incidenciaId);
 
   return (
@@ -45,6 +45,19 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota }
         <div className="flex items-center gap-1.5 text-xs text-gray-400 py-1">
           <Loader2 size={12} className="animate-spin" /> Cargando notas...
         </div>
+      ) : estatus === 'Resuelto' ? (
+        resolucion ? (
+          <div className="bg-green-50 rounded-lg p-2.5 border border-green-100">
+            <p className="text-green-600 font-medium text-xs mb-2 flex items-center gap-1.5">
+              <CheckCircle size={12} /> Detalles de Resolución
+            </p>
+            <p className="text-green-900 leading-relaxed whitespace-pre-wrap text-xs break-words">{resolucion}</p>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-2.5 border border-gray-100 text-gray-500 text-center italic text-[11px]">
+            No se registraron detalles de resolución.
+          </div>
+        )
       ) : notas.length > 0 ? (
         <div className="bg-amber-50 rounded-lg p-2.5 border border-amber-100">
           <p className="text-amber-600 font-medium text-xs mb-2">Notas de Seguimiento</p>
@@ -64,7 +77,7 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota }
         </div>
       ) : null}
 
-      {estatus === 'En proceso' && (
+      {(estatus === 'En proceso' || estatus === 'Pendiente') && (
         <button
           onClick={(e) => { e.stopPropagation(); onAddNota(incidenciaId); }}
           className="w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold transition-colors"
@@ -178,7 +191,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
       </div>
 
       {/* Indicador de notas si no está expandido */}
-      {!expanded && inc.estatus === 'En proceso' && (
+      {!expanded && (inc.estatus === 'En proceso' || inc.estatus === 'Pendiente') && (
         <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-50 w-fit px-1.5 py-0.5 rounded-md">
           <AlignLeft size={10} /> Ver avances de seguimiento...
         </div>
@@ -215,7 +228,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
           </div>
 
           {/* Notas cargadas lazily cuando se expande */}
-          <NotasPanel incidenciaId={inc.id} estatus={inc.estatus} onAddNota={onAddNota} />
+          <NotasPanel incidenciaId={inc.id} estatus={inc.estatus} onAddNota={onAddNota} resolucion={inc.resolucion} />
 
           {/* Botones de cambio de estatus */}
           {canEdit && inc.estatus !== 'Resuelto' && (
