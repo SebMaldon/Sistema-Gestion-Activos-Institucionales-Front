@@ -1,10 +1,11 @@
 import { gql } from 'graphql-request';
 
-export const GET_BIEN_BY_QR = gql`
-  query GetBienByQR($qr_hash: String!) {
-    bienByQR(qr_hash: $qr_hash) {
+export const GET_BIEN_BY_TERMINO = gql`
+  query GetBienByTermino($termino: String!) {
+    bienByTermino(termino: $termino) {
       id_bien
       num_serie
+      num_inv
       qr_hash
       estatus_operativo
       cantidad
@@ -21,10 +22,15 @@ export const GET_BIEN_BY_QR = gql`
       unidad {
         nombre
       }
+      ubicacion {
+        id_ubicacion
+        nombre_ubicacion
+      }
       inmueble {
         nombre_ubicacion
       }
       usuarioResguardo {
+        id_usuario
         nombre_completo
         matricula
       }
@@ -46,6 +52,9 @@ export const GET_BIEN_BY_QR = gql`
   }
 `;
 
+// Alias para compatibilidad con el escáner USB/QR
+export const GET_BIEN_BY_QR = GET_BIEN_BY_TERMINO;
+
 export const UPDATE_BIEN = gql`
   mutation UpdateBien(
     $id_bien: ID!
@@ -56,6 +65,7 @@ export const UPDATE_BIEN = gql`
     $estatus_operativo: String
     $clave_inmueble: String
     $id_usuario_resguardo: Int
+    $id_ubicacion: Int
     $fecha_adquisicion: Date
   ) {
     updateBien(
@@ -67,6 +77,7 @@ export const UPDATE_BIEN = gql`
       estatus_operativo: $estatus_operativo
       clave_inmueble: $clave_inmueble
       id_usuario_resguardo: $id_usuario_resguardo
+      id_ubicacion: $id_ubicacion
       fecha_adquisicion: $fecha_adquisicion
     ) {
       id_bien

@@ -38,23 +38,27 @@ function StatCard({ label, val, color, bg }) {
   );
 }
 
-function ModalOverlay({ children, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+import { createPortal } from 'react-dom';
+
+function ModalOverlay({ children, onClose, wide = false }) {
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" onMouseDown={onClose}>
+      <div className="absolute inset-0 bg-black/50 fade-in" />
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] fade-in`}
+        onMouseDown={e => e.stopPropagation()}
         onClick={e => e.stopPropagation()}
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 function ModalHeader({ title, onClose }) {
   return (
-    <div className="flex items-center justify-between p-5 border-b border-gray-100">
+    <div className="flex items-center justify-between p-5 sm:px-6 border-b border-gray-100 flex-shrink-0">
       <h2 className="font-bold text-gray-900 text-lg">{title}</h2>
       <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
         <X size={18} />
@@ -136,9 +140,9 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
   const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
   return (
-    <ModalOverlay onClose={onClose}>
+    <ModalOverlay onClose={onClose} wide>
       <ModalHeader title={isEdit ? 'Editar Usuario' : 'Nuevo Usuario'} onClose={onClose} />
-      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Matrícula *</label>
@@ -233,7 +237,7 @@ function ResetPasswordModal({ usuario, onClose }) {
   return (
     <ModalOverlay onClose={onClose}>
       <ModalHeader title="Resetear Contraseña" onClose={onClose} />
-      <div className="p-5 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
         {/* Info del usuario */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
@@ -360,7 +364,7 @@ function ConfirmDesactivarModal({ usuario, onClose }) {
   return (
     <ModalOverlay onClose={onClose}>
       <ModalHeader title="Confirmar Desactivación" onClose={onClose} />
-      <div className="p-5 space-y-4">
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
           <strong>¿Desactivar a {usuario.nombre_completo}?</strong>
           <p className="mt-1 text-xs text-red-500">

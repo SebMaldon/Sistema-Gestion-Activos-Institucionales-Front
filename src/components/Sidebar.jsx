@@ -1,56 +1,66 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
+import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Package, AlertTriangle, ArrowLeftRight,
   QrCode, Users, Settings, ShieldCheck, LogOut, ChevronRight,
   Building2, ClipboardList, X
 } from 'lucide-react';
 
-// Menú por id_rol real del backend: 1=Admin, 2=Supervisor, 3=Usuario
+// ─── 1 = Administrador,  2 = Maestro,  3 = Usuario Estándar, 4 = Sin Acceso ──
 const NAV_BY_ROL = {
   1: [ // Admin / SUPERADMIN
-    { id: 'dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
-    { id: 'inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
-    { id: 'incidencias',   label: 'Incidencias y Garantías', icon: AlertTriangle,   group: 'Gestión' },
-    { id: 'movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Gestión' },
-    { id: 'escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
-    { id: 'usuarios',      label: 'Gestión de Usuarios',     icon: Users,           group: 'Sistema' },
-    { id: 'auditoria',     label: 'Bitácora de Auditoría',   icon: ShieldCheck,     group: 'Sistema' },
-    { id: 'configuracion', label: 'Configuración',           icon: Settings,        group: 'Sistema' },
+    { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
+    { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
+    { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Gestión' },
+    { path: '/garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Gestión' },
+    { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Gestión' },
+    { path: '/escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
+    { path: '/usuarios',      label: 'Gestión de Usuarios',     icon: Users,           group: 'Sistema' },
+    { path: '/auditoria',     label: 'Bitácora de Auditoría',   icon: ShieldCheck,     group: 'Sistema' },
+    { path: '/configuracion', label: 'Configuración',           icon: Settings,        group: 'Sistema' },
   ],
   2: [ // Supervisor
-    { id: 'dashboard',   label: 'Panel Principal',         icon: LayoutDashboard, group: 'Administración' },
-    { id: 'inventario',  label: 'Inventario de Bienes',    icon: Package,         group: 'Administración' },
-    { id: 'incidencias', label: 'Incidencias y Garantías', icon: AlertTriangle,   group: 'Administración' },
-    { id: 'movimientos', label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Operación' },
-    { id: 'escaner',     label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
+    { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Administración' },
+    { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Administración' },
+    { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Administración' },
+    { path: '/garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Administración' },
+    { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Operación' },
+    { path: '/escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
   ],
-  3: [ // Usuario común
-    { id: 'escaner',     label: 'Escáner QR',    icon: QrCode,        group: 'Principal' },
-    { id: 'incidencias', label: 'Mis Incidencias', icon: AlertTriangle, group: 'Principal' },
+  3: [ // Usuario Estándar (solo consulta)
+    { path: '/dashboard',     label: 'Panel Principal',   icon: LayoutDashboard, group: 'Principal' },
+    { path: '/inventario',    label: 'Inventario',        icon: Package,         group: 'Consulta' },
+    { path: '/incidencias',   label: 'Mis Incidencias',   icon: AlertTriangle,   group: 'Consulta' },
+    { path: '/escaner',       label: 'Escáner QR',        icon: QrCode,          group: 'Consulta' },
   ],
+  4: [], // Sin Acceso — no debería llegar aquí
 };
 
 export default function Sidebar() {
-  const { currentPage, setCurrentPage, setSidebarOpen } = useApp();
-  const usuario  = useAuthStore((s) => s.usuario);
+  const { currentPage, setSidebarOpen } = useApp();
+  const usuario   = useAuthStore((s) => s.usuario);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate  = useNavigate();
+  const location  = useLocation();
 
   const idRol    = usuario?.id_rol ?? 3;
   const navItems = NAV_BY_ROL[idRol] ?? NAV_BY_ROL[3];
 
-  // Agrupar
+  // Nombre del rol para la etiqueta
+  const ROL_LABELS = { 1: 'Administrador', 2: 'Maestro', 3: 'Usuario Estándar', 4: 'Sin Acceso' };
+  const rolLabel = ROL_LABELS[idRol] ?? 'Usuario';
+
+  // Agrupar items por grupo
   const grouped = navItems.reduce((acc, item) => {
     if (!acc[item.group]) acc[item.group] = [];
     acc[item.group].push(item);
     return acc;
   }, {});
 
-  const handleNav = (id) => {
-    setCurrentPage(id);
+  const handleNav = (path) => {
+    navigate(path);
     setSidebarOpen(false);
   };
 
@@ -75,7 +85,7 @@ export default function Sidebar() {
             <p className="text-white font-bold text-sm leading-tight">IMSS</p>
             <p className="text-green-200 text-xs leading-tight">Gestión de Activos</p>
           </div>
-          {/* X button — only visible on mobile */}
+          {/* X solo en mobile */}
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors"
@@ -83,14 +93,16 @@ export default function Sidebar() {
             <X size={18} />
           </button>
         </div>
+
+        {/* Badge de rol */}
         <div className="mt-3 px-2 py-1 rounded text-xs text-center"
           style={{ backgroundColor: 'rgba(201,162,39,0.15)', color: '#f0c040' }}>
           <ClipboardList size={10} className="inline mr-1" />
-          Ecosistema IMSS v2.4.1
+          {rolLabel}
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navegación */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         {Object.entries(grouped).map(([group, items]) => (
           <div key={group} className="mb-5">
@@ -100,18 +112,22 @@ export default function Sidebar() {
             </p>
             {items.map((item) => {
               const Icon = item.icon;
-              const isActive = currentPage === item.id;
+              // Activo si la URL coincide con la ruta del item
+              const isActive = location.pathname === item.path;
               return (
                 <button
-                  key={item.id}
-                  onClick={() => handleNav(item.id)}
+                  key={item.path}
+                  onClick={() => handleNav(item.path)}
                   className={`sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm font-medium group
                     ${isActive
                       ? 'bg-white/15 text-white'
                       : 'text-green-100/80 hover:bg-white/10 hover:text-white'
                     }`}
                 >
-                  <Icon size={18} className={isActive ? 'text-yellow-300' : 'text-green-200/60 group-hover:text-yellow-300'} />
+                  <Icon
+                    size={18}
+                    className={isActive ? 'text-yellow-300' : 'text-green-200/60 group-hover:text-yellow-300'}
+                  />
                   <span className="flex-1 text-left">{item.label}</span>
                   {isActive && <ChevronRight size={14} className="text-yellow-300" />}
                 </button>
@@ -123,6 +139,13 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="flex-shrink-0 p-3 border-t border-white/10">
+        {/* Info del usuario */}
+        {usuario && (
+          <div className="mb-2 px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+            <p className="text-white text-xs font-semibold leading-tight truncate">{usuario.nombre_completo}</p>
+            <p className="text-green-200/60 text-xs leading-tight truncate">{usuario.matricula}</p>
+          </div>
+        )}
         <button
           id="btn-logout"
           onClick={handleLogout}

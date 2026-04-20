@@ -36,7 +36,6 @@ export default function UserSearchDropdown({ usuarios, value, onChange }) {
     };
   }, [wrapperRef, selectedUser]);
 
-  // Filtrado que evalúa nombre o matrícula, limitado a 50 resultados para evitar bloqueos del DOM
   const filteredUsers = usuarios
     .filter(u => {
       const term = searchTerm.toLowerCase();

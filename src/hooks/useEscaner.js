@@ -3,17 +3,17 @@ import { gqlClient } from '../api/client';
 import { GET_BIEN_BY_QR, UPDATE_BIEN, DELETE_BIEN, UPSERT_ESPEC_TI, CREATE_NOTA_BIEN } from '../api/escaner.queries';
 import { useAuthStore } from '../store/auth.store';
 
-export function useBienByQR(qrHash) {
+export function useBienByQR(termino) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useQuery({
-    queryKey: ['bienByQR', qrHash],
+    queryKey: ['bienByQR', termino],
     queryFn: async () => {
       try {
-        const data = await gqlClient.request(GET_BIEN_BY_QR, { qr_hash: qrHash });
-        if (!data.bienByQR) return null;
+        const data = await gqlClient.request(GET_BIEN_BY_QR, { termino });
+        if (!data.bienByTermino) return null;
         
-        const node = data.bienByQR;
+        const node = data.bienByTermino;
         return {
           id: node.id_bien,
           numSerie: node.num_serie || 'N/D',
@@ -21,14 +21,15 @@ export function useBienByQR(qrHash) {
           cantidad: node.cantidad,
           idCategoria: node.id_categoria,
           idUnidad: node.id_unidad,
-          idUsuarioResguardo: node.id_usuario_resguardo,
+          idUsuarioResguardo: node.usuarioResguardo?.id_usuario || node.id_usuario_resguardo || '',
           claveInmueble: node.clave_inmueble,
           equipo: node.modelo?.descrip_disp || node.categoria?.nombre_categoria || 'Sin especificar',
           resguardo: node.usuarioResguardo?.nombre_completo || 'Sin resguardo',
           usuario: node.usuarioResguardo?.nombre_completo || 'N/A',
           matricula: node.usuarioResguardo?.matricula || 'N/A',
           unidad: node.unidad?.nombre || 'N/A',
-          ubicacion: node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
+          ubicacion: node.ubicacion?.nombre_ubicacion || node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
+          idUbicacion: node.ubicacion?.id_ubicacion || '',
           estatus: node.estatus_operativo || 'Activo',
           actualizacion: node.fecha_actualizacion ? new Date(isNaN(Number(node.fecha_actualizacion)) ? node.fecha_actualizacion : Number(node.fecha_actualizacion)).toLocaleString('es-MX') : 'N/A',
           adquisicion: node.fecha_adquisicion ? new Date(isNaN(Number(node.fecha_adquisicion)) ? node.fecha_adquisicion : Number(node.fecha_adquisicion)).toISOString().split('T')[0] : '',
@@ -54,7 +55,7 @@ export function useBienByQR(qrHash) {
         throw error;
       }
     },
-    enabled: !!qrHash, // Run only when input is present
+    enabled: !!termino, // Run only when input is present
     retry: false,
   });
 }
