@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+﻿import React, { useState, useMemo, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { useBienes } from '../hooks/useBienes';
@@ -61,6 +61,7 @@ const FORM_EMPTY = {
   id_unidad_medida: '',
   id_unidad: '',
   id_ubicacion: '',
+  num_serie: '',
   num_inv: '',
   cantidad: 1,
   estatus_operativo: 'ACTIVO',
@@ -197,6 +198,7 @@ export default function Inventario() {
       id_unidad_medida: bien.idUnidadMedida ?? '',
       id_unidad: bien.idUnidad ?? '',
       id_ubicacion: bien.id_ubicacion ?? '',
+      num_serie: bien.numSerie === 'N/D' ? '' : (bien.numSerie ?? ''),
       num_inv: bien.numInv === 'N/D' ? '' : (bien.numInv ?? ''),
       cantidad: bien.cantidad ?? 1,
       estatus_operativo: bien.estatusOperativo ?? 'ACTIVO',
@@ -229,10 +231,35 @@ export default function Inventario() {
     setFormErrors({});
   }, []);
 
+  // ID de la unidad de medida "Pieza" en Cat_UnidadesMedida
+  const ID_UNIDAD_PIEZA = useMemo(() => {
+    const pza = (catalogos?.unidadesMedida ?? []).find(
+      (u) => u.abreviatura === 'PZA' || u.nombre_unidad?.toLowerCase() === 'pieza'
+    );
+    return pza ? String(pza.id_unidad_medida) : '1';
+  }, [catalogos?.unidadesMedida]);
+
+  // ¿La categoría seleccionada maneja número de serie individual? (→ cantidad forzada a 1)
+  const categoriaSeleccionada = useMemo(() =>
+    (catalogos?.categorias ?? []).find((c) => String(c.id_categoria) === String(form.id_categoria)),
+    [catalogos?.categorias, form.id_categoria]
+  );
+  const esSerie = categoriaSeleccionada?.maneja_serie_individual ?? false;
+
   // ── Detectar categoría TI al cambiar en el formulario ─────────────────────
   const handleCatChange = (val) => {
-    setForm((f) => ({ ...f, id_categoria: val }));
-    setShowTI(CATEGORIAS_TI.includes(Number(val)));
+    const esTI = CATEGORIAS_TI.includes(Number(val));
+    const catInfo = (catalogos?.categorias ?? []).find((c) => String(c.id_categoria) === String(val));
+    const esSerieCat = catInfo?.maneja_serie_individual ?? false;
+    setForm((f) => ({
+      ...f,
+      id_categoria: val,
+      // Si es TI forzar Pieza automáticamente
+      id_unidad_medida: esTI ? ID_UNIDAD_PIEZA : f.id_unidad_medida,
+      // Si maneja serie individual → cantidad siempre 1
+      cantidad: esSerieCat ? 1 : f.cantidad,
+    }));
+    setShowTI(esTI);
   };
 
   // ── Validación básica ──────────────────────────────────────────────────────
@@ -252,8 +279,10 @@ export default function Inventario() {
       id_unidad_medida:  Number(form.id_unidad_medida),
       id_unidad:         form.id_unidad ? Number(form.id_unidad) : null,
       id_ubicacion:      form.id_ubicacion ? Number(form.id_ubicacion) : null,
+      num_serie:         form.num_serie || null,
       num_inv:           form.num_inv || null,
-      cantidad:          Number(form.cantidad) || 1,
+      // Si la categoría maneja serie individual siempre es 1
+      cantidad:          esSerie ? 1 : (Number(form.cantidad) || 1),
       estatus_operativo: form.estatus_operativo,
       clave_inmueble:    form.clave_inmueble || null,
       clave_inmueble_ref: form.clave_inmueble_ref || null,
@@ -263,10 +292,19 @@ export default function Inventario() {
     };
 
     if (modalForm === 'create') {
+      // IMPORTANTE: el callback de mutate() recibe el dato RAW de GraphQL
+      // ({ createBien: {...} }), no el dato normalizado del hook.
+      // Por eso extraemos data.createBien para obtener el id_bien.
       createBien(vars, {
-        onSuccess: (bien) => {
-          if (showTI && bien?.id_bien) {
-            upsertTI({ id_bien: bien.id_bien, ...parseTI() });
+        onSuccess: (data) => {
+          const bienCreado = data?.createBien;
+          if (showTI && bienCreado?.id_bien) {
+            const tiData = parseTI();
+            // Solo guardar si hay al menos un campo TI con valor
+            const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
+            if (hayDatosTI) {
+              upsertTI({ id_bien: bienCreado.id_bien, ...tiData });
+            }
           }
         },
       });
@@ -274,7 +312,11 @@ export default function Inventario() {
       updateBien({ id_bien: modalForm.id_bien, ...vars }, {
         onSuccess: () => {
           if (showTI && modalForm.id_bien) {
-            upsertTI({ id_bien: modalForm.id_bien, ...parseTI() });
+            const tiData = parseTI();
+            const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
+            if (hayDatosTI) {
+              upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+            }
           }
         },
       });
@@ -658,15 +700,19 @@ export default function Inventario() {
                   {formErrors.id_categoria && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_categoria}</p>}
                 </div>
 
-                {/* Unidad de Medida */}
+                {/* Unidad de Medida — bloqueada a Pieza si es categoría TI */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Unidad de Medida <span className="text-red-500">*</span>
+                    {showTI && <span className="ml-2 text-xs text-blue-500 font-normal">(forzado a Pieza)</span>}
                   </label>
                   <select
                     value={form.id_unidad_medida}
-                    onChange={(e) => setForm((f) => ({ ...f, id_unidad_medida: e.target.value }))}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white ${formErrors.id_unidad_medida ? 'border-red-400' : 'border-gray-200'}`}
+                    onChange={(e) => !showTI && setForm((f) => ({ ...f, id_unidad_medida: e.target.value }))}
+                    disabled={showTI}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
+                      showTI ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'
+                    } ${formErrors.id_unidad_medida ? 'border-red-400' : 'border-gray-200'}`}
                   >
                     <option value="">Seleccionar…</option>
                     {(catalogos?.unidadesMedida ?? []).map((u) => (
@@ -674,6 +720,18 @@ export default function Inventario() {
                     ))}
                   </select>
                   {formErrors.id_unidad_medida && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_unidad_medida}</p>}
+                </div>
+
+                {/* Número de Serie — visible para todas las categorías que manejen serie individual */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Número de Serie</label>
+                  <input
+                    type="text"
+                    value={form.num_serie}
+                    onChange={(e) => setForm((f) => ({ ...f, num_serie: e.target.value }))}
+                    placeholder="Ej. SN202400001"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
                 </div>
 
                 {/* Modelo */}
@@ -717,14 +775,15 @@ export default function Inventario() {
                   </select>
                 </div>
 
-                {/* Cantidad */}
+                {/* Cantidad - bloqueada si la categoria maneja serie individual */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Cantidad</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Cantidad{esSerie && <span className="ml-2 text-xs text-blue-500 font-normal"> (forzado a 1)</span>}</label>
                   <input
                     type="number"
                     min="1"
-                    value={form.cantidad}
-                    onChange={(e) => setForm((f) => ({ ...f, cantidad: e.target.value }))}
+                    value={esSerie ? 1 : form.cantidad}
+                    onChange={(e) => !esSerie && setForm((f) => ({ ...f, cantidad: e.target.value }))}
+                    disabled={esSerie}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                 </div>

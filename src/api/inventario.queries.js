@@ -200,6 +200,7 @@ export const UPDATE_BIEN_MUTATION = gql`
     $id_unidad_medida: Int
     $id_unidad: Int
     $id_ubicacion: Int
+    $num_serie: String
     $num_inv: String
     $cantidad: Float
     $estatus_operativo: String
@@ -215,6 +216,7 @@ export const UPDATE_BIEN_MUTATION = gql`
       id_unidad_medida: $id_unidad_medida
       id_unidad: $id_unidad
       id_ubicacion: $id_ubicacion
+      num_serie: $num_serie
       num_inv: $num_inv
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
