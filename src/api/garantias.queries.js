@@ -9,8 +9,12 @@ export const GET_GARANTIAS = gql`
       id_bien
       fecha_inicio
       fecha_fin
-      proveedor
+      id_proveedor
       estado_garantia
+      proveedorObj {
+        id_proveedor
+        nombre_proveedor
+      }
       bien {
         num_serie
         num_inv
@@ -22,6 +26,15 @@ export const GET_GARANTIAS = gql`
           }
         }
       }
+    }
+  }
+`;
+
+export const GET_PROVEEDORES = gql`
+  query GetProveedores {
+    proveedores {
+      id_proveedor
+      nombre_proveedor
     }
   }
 `;
@@ -67,14 +80,14 @@ export const CREATE_GARANTIA = gql`
     $id_bien: ID!
     $fecha_inicio: Date
     $fecha_fin: Date!
-    $proveedor: String
+    $id_proveedor: Int
     $estado_garantia: String
   ) {
     createGarantia(
       id_bien: $id_bien
       fecha_inicio: $fecha_inicio
       fecha_fin: $fecha_fin
-      proveedor: $proveedor
+      id_proveedor: $id_proveedor
       estado_garantia: $estado_garantia
     ) {
       id_garantia
@@ -88,14 +101,14 @@ export const UPDATE_GARANTIA = gql`
     $id_garantia: ID!
     $fecha_inicio: Date
     $fecha_fin: Date
-    $proveedor: String
+    $id_proveedor: Int
     $estado_garantia: String
   ) {
     updateGarantia(
       id_garantia: $id_garantia
       fecha_inicio: $fecha_inicio
       fecha_fin: $fecha_fin
-      proveedor: $proveedor
+      id_proveedor: $id_proveedor
       estado_garantia: $estado_garantia
     ) {
       id_garantia
@@ -107,5 +120,14 @@ export const UPDATE_GARANTIA = gql`
 export const DELETE_GARANTIA = gql`
   mutation DeleteGarantia($id_garantia: ID!) {
     deleteGarantia(id_garantia: $id_garantia)
+  }
+`;
+
+export const CREATE_PROVEEDOR = gql`
+  mutation CreateProveedor($nombre_proveedor: String!, $informacion_contacto: String) {
+    createProveedor(nombre_proveedor: $nombre_proveedor, informacion_contacto: $informacion_contacto) {
+      id_proveedor
+      nombre_proveedor
+    }
   }
 `;

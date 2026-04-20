@@ -70,8 +70,12 @@ const BIEN_FIELDS = gql`
       id_garantia
       fecha_inicio
       fecha_fin
-      proveedor
+      id_proveedor
       estado_garantia
+      proveedorObj {
+        id_proveedor
+        nombre_proveedor
+      }
     }
   }
 `;

@@ -5,11 +5,13 @@ import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import {
   GET_GARANTIAS,
+  GET_PROVEEDORES,
   CREATE_GARANTIA,
   UPDATE_GARANTIA,
   DELETE_GARANTIA,
   GET_BIEN_BY_SERIE,
   GET_BIEN_BY_INV,
+  CREATE_PROVEEDOR,
 } from '../api/garantias.queries';
 import {
   ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box
@@ -44,7 +46,7 @@ function ModalHeader({ title, onClose }) {
 
 // ─── Modal Crear / Editar Garantía ────────────────────────────────────────────
 
-function GarantiaModal({ garantia, onClose, uniqueProveedores = [] }) {
+function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   const qc = useQueryClient();
   const { showToast } = useApp();
   const isEdit = !!garantia;
@@ -53,13 +55,16 @@ function GarantiaModal({ garantia, onClose, uniqueProveedores = [] }) {
     id_bien: garantia?.id_bien ?? '',
     fecha_inicio: garantia?.fecha_inicio ? new Date(garantia.fecha_inicio).toISOString().split('T')[0] : '',
     fecha_fin: garantia?.fecha_fin ? new Date(garantia.fecha_fin).toISOString().split('T')[0] : '',
-    proveedor: garantia?.proveedor ?? '',
+    id_proveedor: garantia?.id_proveedor ? parseInt(garantia.id_proveedor) : '',
     estado_garantia: garantia?.estado_garantia ?? 'VIGENTE',
   });
 
   const [searchValue, setSearchValue] = useState('');
   const [selectedBien, setSelectedBien] = useState(garantia?.bien ?? null);
   const [isSearching, setIsSearching] = useState(false);
+  const [isAddingProveedor, setIsAddingProveedor] = useState(false);
+  const [newProveedorName, setNewProveedorName] = useState('');
+  const [newProveedorContacto, setNewProveedorContacto] = useState('');
 
   const createMut = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
@@ -82,6 +87,28 @@ function GarantiaModal({ garantia, onClose, uniqueProveedores = [] }) {
   });
 
   const isLoading = createMut.isPending || updateMut.isPending;
+
+  const createProveedorMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_PROVEEDOR, vars),
+    onSuccess: (data) => {
+      const nuevo = data.createProveedor;
+      qc.invalidateQueries({ queryKey: ['proveedores'] });
+      setForm(p => ({ ...p, id_proveedor: nuevo.id_proveedor }));
+      setIsAddingProveedor(false);
+      setNewProveedorName('');
+      setNewProveedorContacto('');
+      showToast(`Proveedor "${nuevo.nombre_proveedor}" creado`, 'success');
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear proveedor', 'error'),
+  });
+
+  const handleCreateProveedor = () => {
+    if (!newProveedorName.trim()) return;
+    createProveedorMut.mutate({
+      nombre_proveedor: newProveedorName.trim(),
+      informacion_contacto: newProveedorContacto.trim() || null,
+    });
+  };
 
   const handleChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -126,7 +153,7 @@ function GarantiaModal({ garantia, onClose, uniqueProveedores = [] }) {
         id_garantia: garantia.id_garantia,
         fecha_inicio: form.fecha_inicio || null,
         fecha_fin: form.fecha_fin,
-        proveedor: form.proveedor || null,
+        id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
         estado_garantia: form.estado_garantia,
       });
     } else {
@@ -134,7 +161,7 @@ function GarantiaModal({ garantia, onClose, uniqueProveedores = [] }) {
         id_bien: form.id_bien,
         fecha_inicio: form.fecha_inicio || null,
         fecha_fin: form.fecha_fin,
-        proveedor: form.proveedor || null,
+        id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
         estado_garantia: form.estado_garantia,
       });
     }
@@ -217,12 +244,65 @@ function GarantiaModal({ garantia, onClose, uniqueProveedores = [] }) {
           </div>
           <div>
             <label className={labelCls}>Proveedor</label>
-            <input list="proveedores-list" className={inputCls} value={form.proveedor} onChange={e => handleChange('proveedor', e.target.value)} placeholder="Ej: HP Corporativo S.A." />
-            <datalist id="proveedores-list">
-              {uniqueProveedores.map((prov, i) => (
-                <option key={i} value={prov} />
-              ))}
-            </datalist>
+            {isAddingProveedor ? (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newProveedorName}
+                    onChange={e => setNewProveedorName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateProveedor(); } }}
+                    placeholder="Nombre del proveedor *"
+                    className="flex-1 border border-green-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateProveedor}
+                    disabled={createProveedorMut.isPending || !newProveedorName.trim()}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsAddingProveedor(false); setNewProveedorName(''); setNewProveedorContacto(''); }}
+                    className="px-3 py-2 border border-gray-200 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={newProveedorContacto}
+                  onChange={e => setNewProveedorContacto(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateProveedor(); } }}
+                  placeholder="Información de contacto (opcional): tel, email, dirección..."
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-400 text-gray-600"
+                />
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <select
+                  className={`${inputCls} flex-1`}
+                  value={form.id_proveedor}
+                  onChange={e => handleChange('id_proveedor', e.target.value)}
+                >
+                  <option value="">-- Sin proveedor --</option>
+                  {proveedores.map(p => (
+                    <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingProveedor(true)}
+                  title="Agregar nuevo proveedor"
+                  className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
+            )}
           </div>
           <div>
             <label className={labelCls}>Estado de la Garantía</label>
@@ -313,15 +393,20 @@ export default function Garantias() {
     queryFn: () => gqlClient.request(GET_GARANTIAS),
     select: d => d.garantias ?? [],
   });
-  
+
+  const { data: proveedoresData } = useQuery({
+    queryKey: ['proveedores'],
+    queryFn: () => gqlClient.request(GET_PROVEEDORES),
+    select: d => d.proveedores ?? [],
+  });
+
   const garantias = data || [];
-  
-  const uniqueProveedores = [...new Set(garantias.map(g => g.proveedor).filter(Boolean))];
+  const proveedores = proveedoresData || [];
 
   const filteredGarantias = garantias.filter(g => {
     if (!searchFilter) return true;
     const term = searchFilter.toLowerCase();
-    const proveedorMatch = g.proveedor?.toLowerCase().includes(term);
+    const proveedorMatch = g.proveedorObj?.nombre_proveedor?.toLowerCase().includes(term);
     const serieMatch = g.bien?.num_serie?.toLowerCase().includes(term);
     const invMatch = g.bien?.num_inv?.toLowerCase().includes(term);
     return proveedorMatch || serieMatch || invMatch;
@@ -458,7 +543,7 @@ export default function Garantias() {
                       </div>
                     </td>
                     <td className="px-6 py-4 font-medium text-gray-700">
-                        {garantia.proveedor || '--'}
+                        {garantia.proveedorObj?.nombre_proveedor || '--'}
                     </td>
                     <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${getEstatusStyle(garantia.estado_garantia)} shadow-sm`}>
@@ -496,8 +581,8 @@ export default function Garantias() {
         )}
       </div>
 
-      {modalCrear && <GarantiaModal onClose={() => setModalCrear(false)} uniqueProveedores={uniqueProveedores} />}
-      {modalEditar && <GarantiaModal garantia={modalEditar} onClose={() => setModalEditar(null)} uniqueProveedores={uniqueProveedores} />}
+      {modalCrear && <GarantiaModal onClose={() => setModalCrear(false)} proveedores={proveedores} />}
+      {modalEditar && <GarantiaModal garantia={modalEditar} onClose={() => setModalEditar(null)} proveedores={proveedores} />}
       {modalEliminar && <ConfirmEliminarModal garantia={modalEliminar} onClose={() => setModalEliminar(null)} />}
     </div>
   );

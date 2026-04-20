@@ -139,7 +139,6 @@ export function EditBienModal({ asset, onClose }) {
     id_unidad: asset.idUnidad || '',
     id_ubicacion: asset.idUbicacion || '',
     id_usuario_resguardo: asset.idUsuarioResguardo || '',
-    clave_inmueble: asset.claveInmueble || '',
     fecha_adquisicion: asset.adquisicion || ''
   });
 
@@ -158,7 +157,6 @@ export function EditBienModal({ asset, onClose }) {
         id_unidad: asset.idUnidad || '',
         id_ubicacion: asset.idUbicacion || '',
         id_usuario_resguardo: asset.idUsuarioResguardo || '',
-        clave_inmueble: asset.claveInmueble || '',
         fecha_adquisicion: asset.adquisicion || ''
       });
       if (asset.specs) {
@@ -241,7 +239,6 @@ export function EditBienModal({ asset, onClose }) {
           id_unidad: formData.id_unidad ? parseInt(formData.id_unidad, 10) : undefined,
           id_ubicacion: formData.id_ubicacion ? parseInt(formData.id_ubicacion, 10) : undefined,
           id_usuario_resguardo: formData.id_usuario_resguardo ? parseInt(formData.id_usuario_resguardo, 10) : undefined,
-          clave_inmueble: formData.clave_inmueble,
           fecha_adquisicion: formData.fecha_adquisicion || null
         }
       });
@@ -459,20 +456,12 @@ export function EditBienModal({ asset, onClose }) {
                     />
                   </div>
 
-                  {/* Clave Inmueble + Adquisición */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                      <label className={labelCls}>Cve. Inmueble</label>
-                      <input type="text" value={formData.clave_inmueble}
-                        onChange={e => setFormData({ ...formData, clave_inmueble: e.target.value })}
-                        className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Fecha de Adquisición</label>
-                      <input type="date" value={formData.fecha_adquisicion}
-                        onChange={e => setFormData({ ...formData, fecha_adquisicion: e.target.value })}
-                        className={inputCls} />
-                    </div>
+                  {/* Fecha de Adquisición */}
+                  <div>
+                    <label className={labelCls}>Fecha de Adquisición</label>
+                    <input type="date" value={formData.fecha_adquisicion}
+                      onChange={e => setFormData({ ...formData, fecha_adquisicion: e.target.value })}
+                      className={inputCls} />
                   </div>
 
                 </div>

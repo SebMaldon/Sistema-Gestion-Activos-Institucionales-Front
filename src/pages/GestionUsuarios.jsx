@@ -9,7 +9,7 @@ import {
 } from '../api/usuarios.queries';
 import {
   Users, Plus, Edit, UserX, Search, RefreshCw,
-  ChevronLeft, ChevronRight, RotateCcw,
+  ChevronLeft, ChevronRight, Shield,
   Trash2, UserCheck, UserMinus, X, Eye, EyeOff, Copy, CheckCircle,
 } from 'lucide-react';
 
