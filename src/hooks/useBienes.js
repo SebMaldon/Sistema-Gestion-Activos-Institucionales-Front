@@ -47,10 +47,14 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           resguardo: node.usuarioResguardo?.nombre_completo || 'Sin resguardo',
           ubicacion: node.ubicacion?.nombre_ubicacion || node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
 
-          // — Categoría
+          // — Categoría + regla de capitalización
+          //   Un bien es Capitalizable si:
+          //     1. La categoría tiene es_capitalizable = true, Y
+          //     2. El bien tiene núm. de serie registrado (num_serie no nulo/vacío).
+          //   Si falta alguna condición se clasifica como No Capitalizable.
           categoria: node.categoria,
-          esCapitalizable: node.categoria?.es_capitalizable ?? true,
-          tipo: node.categoria?.es_capitalizable ? 'Capitalizable' : 'No Capitalizable',
+          esCapitalizable: !!(node.categoria?.es_capitalizable && node.num_serie),
+          tipo: (node.categoria?.es_capitalizable && node.num_serie) ? 'Capitalizable' : 'No Capitalizable',
 
           // — Especificaciones TI (solo si aplica)
           especificacionTI: node.especificacionTI || null,
