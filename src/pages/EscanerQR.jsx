@@ -22,7 +22,8 @@ export default function EscanerQR() {
   const [notaSaved, setNotaSaved] = useState(false);
 
   const { usuario } = useAuthStore();
-  const puedeEditar = [1, 2].includes(usuario?.id_rol);
+  const puedeEditar   = [1, 2].includes(usuario?.id_rol);
+  const puedeEliminar = usuario?.id_rol === 1;
 
   const { data: foundAsset, isFetching, isError } = useBienByQR(activeHash);
   const { mutateAsync: deleteBien } = useDeleteBien();
@@ -267,14 +268,14 @@ export default function EscanerQR() {
                   ← Escanear otro
                 </button>
                 {puedeEditar && (
-                  <>
-                    <button onClick={() => setEditModalOpen(true)} className="flex-1 py-2 flex justify-center items-center gap-1.5 rounded-xl text-sm font-semibold text-amber-700 border border-amber-200 hover:bg-amber-50 transition-colors">
-                      <Edit size={14} /> Editar
-                    </button>
-                    <button onClick={handleDelete} className="flex-1 py-2 flex justify-center items-center gap-1.5 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
-                      <Trash2 size={14} /> Eliminar
-                    </button>
-                  </>
+                  <button onClick={() => setEditModalOpen(true)} className="flex-1 py-2 flex justify-center items-center gap-1.5 rounded-xl text-sm font-semibold text-amber-700 border border-amber-200 hover:bg-amber-50 transition-colors">
+                    <Edit size={14} /> Editar
+                  </button>
+                )}
+                {puedeEliminar && (
+                  <button onClick={handleDelete} className="flex-1 py-2 flex justify-center items-center gap-1.5 rounded-xl text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
+                    <Trash2 size={14} /> Eliminar
+                  </button>
                 )}
               </div>
             </div>
