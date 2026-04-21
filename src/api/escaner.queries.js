@@ -12,7 +12,7 @@ export const GET_BIEN_BY_TERMINO = gql`
       id_categoria
       id_unidad
       id_usuario_resguardo
-      clave_inmueble
+      clave_inmueble_ref
       categoria {
         nombre_categoria
       }
@@ -63,7 +63,7 @@ export const UPDATE_BIEN = gql`
     $num_serie: String
     $cantidad: Float
     $estatus_operativo: String
-    $clave_inmueble: String
+    $clave_inmueble_ref: String
     $id_usuario_resguardo: Int
     $id_ubicacion: Int
     $fecha_adquisicion: Date
@@ -75,7 +75,7 @@ export const UPDATE_BIEN = gql`
       num_serie: $num_serie
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
-      clave_inmueble: $clave_inmueble
+      clave_inmueble_ref: $clave_inmueble_ref
       id_usuario_resguardo: $id_usuario_resguardo
       id_ubicacion: $id_ubicacion
       fecha_adquisicion: $fecha_adquisicion

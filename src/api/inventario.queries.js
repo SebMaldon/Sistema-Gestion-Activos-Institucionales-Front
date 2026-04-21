@@ -9,7 +9,6 @@ const BIEN_FIELDS = gql`
     qr_hash
     cantidad
     estatus_operativo
-    clave_inmueble
     clave_inmueble_ref
     clave_presupuestal
     clave_modelo
@@ -166,7 +165,6 @@ export const CREATE_BIEN_MUTATION = gql`
     $num_inv: String
     $cantidad: Float
     $estatus_operativo: String
-    $clave_inmueble: String
     $clave_inmueble_ref: String
     $clave_modelo: String
     $id_usuario_resguardo: Int
@@ -181,7 +179,6 @@ export const CREATE_BIEN_MUTATION = gql`
       num_inv: $num_inv
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
-      clave_inmueble: $clave_inmueble
       clave_inmueble_ref: $clave_inmueble_ref
       clave_modelo: $clave_modelo
       id_usuario_resguardo: $id_usuario_resguardo
@@ -204,7 +201,6 @@ export const UPDATE_BIEN_MUTATION = gql`
     $num_inv: String
     $cantidad: Float
     $estatus_operativo: String
-    $clave_inmueble: String
     $clave_inmueble_ref: String
     $clave_modelo: String
     $id_usuario_resguardo: Int
@@ -220,7 +216,6 @@ export const UPDATE_BIEN_MUTATION = gql`
       num_inv: $num_inv
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
-      clave_inmueble: $clave_inmueble
       clave_inmueble_ref: $clave_inmueble_ref
       clave_modelo: $clave_modelo
       id_usuario_resguardo: $id_usuario_resguardo

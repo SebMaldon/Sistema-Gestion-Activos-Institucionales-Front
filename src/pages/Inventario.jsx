@@ -58,7 +58,6 @@ const FORM_EMPTY = {
   num_inv: '',
   cantidad: 1,
   estatus_operativo: 'ACTIVO',
-  clave_inmueble: '',
   clave_inmueble_ref: '',
   clave_modelo: '',
   id_usuario_resguardo: '',
@@ -195,7 +194,6 @@ export default function Inventario() {
       num_inv: bien.numInv === 'N/D' ? '' : (bien.numInv ?? ''),
       cantidad: bien.cantidad ?? 1,
       estatus_operativo: bien.estatusOperativo ?? 'ACTIVO',
-      clave_inmueble: bien.claveInmueble ?? '',
       clave_inmueble_ref: bien.claveInmuebleRef ?? '',
       clave_modelo: bien.claveModelo ?? '',
       id_usuario_resguardo: bien.idUsuarioResguardo ?? '',
@@ -277,7 +275,6 @@ export default function Inventario() {
       // Si la categoría maneja serie individual siempre es 1
       cantidad:          esSerie ? 1 : (Number(form.cantidad) || 1),
       estatus_operativo: form.estatus_operativo,
-      clave_inmueble:    form.clave_inmueble || null,
       clave_inmueble_ref: form.clave_inmueble_ref || null,
       clave_modelo:      form.clave_modelo || null,
       id_usuario_resguardo: form.id_usuario_resguardo ? Number(form.id_usuario_resguardo) : null,

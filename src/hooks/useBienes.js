@@ -31,7 +31,6 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           // — Campos editables
           cantidad: node.cantidad,
           estatusOperativo: node.estatus_operativo || 'ACTIVO',
-          claveInmueble: node.clave_inmueble,
           claveInmuebleRef: node.clave_inmueble_ref,
           claveModelo: node.clave_modelo,
           idCategoria: node.id_categoria,

@@ -22,7 +22,7 @@ export function useBienByQR(termino) {
           idCategoria: node.id_categoria,
           idUnidad: node.id_unidad,
           idUsuarioResguardo: node.usuarioResguardo?.id_usuario || node.id_usuario_resguardo || '',
-          claveInmueble: node.clave_inmueble,
+          claveInmuebleRef: node.clave_inmueble_ref,
           equipo: node.modelo?.descrip_disp || node.categoria?.nombre_categoria || 'Sin especificar',
           resguardo: node.usuarioResguardo?.nombre_completo || 'Sin resguardo',
           usuario: node.usuarioResguardo?.nombre_completo || 'N/A',
