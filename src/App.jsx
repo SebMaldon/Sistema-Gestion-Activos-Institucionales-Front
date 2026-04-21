@@ -135,19 +135,19 @@ export default function App() {
             </RoleRoute>
           } />
 
-          {/* Rutas restringidas de Sistema: Solo Admin (1) */}
+          {/* Rutas restringidas de Sistema: Solo Maestro (1) */}
           <Route path="/usuarios" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN]}>
+            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
               <AppLayout page="usuarios"><GestionUsuarios /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/auditoria" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN]}>
+            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
               <AppLayout page="auditoria"><Auditoria /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/configuracion" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN]}>
+            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
               <AppLayout page="configuracion"><Configuracion /></AppLayout>
             </RoleRoute>
           } />
