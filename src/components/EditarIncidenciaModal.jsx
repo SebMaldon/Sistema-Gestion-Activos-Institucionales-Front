@@ -75,10 +75,10 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
       await updateIncidencia.mutateAsync({
         id_incidencia: String(incidencia.id),
         id_tipo_incidencia: idTipo ? parseInt(idTipo) : undefined,
-        descripcion_falla: descripcion || undefined,
+        descripcion_falla: descripcion,
         id_unidad: unidadId ? parseInt(unidadId) : undefined,
-        alias: alias || undefined,
-        requerimiento: requerimiento || undefined,
+        alias: alias,
+        requerimiento: requerimiento,
       });
       onUpdated?.();
       onClose();
