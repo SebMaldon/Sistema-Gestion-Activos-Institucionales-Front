@@ -11,41 +11,41 @@ import {
 // ─── 1 = Maestro,  2 = Administrador,  3 = Usuario Estándar, 4 = Sin Acceso ──
 const NAV_BY_ROL = {
   1: [ // Maestro / SUPERADMIN
-    { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
-    { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
-    { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Gestión' },
-    { path: '/garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Gestión' },
-    { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Gestión' },
-    { path: '/escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
-    { path: '/usuarios',      label: 'Gestión de Usuarios',     icon: Users,           group: 'Sistema' },
-    { path: '/auditoria',     label: 'Bitácora de Auditoría',   icon: ShieldCheck,     group: 'Sistema' },
-    { path: '/configuracion', label: 'Configuración',           icon: Settings,        group: 'Sistema' },
+    { path: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, group: 'Principal' },
+    { path: '/inventario', label: 'Inventario de Bienes', icon: Package, group: 'Gestión' },
+    { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Gestión' },
+    { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Gestión' },
+    { path: '/movimientos', label: 'Traspasos y Salidas', icon: ArrowLeftRight, group: 'Gestión' },
+    { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
+    { path: '/usuarios', label: 'Gestión de Usuarios', icon: Users, group: 'Sistema' },
+    { path: '/auditoria', label: 'Bitácora de Auditoría', icon: ShieldCheck, group: 'Sistema' },
+    { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },
   ],
   2: [ // Administrador
-    { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Administración' },
-    { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Administración' },
-    { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Administración' },
-    { path: '/garantias',     label: 'Garantías',               icon: ShieldCheck,     group: 'Administración' },
-    { path: '/movimientos',   label: 'Traspasos y Salidas',     icon: ArrowLeftRight,  group: 'Operación' },
-    { path: '/escaner',       label: 'Escáner QR',              icon: QrCode,          group: 'Operación' },
+    { path: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, group: 'Principal' },
+    { path: '/inventario', label: 'Inventario de Bienes', icon: Package, group: 'Administración' },
+    { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Administración' },
+    { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Administración' },
+    { path: '/movimientos', label: 'Traspasos y Salidas', icon: ArrowLeftRight, group: 'Operación' },
+    { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
   ],
   3: [ // Usuario Estándar (solo consulta)
-    { path: '/dashboard',     label: 'Panel Principal',   icon: LayoutDashboard, group: 'Principal' },
-    { path: '/inventario',    label: 'Inventario',        icon: Package,         group: 'Consulta' },
-    { path: '/incidencias',   label: 'Mis Incidencias',   icon: AlertTriangle,   group: 'Consulta' },
-    { path: '/escaner',       label: 'Escáner QR',        icon: QrCode,          group: 'Consulta' },
+    { path: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, group: 'Principal' },
+    { path: '/inventario', label: 'Inventario', icon: Package, group: 'Consulta' },
+    { path: '/incidencias', label: 'Mis Incidencias', icon: AlertTriangle, group: 'Consulta' },
+    { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Consulta' },
   ],
   4: [], // Sin Acceso — no debería llegar aquí
 };
 
 export default function Sidebar() {
   const { currentPage, setSidebarOpen } = useApp();
-  const usuario   = useAuthStore((s) => s.usuario);
+  const usuario = useAuthStore((s) => s.usuario);
   const clearAuth = useAuthStore((s) => s.clearAuth);
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const idRol    = usuario?.id_rol ?? 3;
+  const idRol = usuario?.id_rol ?? 3;
   const navItems = NAV_BY_ROL[idRol] ?? NAV_BY_ROL[3];
 
   // Nombre del rol para la etiqueta
