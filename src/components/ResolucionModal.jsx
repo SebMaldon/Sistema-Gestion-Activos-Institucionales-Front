@@ -16,6 +16,7 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
   const [resolucion, setResolucion]         = useState('');
   const [idUsuarioResuelve, setIdUsuarioResuelve] = useState('');
   const [isSaving, setIsSaving]             = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Todos los usuarios activos
   const { data: todosUsuarios = [], isLoading: loadingUsuarios } = useUsuariosActivos();
@@ -25,16 +26,29 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
   const loadingOpts = loadingUsuarios;
   const opciones    = todosUsuarios.map(u => ({ id: u.id_usuario, nombre: u.nombre_completo, matricula: u.matricula }));
 
+  const validate = () => {
+    const newErrors = {};
+    if (!resolucion.trim()) newErrors.resolution = 'La descripción de la resolución es obligatoria';
+    else if (resolucion.trim().length < 5) newErrors.resolution = 'Proporcione más detalles sobre la solución';
+    
+    if (!idUsuarioResuelve) newErrors.resolver = 'Debe seleccionar al personal que resolvió';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!resolucion.trim()) return;
-    if (!idUsuarioResuelve)  { alert('Selecciona quién resolvió la incidencia.'); return; }
+    if (!validate()) return;
 
     setIsSaving(true);
     try {
       await onConfirm(incidencia.id, resolucion.trim(), parseInt(idUsuarioResuelve));
       setResolucion('');
       setIdUsuarioResuelve('');
+      setErrors({});
+    } catch (err) {
+      setErrors(prev => ({ ...prev, global: 'Error al procesar la resolución' }));
     } finally {
       setIsSaving(false);
     }
@@ -43,6 +57,7 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
   const handleCerrar = () => {
     setResolucion('');
     setIdUsuarioResuelve('');
+    setErrors({});
     onClose();
   };
 
@@ -78,23 +93,14 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
               ¿Quién resolvió la incidencia? <span className="text-red-500">*</span>
             </label>
 
-            {/* Badge: personal disponible */}
-            <div className="flex items-center gap-2 mb-2">
-              {loadingOpts ? (
-                <span className="text-xs text-gray-400 flex items-center gap-1"><Loader2 size={11} className="animate-spin" /> Cargando personal...</span>
-              ) : (
-                <span className="text-xs text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
-                  Seleccione al personal técnico que atendió el reporte
-                </span>
-              )}
-            </div>
-
             <select
               value={idUsuarioResuelve}
-              onChange={(e) => setIdUsuarioResuelve(e.target.value)}
-              required
+              onChange={(e) => {
+                setIdUsuarioResuelve(e.target.value);
+                setErrors(prev => ({ ...prev, resolver: null }));
+              }}
               disabled={loadingOpts}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-400"
+              className={`w-full px-3 py-2 text-sm border ${errors.resolver ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white disabled:bg-gray-50 disabled:text-gray-400 transition-all`}
             >
               <option value="">{loadingOpts ? 'Cargando...' : 'Seleccione quien resolvió...'}</option>
               {opciones.map(opt => (
@@ -103,6 +109,7 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
                 </option>
               ))}
             </select>
+            {errors.resolver && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.resolver}</p>}
           </div>
 
           {/* Detalle de la resolución */}
@@ -112,13 +119,22 @@ export default function ResolucionModal({ isOpen, onClose, onConfirm, incidencia
             </label>
             <textarea
               value={resolucion}
-              onChange={(e) => setResolucion(e.target.value)}
+              onChange={(e) => {
+                setResolucion(e.target.value);
+                if (e.target.value.trim()) setErrors(prev => ({ ...prev, resolution: null }));
+              }}
               rows="4"
               placeholder="Describa cómo se solucionó la falla, piezas cambiadas, etc..."
-              required
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none"
+              className={`w-full px-3 py-2 text-sm border ${errors.resolution ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none transition-all`}
             />
+            {errors.resolution && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.resolution}</p>}
           </div>
+
+          {errors.global && (
+            <div className="p-3 bg-red-50 text-red-700 rounded-xl border border-red-100 text-xs font-bold animate-pulse">
+              {errors.global}
+            </div>
+          )}
         </form>
 
         {/* FOOTER */}

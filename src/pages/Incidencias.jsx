@@ -14,6 +14,7 @@ import EditarIncidenciaModal from '../components/EditarIncidenciaModal';
 import ResolucionModal from '../components/ResolucionModal';
 import NotaModal from '../components/NotasModal';
 import DetalleIncidenciaModal from '../components/DetalleIncidenciaModal';
+import ConfirmModal from '../components/ConfirmModal';
 import {
   useIncidencias,
   useNotasIncidencia,
@@ -467,6 +468,14 @@ export default function Incidencias() {
   const [isNotaModalOpen,        setIsNotaModalOpen]        = useState(false);
   const [incidenciaParaNota,     setIncidenciaParaNota]     = useState(null);
   const [incidenciaDetalle,      setIncidenciaDetalle]      = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    type: 'danger',
+    onConfirm: () => {},
+  });
 
   // ── useMemo: agrupa incidencias por columna y filtra resueltas por semana ──
   const columnedCards = useMemo(() => {
@@ -511,13 +520,33 @@ export default function Incidencias() {
       setIsResolucionModalOpen(true);
       return;
     }
+
+    if (newStatus === 'En proceso') {
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Iniciar Atención',
+        message: '¿Desea marcar esta incidencia como "En proceso"? Esto notificará que el equipo ya está siendo atendido.',
+        confirmText: 'Comenzar',
+        type: 'info',
+        onConfirm: async () => {
+          setMovingId(inc.id);
+          try {
+            await pasarAEnProceso.mutateAsync({ id_incidencia: String(inc.id) });
+            showToast('Atención iniciada', 'success');
+          } catch {
+            showToast('Error al iniciar atención', 'error');
+          } finally {
+            setMovingId(null);
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+          }
+        }
+      });
+      return;
+    }
+
     setMovingId(inc.id);
     try {
-      if (newStatus === 'En proceso') {
-        await pasarAEnProceso.mutateAsync({ id_incidencia: String(inc.id) });
-      } else {
-        await updateEstatus.mutateAsync({ id_incidencia: String(inc.id), estatus_reparacion: newStatus });
-      }
+      await updateEstatus.mutateAsync({ id_incidencia: String(inc.id), estatus_reparacion: newStatus });
       showToast(`Incidencia movida a "${newStatus}"`, 'success');
     } catch {
       showToast('Error al cambiar el estatus', 'error');
@@ -559,13 +588,23 @@ export default function Incidencias() {
   }, [agregarNota, showToast]);
 
   const handleDelete = useCallback(async (id) => {
-    if (!window.confirm('¿Eliminar esta incidencia? Esta acción no se puede deshacer.')) return;
-    try {
-      await deleteIncidencia.mutateAsync({ id_incidencia: String(id) });
-      showToast('Incidencia eliminada', 'success');
-    } catch {
-      showToast('Error al eliminar la incidencia', 'error');
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: '¿Eliminar Incidencia?',
+      message: 'Esta acción es permanente y no se podrá recuperar el reporte de esta incidencia.',
+      confirmText: 'Eliminar permanentemente',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteIncidencia.mutateAsync({ id_incidencia: String(id) });
+          showToast('Incidencia eliminada', 'success');
+        } catch {
+          showToast('Error al eliminar la incidencia', 'error');
+        } finally {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   }, [deleteIncidencia, showToast]);
 
   // ── useMemo: contadores del header (solo recalcula cuando cambian los datos) ──
@@ -758,6 +797,13 @@ export default function Incidencias() {
         isOpen={!!incidenciaDetalle}
         onClose={() => setIncidenciaDetalle(null)}
         incidencia={incidenciaDetalle}
+      />
+
+      {/* Modal de Confirmación Genérico */}
+      <ConfirmModal
+        {...confirmConfig}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        isLoading={deleteIncidencia.isPending || pasarAEnProceso.isPending}
       />
     </div>
   );

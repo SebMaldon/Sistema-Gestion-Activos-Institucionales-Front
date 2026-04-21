@@ -121,6 +121,9 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   const [resolucionTextual, setResolucionTextual] = useState(''); // Si "Resuelto"
   const [idUsuarioResuelve, setIdUsuarioResuelve] = useState(''); // Si "Resuelto"
 
+  // ── Estado de Errores ──
+  const [errors, setErrors] = useState({});
+
   // ── Búsqueda de bien ──
   const { data: bienData, isLoading: buscandoBien, isError: bienNoEncontrado, refetch: buscarBien } =
     useBienPorTermino(numSerie);
@@ -129,6 +132,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   useEffect(() => {
     if (bienData) {
       setEquipoEncontrado(bienData);
+      setErrors(prev => ({ ...prev, equipment: null }));
       if (bienData.unidad?.id_unidad) {
         setUnidadId(String(bienData.unidad.id_unidad));
       }
@@ -154,6 +158,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
       setTipoIncidencia(''); setNuevoTipo(''); setIsAddingTipo(false);
       setDescripcion(''); setUnidadId(''); setAlias(''); setRequerimiento('');
       setEstatus('Pendiente'); setNotaSeguimiento(''); setResolucionTextual(''); setIdUsuarioResuelve('');
+      setErrors({});
     }
   }, [isOpen]);
 
@@ -162,9 +167,29 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   // ── Handlers ──
   const handleBuscarSerie = () => {
     const val = numSerieInput.trim();
-    if (!val) return;
+    if (!val) {
+      setErrors(prev => ({ ...prev, equipment: 'Ingrese un número de serie o IP' }));
+      return;
+    }
+    setErrors(prev => ({ ...prev, equipment: null }));
     setNumSerie(val);
     buscarBien();
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!equipoEncontrado) newErrors.equipment = 'Debe buscar y seleccionar un equipo válido';
+    if (!tipoIncidencia) newErrors.type = 'Seleccione el tipo de incidencia';
+    if (!descripcion.trim()) newErrors.description = 'La descripción es obligatoria';
+    else if (descripcion.trim().length < 5) newErrors.description = 'Descripción demasiado corta';
+
+    if (estatus === 'Resuelto') {
+      if (!resolucionTextual.trim()) newErrors.resolution = 'Ingrese los detalles de la solución';
+      if (!idUsuarioResuelve) newErrors.resolver = 'Seleccione quién resolvió';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleGuardarNuevoTipo = async () => {
@@ -175,8 +200,9 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
       setTipoIncidencia(String(res.createTipoIncidencia.id_tipo_incidencia));
       setNuevoTipo('');
       setIsAddingTipo(false);
+      setErrors(prev => ({ ...prev, type: null }));
     } catch {
-      alert('Error al crear el tipo. Verifique que no exista ya.');
+      setErrors(prev => ({ ...prev, type: 'Error al crear el tipo (¿ya existe?)' }));
     } finally {
       setSavingTipo(false);
     }
@@ -184,14 +210,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
   const handleGuardar = async (e) => {
     e.preventDefault();
-    if (!equipoEncontrado) { alert('Primero busca y selecciona un equipo por número de serie.'); return; }
-    if (!tipoIncidencia) { alert('Selecciona o agrega un tipo de incidencia.'); return; }
-    if (estatus === 'Resuelto' && !resolucionTextual.trim()) {
-      alert('Ingresa los detalles de la resolución para marcarla como Resuelta.');
-      return;
-    }
-
-    const unidadSeleccionada = unidades.find(u => String(u.id_unidad) === String(unidadId));
+    if (!validate()) return;
 
     try {
       // 1) Crear la incidencia
@@ -218,6 +237,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
           id_incidencia: String(idNueva),
           estatus_cierre: 'Resuelto',
           resolucion_textual: resolucionTextual.trim(),
+          id_usuario_resuelve: parseInt(idUsuarioResuelve),
         });
       }
 
@@ -225,7 +245,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
       onClose();
     } catch (err) {
       const msg = err?.response?.errors?.[0]?.message || 'Error al crear la incidencia';
-      alert(msg);
+      setErrors(prev => ({ ...prev, global: msg }));
     }
   };
 
@@ -266,7 +286,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                     onChange={(e) => setNumSerieInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleBuscarSerie())}
                     placeholder="Ingrese serie o dirección IP..."
-                    className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className={`w-full px-4 py-2 text-sm border ${errors.equipment ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
                   />
                 </div>
                 <button
@@ -279,6 +299,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   Buscar
                 </button>
               </div>
+              {errors.equipment && <p className="text-[10px] font-bold text-red-600 animate-bounce">{errors.equipment}</p>}
 
               {equipoEncontrado && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-y-5 gap-x-4 p-5 bg-gray-50 rounded-xl border border-gray-200 text-sm mt-2 fade-in">
@@ -288,9 +309,9 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   <div><p className="text-xs text-gray-400 mb-0.5">Marca</p><p className="font-semibold text-gray-800">{equipoEncontrado.modelo?.marca?.marca || 'N/D'}</p></div>
                   <div><p className="text-xs text-gray-400 mb-0.5">Unidad</p><p className="font-semibold text-blue-700">{equipoEncontrado.unidad?.nombre || 'Sin unidad'}</p></div>
                   <div><p className="text-xs text-gray-400 mb-0.5">Responsable Resguardo</p><p className="font-semibold text-gray-800">{equipoEncontrado.usuarioResguardo?.nombre_completo || '—'}</p></div>
-                  <div className="flex items-center gap-1.5 col-span-2 md:col-span-3">
+                  <div className="flex items-center gap-1.5 col-span-2 md:col-span-3 text-green-700">
                     <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
-                    <span className="text-xs text-green-700 font-semibold">Equipo encontrado en el inventario</span>
+                    <span className="text-xs font-semibold uppercase tracking-tight">Equipo vinculado correctamente</span>
                   </div>
                 </div>
               )}
@@ -314,24 +335,29 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
                 {/* Tipo de incidencia */}
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tipo de Incidencia</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tipo de Incidencia <span className="text-red-500">*</span></label>
                   {!isAddingTipo ? (
-                    <select
-                      value={tipoIncidencia}
-                      onChange={(e) => {
-                        if (e.target.value === '__nuevo__') setIsAddingTipo(true);
-                        else setTipoIncidencia(e.target.value);
-                      }}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                      required
-                      disabled={loadingTipos}
-                    >
-                      <option value="">{loadingTipos ? 'Cargando...' : 'Seleccione un tipo...'}</option>
-                      {tiposIncidencia.map(t => (
-                        <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>{t.nombre_tipo}</option>
-                      ))}
-                      <option value="__nuevo__" className="font-bold text-blue-600">+ Agregar nuevo tipo...</option>
-                    </select>
+                    <>
+                      <select
+                        value={tipoIncidencia}
+                        onChange={(e) => {
+                          if (e.target.value === '__nuevo__') setIsAddingTipo(true);
+                          else {
+                            setTipoIncidencia(e.target.value);
+                            setErrors(prev => ({ ...prev, type: null }));
+                          }
+                        }}
+                        className={`w-full px-3 py-2 text-sm border ${errors.type ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white`}
+                        disabled={loadingTipos}
+                      >
+                        <option value="">{loadingTipos ? 'Cargando...' : 'Seleccione un tipo...'}</option>
+                        {tiposIncidencia.map(t => (
+                          <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>{t.nombre_tipo}</option>
+                        ))}
+                        <option value="__nuevo__" className="font-bold text-blue-600">+ Agregar nuevo tipo...</option>
+                      </select>
+                      {errors.type && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.type}</p>}
+                    </>
                   ) : (
                     <div className="space-y-2">
                       <input
@@ -360,7 +386,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                     type="text"
                     value={usuarioLogueado?.matricula || ''}
                     readOnly
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed font-mono"
                   />
                 </div>
 
@@ -373,12 +399,15 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   </label>
                   <textarea
                     value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
+                    onChange={(e) => {
+                      setDescripcion(e.target.value);
+                      if (e.target.value.trim()) setErrors(prev => ({ ...prev, description: null }));
+                    }}
                     rows="3"
                     placeholder="Describa detalladamente el problema..."
-                    required
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                    className={`w-full px-3 py-2 text-sm border ${errors.description ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all`}
                   />
+                  {errors.description && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.description}</p>}
                 </div>
 
                 {/* Alias */}
@@ -412,7 +441,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Unidad
                     {equipoEncontrado?.unidad?.nombre && (
-                      <span className="ml-2 text-blue-500 font-normal">(pre-llenada desde el equipo)</span>
+                      <span className="ml-2 text-blue-500 font-normal italic">(autocompletado)</span>
                     )}
                   </label>
                   <SearchableSelect
@@ -422,15 +451,14 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                     placeholder="Buscar unidad..."
                     loading={loadingUnidades}
                   />
-                  {!unidadId && <p className="text-xs text-gray-400 mt-1">Escribe para filtrar las unidades</p>}
                 </div>
               </div>
             </section>
 
             {/* ── SECCIÓN 3: Estatus y Resolución ── */}
-            <section className="space-y-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-blue-100 pb-2">
-                <span className="w-6 h-6 rounded bg-blue-200 text-blue-800 flex items-center justify-center text-xs">3</span>
+            <section className="space-y-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-200 pb-2">
+                <span className="w-6 h-6 rounded bg-gray-200 text-gray-700 flex items-center justify-center text-xs">3</span>
                 Estatus y Resolución
               </h3>
 
@@ -438,7 +466,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
                 {/* Selector de estatus */}
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Estatus</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">Estatus Inicial</label>
                   <select
                     value={estatus}
                     onChange={(e) => setEstatus(e.target.value)}
@@ -456,52 +484,65 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                 {estatus === 'En proceso' && (
                   <div className="md:col-span-3 fade-in">
                     <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
-                      <Plus size={14} className="text-blue-500" /> Nota de Seguimiento (Opcional)
+                      <Plus size={14} className="text-blue-500" /> Nota de Seguimiento Inicial
                     </label>
                     <textarea
                       value={notaSeguimiento}
                       onChange={(e) => setNotaSeguimiento(e.target.value)}
                       rows="2"
                       placeholder="Agregue avances o notas sobre lo que se está revisando..."
-                      className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white"
+                      className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white shadow-inner"
                     />
                   </div>
                 )}
 
                 {/* CONDICIONAL: Resuelto → Quién resolvió + Detalle */}
                 {estatus === 'Resuelto' && (
-                  <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-5 fade-in border-t border-blue-200 pt-4">
+                  <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-5 fade-in border-t border-gray-200 pt-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                        Personal que Resolvió <span className="text-red-500">*</span>
+                        Técnico que Resolvió <span className="text-red-500">*</span>
                       </label>
                       <SearchableSelect
                         options={optsResuelve}
                         value={idUsuarioResuelve}
-                        onChange={setIdUsuarioResuelve}
+                        onChange={(val) => {
+                          setIdUsuarioResuelve(val);
+                          setErrors(prev => ({ ...prev, resolver: null }));
+                        }}
                         placeholder="Buscar técnico..."
                         loading={loadingUsuarios}
                       />
+                      {errors.resolver && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.resolver}</p>}
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                        Detalles de la Resolución <span className="text-red-500">*</span>
+                        Detalles Finales de la Resolución <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={resolucionTextual}
-                        onChange={(e) => setResolucionTextual(e.target.value)}
+                        onChange={(e) => {
+                          setResolucionTextual(e.target.value);
+                          if (e.target.value.trim()) setErrors(prev => ({ ...prev, resolution: null }));
+                        }}
                         rows="3"
-                        placeholder="Describa cómo se solucionó el problema, piezas cambiadas, etc..."
-                        required={estatus === 'Resuelto'}
-                        className="w-full px-3 py-2 text-sm border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none bg-white"
+                        placeholder="Describa cómo se solucionó el problema..."
+                        className={`w-full px-3 py-2 text-sm border ${errors.resolution ? 'border-red-500 bg-red-50' : 'border-green-200'} rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none bg-white transition-all`}
                       />
+                      {errors.resolution && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.resolution}</p>}
                     </div>
                   </div>
                 )}
 
               </div>
             </section>
+            
+            {errors.global && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100 text-xs font-bold animate-pulse">
+                <AlertCircle size={14} /> {errors.global}
+              </div>
+            )}
           </form>
         </div>
 

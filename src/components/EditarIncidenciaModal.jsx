@@ -29,6 +29,8 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
   const [alias, setAlias] = useState('');
   const [requerimiento, setRequerimiento] = useState('');
 
+  const [errors, setErrors] = useState({});
+
   // Pre-llenar con los datos actuales cada vez que abre o cambia la incidencia
   useEffect(() => {
     if (isOpen && incidencia) {
@@ -36,6 +38,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
       setDescripcion(incidencia.falla ?? '');
       setAlias(incidencia.alias ?? '');
       setRequerimiento(incidencia.requerimiento ?? '');
+      setErrors({});
 
       // Resolver el id_unidad desde el objeto que viene del mapIncidenciaNode o _raw
       const idU = incidencia._raw?.id_unidad || incidencia._raw?.bien?.unidad?.id_unidad;
@@ -54,8 +57,20 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
     label: u.nombre || u.no_ref,
   })), [unidades]);
 
+  const validate = () => {
+    const newErrors = {};
+    if (!idTipo) newErrors.type = 'Seleccione el tipo de incidencia';
+    if (!descripcion.trim()) newErrors.description = 'La descripción es obligatoria';
+    else if (descripcion.trim().length < 5) newErrors.description = 'Descripción demasiado corta';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    if (!validate()) return;
+
     try {
       await updateIncidencia.mutateAsync({
         id_incidencia: String(incidencia.id),
@@ -69,9 +84,9 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
       onClose();
     } catch (err) {
       const msg = err?.response?.errors?.[0]?.message || 'Error al actualizar la incidencia';
-      alert(msg);
+      setErrors(prev => ({ ...prev, global: msg }));
     }
-  }, [incidencia, idTipo, descripcion, unidadId, alias, requerimiento, updateIncidencia, onUpdated, onClose]);
+  }, [incidencia, idTipo, descripcion, unidadId, alias, requerimiento, updateIncidencia, onUpdated, onClose, validate]);
 
   if (!isOpen || !incidencia) return null;
 
@@ -101,11 +116,14 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
 
             {/* Tipo de incidencia */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tipo de Incidencia</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tipo de Incidencia <span className="text-red-500">*</span></label>
               <select
                 value={idTipo}
-                onChange={(e) => setIdTipo(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white"
+                onChange={(e) => {
+                  setIdTipo(e.target.value);
+                  setErrors(prev => ({ ...prev, type: null }));
+                }}
+                className={`w-full px-3 py-2 text-sm border ${errors.type ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white transition-all`}
                 disabled={loadingTipos}
               >
                 <option value="">{loadingTipos ? 'Cargando...' : 'Seleccione un tipo...'}</option>
@@ -113,6 +131,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
                   <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>{t.nombre_tipo}</option>
                 ))}
               </select>
+              {errors.type && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.type}</p>}
             </div>
 
             {/* Descripción */}
@@ -122,12 +141,15 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
               </label>
               <textarea
                 value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
+                onChange={(e) => {
+                  setDescripcion(e.target.value);
+                  if (e.target.value.trim()) setErrors(prev => ({ ...prev, description: null }));
+                }}
                 rows="4"
-                required
                 placeholder="Describa el problema..."
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+                className={`w-full px-3 py-2 text-sm border ${errors.description ? 'border-red-500 bg-red-50' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-amber-500 outline-none resize-none transition-all`}
               />
+              {errors.description && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.description}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -178,6 +200,12 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
 
 
             </div>
+
+            {errors.global && (
+              <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100 text-xs font-bold animate-pulse">
+                {errors.global}
+              </div>
+            )}
           </form>
         </div>
 

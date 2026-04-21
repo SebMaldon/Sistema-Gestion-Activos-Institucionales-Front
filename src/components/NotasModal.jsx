@@ -3,19 +3,25 @@ import { X, FileText } from 'lucide-react';
 
 export default function NotaModal({ isOpen, onClose, onSave, incidenciaId }) {
     const [nota, setNota] = useState('');
+    const [errors, setErrors] = useState({});
 
     if (!isOpen) return null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!nota.trim()) return;
+        if (!nota.trim()) {
+            setErrors({ note: 'La nota no puede estar vacía' });
+            return;
+        }
 
         onSave(incidenciaId, nota);
-        setNota(''); // Limpiamos para la próxima
+        setNota(''); 
+        setErrors({});
     };
 
     const handleClose = () => {
         setNota('');
+        setErrors({});
         onClose();
     };
 
@@ -43,13 +49,16 @@ export default function NotaModal({ isOpen, onClose, onSave, incidenciaId }) {
                 <form id="nota-form" onSubmit={handleSubmit} className="p-5">
                     <textarea
                         value={nota}
-                        onChange={(e) => setNota(e.target.value)}
+                        onChange={(e) => {
+                            setNota(e.target.value);
+                            if (e.target.value.trim()) setErrors({});
+                        }}
                         rows="3"
                         placeholder="Ej. Se solicitó la fuente de poder al almacén. Esperando respuesta..."
-                        required
                         autoFocus
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                        className={`w-full px-3 py-2 text-sm border ${errors.note ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all`}
                     />
+                    {errors.note && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.note}</p>}
                 </form>
 
                 {/* FOOTER */}
