@@ -12,7 +12,7 @@ const ROL_CONFIG = {
 };
 
 export default function Topbar() {
-  const { sidebarOpen, setSidebarOpen } = useApp();
+  const { sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const [showNotif, setShowNotif] = useState(false);
 
@@ -32,11 +32,17 @@ export default function Topbar() {
     <header className="h-14 sm:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-6 flex-shrink-0 z-20">
       {/* Left: Hamburger + Search */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Hamburger — mobile only */}
+        {/* Hamburger / Toggle Sidebar */}
         <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-          aria-label="Abrir menú"
+          onClick={() => {
+            if (window.innerWidth < 1024) {
+              setSidebarOpen(!sidebarOpen);
+            } else {
+              setSidebarCollapsed(!sidebarCollapsed);
+            }
+          }}
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Alternar menú"
         >
           <Menu size={20} className="text-gray-600" />
         </button>

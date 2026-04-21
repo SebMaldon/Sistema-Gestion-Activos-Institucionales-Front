@@ -39,7 +39,7 @@ const NAV_BY_ROL = {
 };
 
 export default function Sidebar() {
-  const { currentPage, setSidebarOpen } = useApp();
+  const { currentPage, setSidebarOpen, sidebarCollapsed } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
@@ -71,20 +71,22 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 flex-shrink-0 flex flex-col h-screen"
+    <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 flex-shrink-0 flex flex-col h-screen`}
       style={{ backgroundColor: '#00472e' }}>
 
       {/* Logo */}
       <div className="flex-shrink-0 px-5 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: '#006341' }}>
             <Building2 size={22} className="text-white" />
           </div>
-          <div className="flex-1">
-            <p className="text-white font-bold text-sm leading-tight">IMSS</p>
-            <p className="text-green-200 text-xs leading-tight">Gestión de Activos</p>
-          </div>
+          {!sidebarCollapsed && (
+            <div className="flex-1 overflow-hidden">
+              <p className="text-white font-bold text-sm leading-tight whitespace-nowrap">IMSS</p>
+              <p className="text-green-200 text-xs leading-tight whitespace-nowrap">Gestión de Activos</p>
+            </div>
+          )}
           {/* X solo en mobile */}
           <button
             onClick={() => setSidebarOpen(false)}
@@ -95,21 +97,27 @@ export default function Sidebar() {
         </div>
 
         {/* Badge de rol */}
-        <div className="mt-3 px-2 py-1 rounded text-xs text-center"
-          style={{ backgroundColor: 'rgba(201,162,39,0.15)', color: '#f0c040' }}>
-          <ClipboardList size={10} className="inline mr-1" />
-          {rolLabel}
-        </div>
+        {!sidebarCollapsed && (
+          <div className="mt-3 px-2 py-1 rounded text-xs text-center whitespace-nowrap overflow-hidden"
+            style={{ backgroundColor: 'rgba(201,162,39,0.15)', color: '#f0c040' }}>
+            <ClipboardList size={10} className="inline mr-1" />
+            {rolLabel}
+          </div>
+        )}
       </div>
 
       {/* Navegación */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
         {Object.entries(grouped).map(([group, items]) => (
           <div key={group} className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-wider px-3 mb-2"
-              style={{ color: 'rgba(187,247,208,0.5)' }}>
-              {group}
-            </p>
+            {!sidebarCollapsed ? (
+              <p className="text-xs font-semibold uppercase tracking-wider px-3 mb-2"
+                style={{ color: 'rgba(187,247,208,0.5)' }}>
+                {group}
+              </p>
+            ) : (
+              <div className="h-px bg-white/10 mx-3 mb-2 mt-4" />
+            )}
             {items.map((item) => {
               const Icon = item.icon;
               // Activo si la URL coincide con la ruta del item
@@ -118,7 +126,8 @@ export default function Sidebar() {
                 <button
                   key={item.path}
                   onClick={() => handleNav(item.path)}
-                  className={`sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm font-medium group
+                  title={sidebarCollapsed ? item.label : undefined}
+                  className={`sidebar-link w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} rounded-lg mb-1 text-sm font-medium group
                     ${isActive
                       ? 'bg-white/15 text-white'
                       : 'text-green-100/80 hover:bg-white/10 hover:text-white'
@@ -128,8 +137,8 @@ export default function Sidebar() {
                     size={18}
                     className={isActive ? 'text-yellow-300' : 'text-green-200/60 group-hover:text-yellow-300'}
                   />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {isActive && <ChevronRight size={14} className="text-yellow-300" />}
+                  {!sidebarCollapsed && <span className="flex-1 text-left whitespace-nowrap">{item.label}</span>}
+                  {isActive && !sidebarCollapsed && <ChevronRight size={14} className="text-yellow-300" />}
                 </button>
               );
             })}
@@ -140,7 +149,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="flex-shrink-0 p-3 border-t border-white/10">
         {/* Info del usuario */}
-        {usuario && (
+        {usuario && !sidebarCollapsed && (
           <div className="mb-2 px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
             <p className="text-white text-xs font-semibold leading-tight truncate">{usuario.nombre_completo}</p>
             <p className="text-green-200/60 text-xs leading-tight truncate">{usuario.matricula}</p>
@@ -149,14 +158,17 @@ export default function Sidebar() {
         <button
           id="btn-logout"
           onClick={handleLogout}
-          className="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-300/80 hover:bg-red-900/30 hover:text-red-200"
+          title={sidebarCollapsed ? 'Cerrar Sesión' : undefined}
+          className={`sidebar-link w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} rounded-lg text-sm font-medium text-red-300/80 hover:bg-red-900/30 hover:text-red-200`}
         >
           <LogOut size={16} />
-          <span>Cerrar Sesión</span>
+          {!sidebarCollapsed && <span>Cerrar Sesión</span>}
         </button>
-        <p className="text-center mt-2 text-green-200/30 text-xs">
-          © 2026 IMSS — DGSTI
-        </p>
+        {!sidebarCollapsed && (
+          <p className="text-center mt-2 text-green-200/30 text-xs whitespace-nowrap">
+            © 2026 IMSS — DGSTI
+          </p>
+        )}
       </div>
     </aside>
   );
