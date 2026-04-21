@@ -128,15 +128,9 @@ const IncidenciaCard = memo(function IncidenciaCard({
   return (
     <div
       ref={cardRef}
-      className={`group bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`group bg-white rounded-2xl border border-gray-50 p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
       onClick={handleCardClick}
     >
-      {/* Indicador de Estatus Lateral */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 group-hover:w-2"
-        style={{ backgroundColor: colConfig.color }}
-      />
-
       {/* Cabecera */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -199,7 +193,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
           </span>
         </div>
         
-        <div className="flex gap-2.5 items-start bg-gray-50/50 p-2.5 rounded-xl border border-gray-50 group-hover:bg-white group-hover:border-gray-100 transition-all">
+        <div className="flex gap-2.5 items-start bg-gray-50/30 p-2.5 rounded-xl border border-gray-50/50 group-hover:bg-white group-hover:border-gray-100 transition-all">
           <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-gray-700 font-medium leading-relaxed line-clamp-3" title={inc.falla}>
             {inc.falla}
@@ -622,7 +616,7 @@ export default function Incidencias() {
     <div className="p-4 sm:p-6 fade-in relative flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden">
 
       {/* Header */}
-      <div className="flex-shrink-0 z-20 pb-4 mb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="sticky top-0 z-40 flex-shrink-0 pb-4 mb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 -mx-4 px-4 sm:mx-0 sm:px-0 bg-white/90 backdrop-blur-md">
         <div className="flex flex-col items-start w-full sm:w-auto">
           <div className="flex items-center justify-between w-full sm:w-auto gap-4 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Incidencias</h1>
@@ -677,8 +671,8 @@ export default function Incidencias() {
               return (
                 <div key={col.id} className="h-full flex flex-col min-w-[85vw] md:min-w-0 snap-center md:snap-align-none pb-2 md:pb-0">
                   <div
-                    className="flex-shrink-0 flex items-center gap-2.5 px-4 py-3 rounded-xl mb-3"
-                    style={{ backgroundColor: col.bg, border: `1px solid ${col.border}` }}
+                    className="sticky top-0 z-30 flex-shrink-0 flex items-center gap-2.5 px-4 py-3 rounded-t-2xl shadow-sm backdrop-blur-sm"
+                    style={{ backgroundColor: `${col.bg}EE` }}
                   >
                     <Icon size={16} style={{ color: col.color }} />
                     <h3 className="text-sm font-bold" style={{ color: col.color }}>{col.label}</h3>
@@ -690,7 +684,7 @@ export default function Incidencias() {
                     </span>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto space-y-3 pb-24 md:pb-4 scrollbar-hide pr-1">
+                  <div className="flex-1 overflow-y-auto space-y-3 pb-24 md:pb-4 scrollbar-hide px-3 pt-4 rounded-b-2xl bg-gray-50/10">
                     {cards.length === 0 ? (
                       <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 text-center text-sm text-gray-300">
                         Sin incidencias
