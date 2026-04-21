@@ -9,6 +9,7 @@ export function AppProvider({ children }) {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [isFichaOpen, setIsFichaOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
@@ -33,6 +34,7 @@ export function AppProvider({ children }) {
       selectedAsset, isFichaOpen,
       openFicha, closeFicha,
       sidebarOpen, setSidebarOpen,
+      sidebarCollapsed, setSidebarCollapsed,
     }}>
       {children}
     </AppContext.Provider>
