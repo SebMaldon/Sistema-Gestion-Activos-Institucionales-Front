@@ -3,10 +3,10 @@ import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import { Bell, User, Shield, UserCog, Menu } from 'lucide-react';
 
-// Roles reales de BD: 1=Administrador, 2=Maestro, 3=Usuario Estándar, 4=Sin Acceso
+// Roles reales de BD: 1=Maestro, 2=Administrador, 3=Usuario Estándar, 4=Sin Acceso
 const ROL_CONFIG = {
-  1: { label: 'Administrador',    sublabel: 'Gestión y configuración', icon: Shield,  color: '#006341', bg: '#dcfce7' },
-  2: { label: 'Maestro',          sublabel: 'Control de inventario',   icon: UserCog, color: '#7c3aed', bg: '#ede9fe' },
+  1: { label: 'Maestro',          sublabel: 'Gestión y configuración', icon: Shield,  color: '#006341', bg: '#dcfce7' },
+  2: { label: 'Administrador',    sublabel: 'Control de inventario',   icon: UserCog, color: '#7c3aed', bg: '#ede9fe' },
   3: { label: 'Usuario Estándar', sublabel: 'Consulta y reporte',      icon: User,    color: '#2563eb', bg: '#dbeafe' },
   4: { label: 'Sin Acceso',       sublabel: '',                         icon: User,    color: '#6b7280', bg: '#f3f4f6' },
 };

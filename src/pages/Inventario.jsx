@@ -20,8 +20,8 @@ import { GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION } from '../api/inventario.
 import { formatDate, formatDateTime } from '../lib/utils';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
-const ROL_MAESTRO  = 2;
-const ROL_ADMIN    = 1;
+const ROL_MAESTRO  = 1;
+const ROL_ADMIN    = 2;
 
 // Categorías TI (id_categoria = 1: Equipo de Cómputo, 3: Redes y Telecomunicaciones)
 const CATEGORIAS_TI = [1, 3];

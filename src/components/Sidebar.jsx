@@ -8,9 +8,9 @@ import {
   Building2, ClipboardList, X
 } from 'lucide-react';
 
-// ─── 1 = Administrador,  2 = Maestro,  3 = Usuario Estándar, 4 = Sin Acceso ──
+// ─── 1 = Maestro,  2 = Administrador,  3 = Usuario Estándar, 4 = Sin Acceso ──
 const NAV_BY_ROL = {
-  1: [ // Admin / SUPERADMIN
+  1: [ // Maestro / SUPERADMIN
     { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Principal' },
     { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Gestión' },
     { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Gestión' },
@@ -21,7 +21,7 @@ const NAV_BY_ROL = {
     { path: '/auditoria',     label: 'Bitácora de Auditoría',   icon: ShieldCheck,     group: 'Sistema' },
     { path: '/configuracion', label: 'Configuración',           icon: Settings,        group: 'Sistema' },
   ],
-  2: [ // Supervisor
+  2: [ // Administrador
     { path: '/dashboard',     label: 'Panel Principal',         icon: LayoutDashboard, group: 'Administración' },
     { path: '/inventario',    label: 'Inventario de Bienes',    icon: Package,         group: 'Administración' },
     { path: '/incidencias',   label: 'Incidencias',             icon: AlertTriangle,   group: 'Administración' },
@@ -49,7 +49,7 @@ export default function Sidebar() {
   const navItems = NAV_BY_ROL[idRol] ?? NAV_BY_ROL[3];
 
   // Nombre del rol para la etiqueta
-  const ROL_LABELS = { 1: 'Administrador', 2: 'Maestro', 3: 'Usuario Estándar', 4: 'Sin Acceso' };
+  const ROL_LABELS = { 1: 'Maestro', 2: 'Administrador', 3: 'Usuario Estándar', 4: 'Sin Acceso' };
   const rolLabel = ROL_LABELS[idRol] ?? 'Usuario';
 
   // Agrupar items por grupo

@@ -19,9 +19,9 @@ import Configuracion from './pages/Configuracion';
 import Garantias from './pages/Garantias';
 
 // ─── Roles reales de BD ──────────────────────────────────────────────────────
-// 1 = Administrador, 2 = Maestro, 3 = Usuario Estándar, 4 = Sin Acceso
-const ROL_ADMIN    = 1;
-const ROL_MAESTRO  = 2;
+// 1 = Maestro, 2 = Administrador, 3 = Usuario Estándar, 4 = Sin Acceso
+const ROL_ADMIN    = 2;
+const ROL_MAESTRO  = 1;
 const ROL_USUARIO  = 3;
 
 // ─── Guard: solo requiere sesión activa ─────────────────────────────────────
