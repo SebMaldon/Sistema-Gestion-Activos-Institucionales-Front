@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import {
   AlertTriangle, Clock, CheckCircle, User, Calendar,
-  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft
+  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft,
+  Hash, FileText, MapPin
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
@@ -112,153 +113,187 @@ const IncidenciaCard = memo(function IncidenciaCard({
         setMenuOpen(false);
       }
     };
-
-    if (expanded || menuOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
+    if (expanded || menuOpen) document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [expanded, menuOpen]);
-
-
 
   const handleCardClick = useCallback(() => {
     if (menuOpen) setMenuOpen(false);
     else setExpanded(prev => !prev);
   }, [menuOpen]);
 
+  // Obtener config de columna para el indicador visual
+  const colConfig = COLUMNS.find(c => c.id === inc.estatus) || COLUMNS[0];
+
   return (
     <div
       ref={cardRef}
-      className={`bg-white rounded-xl border border-gray-100 p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow relative ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`group bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
       onClick={handleCardClick}
     >
+      {/* Indicador de Estatus Lateral */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-300 group-hover:w-2"
+        style={{ backgroundColor: colConfig.color }}
+      />
+
       {/* Cabecera */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-900 leading-snug">{inc.numSerie}</p>
-          {inc.alias && <p className="text-[10px] font-semibold text-blue-500 truncate" title={inc.alias}>{inc.alias}</p>}
-        </div>
-
-
-          {(canEdit || canDelete) && (
-            <div className="relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
-                className={`p-1 rounded-lg transition-colors ${menuOpen ? 'bg-gray-100 text-gray-800' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
-              >
-                <MoreVertical size={18} />
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-10 fade-in overflow-hidden">
-                  {canEdit && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
-                      className="w-full px-3 py-2 text-left text-xs font-medium text-gray-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-2"
-                    >
-                      <Edit2 size={14} /> Editar
-                    </button>
-                  )}
-                  {canDelete && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
-                      className="w-full px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <Trash2 size={14} /> Eliminar
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <Hash size={14} className="text-gray-400" />
+            <p className="text-sm font-black text-gray-900 tracking-tight leading-none uppercase">{inc.numSerie}</p>
+          </div>
+          {inc.alias && (
+            <p className="text-[11px] font-bold text-blue-600/80 italic ml-5 truncate" title={inc.alias}>
+              {inc.alias}
+            </p>
           )}
         </div>
 
-      {/* Tipo y Falla */}
-      <div className="mt-3 space-y-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+        {(canEdit || canDelete) && (
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
+              className={`p-1.5 rounded-xl transition-all duration-200 ${menuOpen ? 'bg-gray-100 text-gray-900 scale-110' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+            >
+              <MoreVertical size={18} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 fade-in overflow-hidden ring-4 ring-black/5">
+                {canEdit && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
+                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 transition-colors"
+                  >
+                    <div className="p-1 bg-amber-100 rounded-lg text-amber-600"><Edit2 size={14} /></div>
+                    Editar Registro
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
+                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                  >
+                    <div className="p-1 bg-red-100 rounded-lg text-red-600"><Trash2 size={14} /></div>
+                    Eliminar
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Contenido Principal */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded-full border shadow-sm transition-all group-hover:shadow-md"
+            style={{ 
+              backgroundColor: `${colConfig.bg}80`, // 80 is alpha
+              color: colConfig.color,
+              borderColor: colConfig.border 
+            }}
+          >
             {inc.tipoIncidencia}
           </span>
         </div>
-        <p className="text-xs text-gray-700 line-clamp-2 leading-relaxed" title={inc.falla}>
-          {inc.falla}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <User size={12} className="flex-shrink-0" />
-          <span className="truncate">{inc.tecnico}</span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0 text-right">
-          <span className="truncate max-w-[120px] font-medium">{inc.unidad || 'Sin unidad'}</span>
-          <Building2 size={12} className="flex-shrink-0" />
+        
+        <div className="flex gap-2.5 items-start bg-gray-50/50 p-2.5 rounded-xl border border-gray-50 group-hover:bg-white group-hover:border-gray-100 transition-all">
+          <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-gray-700 font-medium leading-relaxed line-clamp-3" title={inc.falla}>
+            {inc.falla}
+          </p>
         </div>
       </div>
 
-      {/* Indicador de notas si no está expandido */}
-      {!expanded && (inc.estatus === 'En proceso' || inc.estatus === 'Pendiente') && (
-        <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-50 w-fit px-1.5 py-0.5 rounded-md">
-          <AlignLeft size={10} /> Ver avances de seguimiento...
+      {/* Footer Informátivo */}
+      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[11px]">
+        <div className="flex items-center gap-2 min-w-0 text-gray-500">
+          <div className="p-1 bg-gray-50 rounded-lg group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+            <Building2 size={12} />
+          </div>
+          <span className="truncate font-bold tracking-tight">{inc.unidad || 'Ubicación General'}</span>
+        </div>
+        
+        {inc.tecnico && (
+          <div className="flex items-center gap-2 text-blue-600 bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100/50">
+            <User size={12} className="flex-shrink-0" />
+            <span className="truncate font-black tracking-tight max-w-[100px]">{inc.tecnico.split(' ')[0]}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Ver más indicador */}
+      {!expanded && (
+        <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-500 transition-all py-1 rounded-lg hover:bg-gray-50">
+          <AlignLeft size={12} className="transition-transform group-hover:scale-125" />
+          <span>Detalles de seguimiento</span>
         </div>
       )}
 
       {/* Detalle expandido */}
       {expanded && (
-        <div className="mt-3 pt-3 border-t border-gray-100 space-y-3 fade-in text-xs">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-gray-50 rounded-lg p-2.5">
-              <p className="text-gray-400 font-medium mb-0.5">Equipo Afectado</p>
-              <p className="text-gray-800 font-semibold truncate" title={inc.equipo}>{inc.equipo}</p>
-              <p className="text-gray-500 mt-0.5">ID: {inc.id}</p>
+        <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 fade-in">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 border border-gray-100 shadow-sm">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Hash size={10} /> Dispositivo
+              </p>
+              <p className="text-xs text-gray-800 font-bold leading-tight" title={inc.equipo}>{inc.equipo}</p>
+              <p className="text-[10px] text-gray-400 mt-1 font-mono">ID: {inc.id}</p>
             </div>
-            <div className="bg-blue-50/50 rounded-lg p-2.5 border border-blue-50">
-              <p className="text-blue-400 font-medium mb-0.5">Generado por</p>
-              <p className="text-blue-900 font-semibold truncate">{inc.generadoPor || 'Usuario del Sistema'}</p>
-              <p className="text-blue-600/70 mt-0.5 truncate">Requerimiento: {inc.requerimiento || 'S/N'}</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-gray-400 font-medium mb-1">Descripción de la Falla</p>
-            <p className="text-gray-700 leading-relaxed bg-gray-50 p-2.5 rounded-lg border border-gray-100 break-words whitespace-pre-wrap">{inc.falla}</p>
-          </div>
-
-          <div className="flex gap-6 px-1">
-            <div className="flex items-center gap-1.5 text-gray-600">
-              <Calendar size={13} className="text-gray-400" /><span>{inc.fecha}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-gray-600">
-              <Clock size={13} className="text-gray-400" /><span>{inc.horaCreacion || 'Hora no registrada'}</span>
+            <div className="bg-gradient-to-br from-blue-50/50 to-white rounded-2xl p-3 border border-blue-50 shadow-sm">
+              <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <User size={10} /> Reportado por
+              </p>
+              <p className="text-xs text-blue-900 font-bold leading-tight">{inc.generadoPor || 'Personal IMSS'}</p>
+              <p className="text-[10px] text-blue-600/70 mt-1 truncate">REQ: {inc.requerimiento || 'S/N'}</p>
             </div>
           </div>
 
-          {/* Notas cargadas lazily cuando se expande */}
-          <NotasPanel 
-            incidenciaId={inc.id} 
-            estatus={inc.estatus} 
-            onAddNota={onAddNota} 
-            resolucion={inc.resolucion} 
-            fechaResolucion={inc.fechaResolucion} 
-          />
+          <div className="flex gap-4 px-2">
+            <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+              <Calendar size={12} />
+              <span className="font-bold">{inc.fecha}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+              <Clock size={12} />
+              <span className="font-bold">{inc.horaCreacion || '--:--'}</span>
+            </div>
+          </div>
+
+          {/* Notas y Resolución */}
+          <div className="bg-white/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-100 p-1">
+            <NotasPanel 
+              incidenciaId={inc.id} 
+              estatus={inc.estatus} 
+              onAddNota={onAddNota} 
+              resolucion={inc.resolucion} 
+              fechaResolucion={inc.fechaResolucion} 
+            />
+          </div>
 
           {/* Botones de cambio de estatus */}
           {canEdit && inc.estatus !== 'Resuelto' && (
-            <div className="flex gap-1.5 mt-2">
+            <div className="flex gap-2 mt-2">
               {COLUMNS.filter(c => {
                 if (inc.estatus === 'Pendiente') return c.id === 'En proceso' || c.id === 'Resuelto';
                 if (inc.estatus === 'En proceso') return c.id === 'Resuelto';
                 return false;
-              }).map(col => (
-                <button
-                  key={col.id}
-                  onClick={(e) => { e.stopPropagation(); onStatusChange(inc, col.id); }}
-                  className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 font-medium transition-colors"
-                >
-                  → {col.label}
-                </button>
-              ))}
+              }).map(col => {
+                const ColIcon = col.icon;
+                return (
+                  <button
+                    key={col.id}
+                    onClick={(e) => { e.stopPropagation(); onStatusChange(inc, col.id); }}
+                    className="flex-1 flex items-center justify-center gap-2 text-[11px] font-black uppercase tracking-wider py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-300 shadow-sm"
+                  >
+                    <ColIcon size={14} />
+                    {col.label}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -452,13 +487,9 @@ export default function Incidencias() {
     incidencias.forEach(inc => { 
       if (map[inc.estatus]) {
         if (inc.estatus === 'Resuelto') {
-          // Asumiendo que mapped.fechaResolucion es ISO o null
-          const resolvedStr = inc.fechaResolucion || inc._raw?.fecha_resolucion || inc._raw?.fecha_actualizacion;
-          if (resolvedStr) {
-            const resolvedDate = new Date(resolvedStr);
-            if (resolvedDate >= startOfWeek) {
-              map[inc.estatus].push(inc);
-            }
+          const resolvedDate = parseServerDate(inc._raw?.fecha_resolucion || inc._raw?.fecha_actualizacion);
+          if (resolvedDate && resolvedDate >= startOfWeek) {
+            map[inc.estatus].push(inc);
           }
         } else {
           map[inc.estatus].push(inc);

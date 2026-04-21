@@ -52,7 +52,7 @@ export function mapIncidenciaNode(node) {
     })(),
     generadoPor: node.usuarioGeneraReporte?.nombre_completo || '',
     matriculaGenera: node.usuarioGeneraReporte?.matricula || '',
-    tecnico: node.usuarioResuelve?.nombre_completo || 'Sin asignar',
+    tecnico: node.usuarioResuelve?.nombre_completo || '',
     resolucion: node.resolucion_textual || '',
     fechaResolucion: (() => {
       const d = parseServerDate(node.fecha_resolucion);
@@ -202,11 +202,17 @@ export function useNotasIncidencia(id_incidencia) {
 
 // ─── Helpers para actualizaciones optimistas ─────────────────────────────────
 
-function optimisticStatus(qc, id_incidencia, newStatus) {
+function optimisticStatus(qc, id_incidencia, updates) {
   qc.setQueriesData(
     { queryKey: ['incidencias'] },
     (old) => Array.isArray(old)
-      ? old.map(i => String(i.id) === String(id_incidencia) ? { ...i, estatus: newStatus } : i)
+      ? old.map(i => {
+          if (String(i.id) === String(id_incidencia)) {
+            const newRaw = updates._raw ? { ...i._raw, ...updates._raw } : i._raw;
+            return { ...i, ...updates, _raw: newRaw };
+          }
+          return i;
+        })
       : old
   );
 }
@@ -237,7 +243,7 @@ export function usePasarAEnProceso() {
     onMutate: async ({ id_incidencia }) => {
       await qc.cancelQueries({ queryKey: ['incidencias'] });
       const snapshots = qc.getQueriesData({ queryKey: ['incidencias'] });
-      optimisticStatus(qc, id_incidencia, 'En proceso');
+      optimisticStatus(qc, id_incidencia, { estatus: 'En proceso' });
       return { snapshots };
     },
     onError: (_, __, ctx) =>
@@ -251,10 +257,20 @@ export function useResolverIncidencia() {
   return useMutation({
     mutationFn: (vars) => gqlClient.request(RESOLVER_INCIDENCIA_MUTATION, vars),
     // Optimistic: la tarjeta salta a "Resuelto" de inmediato
-    onMutate: async ({ id_incidencia }) => {
+    onMutate: async ({ id_incidencia, resolucion_textual }) => {
       await qc.cancelQueries({ queryKey: ['incidencias'] });
       const snapshots = qc.getQueriesData({ queryKey: ['incidencias'] });
-      optimisticStatus(qc, id_incidencia, 'Resuelto');
+      
+      const now = new Date();
+      optimisticStatus(qc, id_incidencia, { 
+        estatus: 'Resuelto',
+        resolucion: resolucion_textual,
+        fechaResolucion: now.toLocaleDateString('es-MX'),
+        _raw: { 
+          fecha_resolucion: now.toISOString(),
+          resolucion_textual: resolucion_textual
+        }
+      });
       return { snapshots };
     },
     onError: (_, __, ctx) =>
@@ -281,7 +297,7 @@ export function useUpdateEstatusIncidencia() {
     onMutate: async ({ id_incidencia, estatus_reparacion }) => {
       await qc.cancelQueries({ queryKey: ['incidencias'] });
       const snapshots = qc.getQueriesData({ queryKey: ['incidencias'] });
-      optimisticStatus(qc, id_incidencia, estatus_reparacion);
+      optimisticStatus(qc, id_incidencia, { estatus: estatus_reparacion });
       return { snapshots };
     },
     onError: (_, __, ctx) =>
