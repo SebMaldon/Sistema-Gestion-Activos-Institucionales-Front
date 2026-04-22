@@ -159,9 +159,6 @@ export default function Login() {
                   <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     Contraseña
                   </label>
-                  <button type="button" className="text-xs font-medium" style={{ color: '#006341' }}>
-                    ¿Olvidaste tu contraseña?
-                  </button>
                 </div>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />

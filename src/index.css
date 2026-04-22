@@ -51,6 +51,12 @@ body {
   background: #004d32;
 }
 
+/* Ocultar ícono de ojo nativo de Edge en contraseñas */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* Smooth transitions */
 .sidebar-link {
   transition: all 0.2s ease;
