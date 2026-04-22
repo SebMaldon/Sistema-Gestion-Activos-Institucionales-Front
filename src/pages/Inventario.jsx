@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { useBienes } from '../hooks/useBienes';
@@ -11,17 +12,22 @@ import {
   ChevronLeft, ChevronRight, X, AlertTriangle,
   Server, Monitor, Cpu, HardDrive, Wifi, Save,
   Package, Shield, Calendar, MapPin, User, Tag,
-  ChevronDown, ChevronUp, Loader2, RefreshCw
+  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
-import { GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION } from '../api/inventario.queries';
+import {
+  GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION,
+  GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
+  CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION
+} from '../api/inventario.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
+import SearchableSelect from '../components/SearchableSelect';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
-const ROL_MAESTRO  = 1;
-const ROL_ADMIN    = 2;
+const ROL_ADMIN    = 1;
+const ROL_MAESTRO  = 2;
 
 // Categorías TI (id_categoria = 1: Equipo de Cómputo, 3: Redes y Telecomunicaciones)
 const CATEGORIAS_TI = [1, 3];
@@ -67,6 +73,265 @@ const TI_EMPTY = {
   nom_pc: '', cpu_info: '', ram_gb: '', almacenamiento_gb: '',
   dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '',
 };
+// ─── Mini-CRUD: Modal de Catálogos (Marcas / Tipos / Modelos) ────────────────
+function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }) {
+  const { showToast } = useApp();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState('modelos');
+
+  // Formularios locales para cada sección
+  const [nuevaMarca, setNuevaMarca] = useState('');
+  const [nuevoTipo, setNuevoTipo] = useState('');
+  const [nuevoModelo, setNuevoModelo] = useState({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
+  const [searchModelo, setSearchModelo] = useState('');
+
+  // Query: marcas y tipos (ligero)
+  const { data: catAux, refetch: refetchAux } = useQuery({
+    queryKey: ['marcas-tipos'],
+    queryFn: () => gqlClient.request(GET_MARCAS_TIPOS_QUERY),
+    staleTime: 30_000,
+  });
+  const marcas = catAux?.marcas ?? [];
+  const tipos  = catAux?.tiposDispositivo ?? [];
+  const modelos = catalogos?.modelos ?? [];
+
+  const modelosFiltrados = useMemo(() => {
+    const q = searchModelo.toLowerCase();
+    if (!q) return modelos.slice(0, 80);
+    return modelos.filter(m =>
+      (m.descrip_disp || m.clave_modelo).toLowerCase().includes(q)
+    ).slice(0, 80);
+  }, [modelos, searchModelo]);
+
+  // Mutations
+  const mutMarca = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_MARCA_MUTATION, vars),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['marcas-tipos'] });
+      qc.invalidateQueries({ queryKey: ['catalogosBienes'] });
+      setNuevaMarca('');
+      showToast(`Marca "${data.createMarca.marca}" creada`, 'success');
+    },
+    onError: () => showToast('Error al crear la marca', 'error'),
+  });
+
+  const mutTipo = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_TIPO_DISPOSITIVO_MUTATION, vars),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['marcas-tipos'] });
+      qc.invalidateQueries({ queryKey: ['catalogosBienes'] });
+      setNuevoTipo('');
+      showToast(`Tipo "${data.createTipoDispositivo.nombre_tipo}" creado`, 'success');
+    },
+    onError: () => showToast('Error al crear el tipo', 'error'),
+  });
+
+  const mutModelo = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_CAT_MODELO_MUTATION, vars),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['catalogosBienes'] });
+      const m = data.createCatModelo;
+      showToast(`Modelo "${m.descrip_disp || m.clave_modelo}" creado`, 'success');
+      setNuevoModelo({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
+      onSelectModelo(m.clave_modelo);
+      onClose();
+    },
+    onError: (e) => {
+      console.error('Error al crear modelo:', e);
+      showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear modelo', 'error');
+    },
+  });
+
+  const handleCrearMarca = () => {
+    if (!nuevaMarca.trim()) return;
+    mutMarca.mutate({ marca: nuevaMarca.trim() });
+  };
+  const handleCrearTipo = () => {
+    if (!nuevoTipo.trim()) return;
+    mutTipo.mutate({ nombre_tipo: nuevoTipo.trim() });
+  };
+  const handleCrearModelo = () => {
+    if (!nuevoModelo.clave_modelo.trim()) return showToast('La clave del modelo es obligatoria', 'warning');
+    const vars = {
+      clave_modelo: nuevoModelo.clave_modelo.trim().toUpperCase(),
+      descrip_disp: nuevoModelo.descrip_disp?.trim() || null,
+      clave_marca:  nuevoModelo.clave_marca ? parseInt(nuevoModelo.clave_marca) : null,
+      tipo_disp:    nuevoModelo.tipo_disp ? parseInt(nuevoModelo.tipo_disp) : null,
+    };
+    console.log('Creando modelo con vars:', vars);
+    mutModelo.mutate(vars);
+  };
+
+  const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white';
+  const tabs = [
+    { id: 'modelos', label: 'Modelos',           icon: Layers },
+    { id: 'tipos',   label: 'Tipos Dispositivo', icon: CpuIcon },
+    { id: 'marcas',  label: 'Marcas',            icon: Bookmark },
+  ];
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+          <h2 className="text-base font-bold text-gray-900">Catálogos de Modelos</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"><X size={18} /></button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100 shrink-0 bg-gray-50">
+          {tabs.map(t => {
+            const Icon = t.icon;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
+                  tab === t.id ? 'border-green-600 text-green-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}>
+                <Icon size={13} />{t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+          {/* ── TAB MODELOS ── */}
+          {tab === 'modelos' && (
+            <div className="space-y-4 fade-in">
+              {/* Buscador */}
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" placeholder="Buscar modelo..." value={searchModelo}
+                  onChange={e => setSearchModelo(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+              </div>
+              {/* Lista */}
+              <div className="space-y-1 max-h-52 overflow-y-auto">
+                {modelosFiltrados.map(m => (
+                  <button key={m.clave_modelo} onClick={() => { onSelectModelo(m.clave_modelo); onClose(); }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
+                      m.clave_modelo === modeloActual ? 'bg-green-50 text-green-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'
+                    }`}>
+                    {m.clave_modelo === modeloActual && <Check size={13} className="flex-shrink-0" />}
+                    <span className="font-mono text-xs text-gray-400 shrink-0">{m.clave_modelo}</span>
+                    <span className="truncate">{m.descrip_disp || '—'}</span>
+                  </button>
+                ))}
+                {modelosFiltrados.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin resultados</p>}
+              </div>
+              {/* Crear nuevo modelo */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Crear Nuevo Modelo</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Clave <span className="text-red-500">*</span></label>
+                    <input type="text" value={nuevoModelo.clave_modelo} placeholder="Ej: HP-1020"
+                      onChange={e => setNuevoModelo(p => ({ ...p, clave_modelo: e.target.value }))}
+                      className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Descripción</label>
+                    <input type="text" value={nuevoModelo.descrip_disp} placeholder="Ej: HP LaserJet 1020"
+                      onChange={e => setNuevoModelo(p => ({ ...p, descrip_disp: e.target.value }))}
+                      className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Marca</label>
+                    <SearchableSelect 
+                      value={nuevoModelo.clave_marca ? String(nuevoModelo.clave_marca) : ''}
+                      onChange={val => setNuevoModelo(p => ({ ...p, clave_marca: val }))}
+                      options={marcas.map(m => ({ value: String(m.clave_marca), label: m.marca }))}
+                      placeholder="— Ninguna —"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo Dispositivo</label>
+                    <SearchableSelect 
+                      value={nuevoModelo.tipo_disp ? String(nuevoModelo.tipo_disp) : ''}
+                      onChange={val => setNuevoModelo(p => ({ ...p, tipo_disp: val }))}
+                      options={tipos.map(t => ({ value: String(t.tipo_disp), label: t.nombre_tipo }))}
+                      placeholder="— Ninguno —"
+                    />
+                  </div>
+                </div>
+                <button onClick={handleCrearModelo} disabled={mutModelo.isPending || !nuevoModelo.clave_modelo.trim()}
+                  className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                  style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+                  {mutModelo.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                  {mutModelo.isPending ? 'Creando...' : 'Crear Modelo y Seleccionar'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB TIPOS DISPOSITIVO ── */}
+          {tab === 'tipos' && (
+            <div className="space-y-3 fade-in">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tipos existentes</p>
+              <div className="space-y-1 max-h-56 overflow-y-auto">
+                {tipos.map(t => (
+                  <div key={t.tipo_disp} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg text-sm">
+                    <span className="font-mono text-xs text-gray-400 w-6">{t.tipo_disp}</span>
+                    <span className="text-gray-700">{t.nombre_tipo}</span>
+                  </div>
+                ))}
+                {tipos.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin tipos registrados</p>}
+              </div>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Crear Nuevo Tipo</p>
+                <div className="flex gap-2">
+                  <input type="text" value={nuevoTipo} placeholder="Nombre del tipo..."
+                    onChange={e => setNuevoTipo(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCrearTipo()}
+                    className={`${inputCls} flex-1`} />
+                  <button onClick={handleCrearTipo} disabled={mutTipo.isPending || !nuevoTipo.trim()}
+                    className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+                    {mutTipo.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    Crear
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB MARCAS ── */}
+          {tab === 'marcas' && (
+            <div className="space-y-3 fade-in">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Marcas existentes</p>
+              <div className="space-y-1 max-h-56 overflow-y-auto">
+                {marcas.map(m => (
+                  <div key={m.clave_marca} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg text-sm">
+                    <span className="font-mono text-xs text-gray-400 w-6">{m.clave_marca}</span>
+                    <span className="text-gray-700">{m.marca}</span>
+                  </div>
+                ))}
+                {marcas.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin marcas registradas</p>}
+              </div>
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Crear Nueva Marca</p>
+                <div className="flex gap-2">
+                  <input type="text" value={nuevaMarca} placeholder="Nombre de la marca..."
+                    onChange={e => setNuevaMarca(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCrearMarca()}
+                    className={`${inputCls} flex-1`} />
+                  <button onClick={handleCrearMarca} disabled={mutMarca.isPending || !nuevaMarca.trim()}
+                    className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+                    {mutMarca.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    Crear
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Inventario() {
@@ -90,6 +355,7 @@ export default function Inventario() {
   const [modalForm, setModalForm]       = useState(null); // null | 'create' | bien
   const [modalConfirmDel, setModalConfirmDel] = useState(null);
   const [showTI, setShowTI]             = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [form, setForm]   = useState(FORM_EMPTY);
@@ -326,7 +592,7 @@ export default function Inventario() {
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 sm:p-6 space-y-5 fade-in">
+    <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-4 fade-in">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -420,144 +686,156 @@ export default function Inventario() {
         </p>
       </div>
 
-      {/* ── Estado de carga / error ──────────────────────────────────────── */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-          <Loader2 size={22} className="animate-spin" />
-          <span className="text-sm">Cargando inventario...</span>
-        </div>
-      )}
-      {isError && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center text-red-600 text-sm">
-          Ocurrió un error al cargar el inventario. <button onClick={() => refetch()} className="underline font-semibold">Reintentar</button>
-        </div>
-      )}
+      {/* ── Contenedor con scroll — tabla desktop + tarjetas móvil ──────── */}
+      <div className="flex-1 min-h-0 flex flex-col gap-3">
 
-      {/* ── TABLA (desktop) ──────────────────────────────────────────────── */}
-      {!isLoading && !isError && (
-        <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / Serie</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Modelo / Categoría</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ubicación</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Resguardo</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {paginated.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-14 text-gray-400 text-sm">
-                    <Package size={32} className="mx-auto mb-2 opacity-30" />
-                    No se encontraron bienes con los filtros aplicados.
-                  </td></tr>
-                ) : paginated.map((bien) => (
-                  <tr key={bien.id} className="hover:bg-gray-50/70 transition-colors group">
-                    <td className="px-4 py-3.5">
-                      <div>
-                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                          {fmt(bien.numSerie)}
-                        </span>
-                        <p className="text-xs text-gray-400 mt-0.5">Inv: {fmt(bien.numInv)}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="font-semibold text-gray-900 text-sm">{bien.equipo}</p>
-                      <p className="text-xs text-gray-400">{bien.categoria?.nombre_categoria}</p>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-gray-600 max-w-[160px] truncate">{fmt(bien.ubicacion)}</td>
-                    <td className="px-4 py-3.5 text-xs text-gray-600 max-w-[140px] truncate">{fmt(bien.resguardo)}</td>
-                    <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1.5">
-                        {/* Ver ficha */}
-                        <button onClick={() => setModalFicha(bien)} title="Ver Ficha Técnica"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
-                          <Eye size={14} />
-                        </button>
-                        {/* QR / Barcode */}
-                        <button onClick={() => setModalQR(bien)} title="Ver Identificadores QR"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
-                          <QrCode size={14} />
-                        </button>
-                        {/* Editar — solo Admin/Maestro */}
-                        {canEdit && (
-                          <button onClick={() => openEdit(bien)} title="Editar bien"
-                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                            <Edit size={14} />
-                          </button>
-                        )}
-                        {/* Eliminar — solo Maestro */}
-                        {canDelete && (
-                          <button onClick={() => setModalConfirmDel(bien)} title="Eliminar bien"
-                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Estado de carga / error */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+            <Loader2 size={22} className="animate-spin" />
+            <span className="text-sm">Cargando inventario...</span>
           </div>
-          <Pagination page={page} totalPages={totalPages} onPage={setPage} />
-        </div>
-      )}
+        )}
+        {isError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center text-red-600 text-sm">
+            Ocurrió un error al cargar el inventario. <button onClick={() => refetch()} className="underline font-semibold">Reintentar</button>
+          </div>
+        )}
 
-      {/* ── TARJETAS (mobile) ─────────────────────────────────────────────── */}
-      {!isLoading && !isError && (
-        <div className="md:hidden space-y-3">
-          {paginated.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-gray-400 text-sm">
-              <Package size={32} className="mx-auto mb-2 opacity-30" />
-              No se encontraron bienes.
+        {/* TABLA desktop */}
+        {!isLoading && !isError && (
+          <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Cabecera fija */}
+            <div className="flex-shrink-0 bg-gray-50 border-b border-gray-100">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / Serie</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Modelo / Categoría</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ubicación</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Resguardo</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
+                  </tr>
+                </thead>
+              </table>
             </div>
-          ) : paginated.map((bien) => (
-            <div key={bien.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm leading-tight">{bien.equipo}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
-                  <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">
-                    {fmt(bien.numSerie)}
-                  </span>
+            {/* Cuerpo scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-gray-50">
+                  {paginated.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-14 text-gray-400 text-sm">
+                      <Package size={32} className="mx-auto mb-2 opacity-30" />
+                      No se encontraron bienes con los filtros aplicados.
+                    </td></tr>
+                  ) : paginated.map((bien) => (
+                    <tr key={bien.id} className="hover:bg-gray-50/70 transition-colors group">
+                      <td className="px-4 py-3.5">
+                        <div>
+                          <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                            {fmt(bien.numSerie)}
+                          </span>
+                          <p className="text-xs text-gray-400 mt-0.5">Inv: {fmt(bien.numInv)}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="font-semibold text-gray-900 text-sm">{bien.equipo}</p>
+                        <p className="text-xs text-gray-400">{bien.categoria?.nombre_categoria}</p>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-gray-600 max-w-[160px] truncate">{fmt(bien.ubicacion)}</td>
+                      <td className="px-4 py-3.5 text-xs text-gray-600 max-w-[140px] truncate">{fmt(bien.resguardo)}</td>
+                      <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => setModalFicha(bien)} title="Ver Ficha Técnica"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
+                            <Eye size={14} />
+                          </button>
+                          <button onClick={() => setModalQR(bien)} title="Ver Identificadores QR"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
+                            <QrCode size={14} />
+                          </button>
+                          {canEdit && (
+                            <button onClick={() => openEdit(bien)} title="Editar bien"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                              <Edit size={14} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button onClick={() => setModalConfirmDel(bien)} title="Eliminar bien"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TARJETAS mobile */}
+        {!isLoading && !isError && (
+          <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 pb-2">
+            {paginated.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-gray-400 text-sm">
+                <Package size={32} className="mx-auto mb-2 opacity-30" />
+                No se encontraron bienes.
+              </div>
+            ) : paginated.map((bien) => (
+              <div key={bien.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm leading-tight">{bien.equipo}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
+                    <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">
+                      {fmt(bien.numSerie)}
+                    </span>
+                  </div>
+                  <EstatusBadge estatus={bien.estatusOperativo} />
                 </div>
-                <EstatusBadge estatus={bien.estatusOperativo} />
-              </div>
-              <div className="text-xs text-gray-500 space-y-1 mb-3">
-                <p><span className="text-gray-400">Ubicación:</span> {fmt(bien.ubicacion)}</p>
-                <p><span className="text-gray-400">Resguardo:</span> {fmt(bien.resguardo)}</p>
-                <p><span className="text-gray-400">Inv:</span> {fmt(bien.numInv)}</p>
-              </div>
-              <div className="flex items-center gap-2 pt-3 border-t border-gray-50 flex-wrap">
-                <button onClick={() => setModalFicha(bien)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-xs font-semibold">
-                  <Eye size={13} /> Ficha
-                </button>
-                <button onClick={() => setModalQR(bien)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors text-xs font-semibold">
-                  <QrCode size={13} /> QR
-                </button>
-                {canEdit && (
-                  <button onClick={() => openEdit(bien)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors text-xs font-semibold">
-                    <Edit size={13} /> Editar
+                <div className="text-xs text-gray-500 space-y-1 mb-3">
+                  <p><span className="text-gray-400">Ubicación:</span> {fmt(bien.ubicacion)}</p>
+                  <p><span className="text-gray-400">Resguardo:</span> {fmt(bien.resguardo)}</p>
+                  <p><span className="text-gray-400">Inv:</span> {fmt(bien.numInv)}</p>
+                </div>
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-50 flex-wrap">
+                  <button onClick={() => setModalFicha(bien)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-xs font-semibold">
+                    <Eye size={13} /> Ficha
                   </button>
-                )}
-                {canDelete && (
-                  <button onClick={() => setModalConfirmDel(bien)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors text-xs font-semibold">
-                    <Trash2 size={13} /> Eliminar
+                  <button onClick={() => setModalQR(bien)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors text-xs font-semibold">
+                    <QrCode size={13} /> QR
                   </button>
-                )}
+                  {canEdit && (
+                    <button onClick={() => openEdit(bien)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors text-xs font-semibold">
+                      <Edit size={13} /> Editar
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button onClick={() => setModalConfirmDel(bien)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors text-xs font-semibold">
+                      <Trash2 size={13} /> Eliminar
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-          <Pagination page={page} totalPages={totalPages} onPage={setPage} mobile />
+            ))}
+          </div>
+        )}
+
+      </div>{/* fin contenedor scroll */}
+
+      {/* Paginación estática */}
+      {!isLoading && !isError && (
+        <div className="flex-shrink-0">
+          <Pagination page={page} totalPages={totalPages} onPage={setPage} />
         </div>
       )}
 
@@ -677,16 +955,13 @@ export default function Inventario() {
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Categoría <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={form.id_categoria}
-                    onChange={(e) => handleCatChange(e.target.value)}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white ${formErrors.id_categoria ? 'border-red-400' : 'border-gray-200'}`}
-                  >
-                    <option value="">Seleccionar…</option>
-                    {(catalogos?.categorias ?? []).map((c) => (
-                      <option key={c.id_categoria} value={c.id_categoria}>{c.nombre_categoria}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.id_categoria ? String(form.id_categoria) : ''}
+                    onChange={(val) => handleCatChange(val)}
+                    options={(catalogos?.categorias ?? []).map(c => ({ value: String(c.id_categoria), label: c.nombre_categoria }))}
+                    placeholder="Seleccionar…"
+                    error={!!formErrors.id_categoria}
+                  />
                   {formErrors.id_categoria && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_categoria}</p>}
                 </div>
 
@@ -724,19 +999,41 @@ export default function Inventario() {
                   />
                 </div>
 
-                {/* Modelo */}
+                {/* Modelo — selector con mini-CRUD */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Modelo</label>
-                  <select
-                    value={form.clave_modelo}
-                    onChange={(e) => setForm((f) => ({ ...f, clave_modelo: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                  >
-                    <option value="">Sin modelo</option>
-                    {(catalogos?.modelos ?? []).map((m) => (
-                      <option key={m.clave_modelo} value={m.clave_modelo}>{m.descrip_disp || m.clave_modelo}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <div
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 cursor-pointer hover:border-green-400 transition-colors flex items-center justify-between min-w-0"
+                      onClick={() => setShowCatalogModal(true)}
+                    >
+                      {form.clave_modelo ? (
+                        <span className="truncate">
+                          {(catalogos?.modelos ?? []).find(m => m.clave_modelo === form.clave_modelo)?.descrip_disp || form.clave_modelo}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">Sin modelo</span>
+                      )}
+                      <ChevronDown size={13} className="ml-2 text-gray-400 flex-shrink-0" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCatalogModal(true)}
+                      className="px-3 py-2 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 transition-colors flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
+                    >
+                      <Plus size={13} /> Gestionar
+                    </button>
+                    {form.clave_modelo && (
+                      <button
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, clave_modelo: '' }))}
+                        className="w-9 h-9 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-400 transition-colors flex items-center justify-center flex-shrink-0"
+                        title="Quitar modelo"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Número de Inventario */}
@@ -781,20 +1078,16 @@ export default function Inventario() {
                 {/* Unidad Operativa */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Operativa</label>
-                  <select
-                    value={form.id_unidad}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, id_unidad: e.target.value, id_ubicacion: '' }));
+                  <SearchableSelect
+                    value={form.id_unidad ? String(form.id_unidad) : ''}
+                    onChange={(val) => {
+                      setForm((f) => ({ ...f, id_unidad: val, id_ubicacion: '' }));
                       setIsAddingUbicacion(false);
                       setNewUbicacionName('');
                     }}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                  >
-                    <option value="">Sin unidad</option>
-                    {(catalogos?.unidades ?? []).map((u) => (
-                      <option key={u.id_unidad} value={u.id_unidad}>{u.nombre || u.clave}</option>
-                    ))}
-                  </select>
+                    options={(catalogos?.unidades ?? []).map(u => ({ value: String(u.id_unidad), label: u.nombre || u.clave }))}
+                    placeholder="Sin unidad"
+                  />
                 </div>
 
                 {/* Ubicacion Física (Depende de Unidad) */}
@@ -822,16 +1115,14 @@ export default function Inventario() {
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <select
-                          value={form.id_ubicacion}
-                          onChange={(e) => setForm((f) => ({ ...f, id_ubicacion: e.target.value }))}
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                        >
-                          <option value="">Seleccionar ubicación...</option>
-                          {ubicacionesUnidad.map((u) => (
-                            <option key={u.id_ubicacion} value={u.id_ubicacion}>{u.nombre_ubicacion}</option>
-                          ))}
-                        </select>
+                        <div className="flex-1 min-w-0">
+                          <SearchableSelect
+                            value={form.id_ubicacion ? String(form.id_ubicacion) : ''}
+                            onChange={(val) => setForm((f) => ({ ...f, id_ubicacion: val }))}
+                            options={ubicacionesUnidad.map(u => ({ value: String(u.id_ubicacion), label: u.nombre_ubicacion }))}
+                            placeholder="Seleccionar ubicación..."
+                          />
+                        </div>
                         <button type="button" onClick={() => setIsAddingUbicacion(true)} title="Añadir nueva ubicación a la Unidad"
                           className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors">
                           <Plus size={15} />
@@ -844,31 +1135,23 @@ export default function Inventario() {
                 {/* Inmueble */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Inmueble / Ubicación</label>
-                  <select
-                    value={form.clave_inmueble_ref}
-                    onChange={(e) => setForm((f) => ({ ...f, clave_inmueble_ref: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                  >
-                    <option value="">Sin inmueble</option>
-                    {(catalogos?.inmuebles ?? []).map((i) => (
-                      <option key={i.clave} value={i.clave}>{i.desc_corta || i.descripcion || i.clave}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.clave_inmueble_ref || ''}
+                    onChange={(val) => setForm((f) => ({ ...f, clave_inmueble_ref: val }))}
+                    options={(catalogos?.inmuebles ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
+                    placeholder="Sin inmueble"
+                  />
                 </div>
 
                 {/* Usuario Resguardo */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Usuario en Resguardo</label>
-                  <select
-                    value={form.id_usuario_resguardo}
-                    onChange={(e) => setForm((f) => ({ ...f, id_usuario_resguardo: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                  >
-                    <option value="">Sin resguardo</option>
-                    {(catalogos?.usuarios ?? []).map((u) => (
-                      <option key={u.id_usuario} value={u.id_usuario}>{u.nombre_completo} ({u.matricula})</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.id_usuario_resguardo ? String(form.id_usuario_resguardo) : ''}
+                    onChange={(val) => setForm((f) => ({ ...f, id_usuario_resguardo: val }))}
+                    options={(catalogos?.usuarios ?? []).map(u => ({ value: String(u.id_usuario), label: `${u.nombre_completo} (${u.matricula})` }))}
+                    placeholder="Sin resguardo"
+                  />
                 </div>
 
                 {/* Fecha Adquisición */}
@@ -982,21 +1265,35 @@ export default function Inventario() {
         </Modal>
       )}
 
+      {/* Mini-CRUD: catalogo de modelos */}
+      {showCatalogModal && modalForm && (
+        <ModeloCatalogModal
+          onClose={() => setShowCatalogModal(false)}
+          onSelectModelo={(clave) => setForm(f => ({ ...f, clave_modelo: clave }))}
+          modeloActual={form.clave_modelo}
+          catalogos={catalogos}
+        />
+      )}
+
     </div>
   );
 }
 
 // ─── Sub-componentes ───────────────────────────────────────────────────────────
 
-import { createPortal } from 'react-dom';
 
 function Modal({ onClose, title, children, wide = false, small = false }) {
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" onMouseDown={onClose}>
-      <div className="absolute inset-0 bg-black/50 fade-in" />
+  return ReactDOM.createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" 
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-black/50 fade-in pointer-events-none" />
       <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${
         small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'
-      } fade-in`} onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+      } fade-in`}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <h3 className="font-bold text-gray-900">{title}</h3>

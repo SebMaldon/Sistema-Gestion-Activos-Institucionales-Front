@@ -16,10 +16,9 @@ export default function Toast() {
 
   const conf = TOAST_CONFIG[toast.type] || TOAST_CONFIG.success;
   const Icon = conf.icon;
-
   return (
     <div
-      className="fixed bottom-6 right-6 z-[100] flex items-start gap-3 px-5 py-4 rounded-xl shadow-2xl border max-w-sm toast-enter"
+      className="fixed bottom-6 right-6 z-[99999] flex items-start gap-3 px-5 py-4 rounded-xl shadow-2xl border max-w-sm toast-enter"
       style={{ backgroundColor: conf.bg, borderColor: conf.border, color: conf.text }}
     >
       <Icon size={20} style={{ color: conf.iconColor }} className="flex-shrink-0 mt-0.5" />

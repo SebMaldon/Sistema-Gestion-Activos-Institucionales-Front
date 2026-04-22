@@ -290,3 +290,36 @@ export const CREATE_UBICACION = gql`
     }
   }
 `;
+
+// ─── Catálogos auxiliares: marcas, tipos, modelos ────────────────────────────
+
+export const GET_MARCAS_TIPOS_QUERY = gql`
+  query GetMarcasTipos {
+    marcas { clave_marca marca }
+    tiposDispositivo { tipo_disp nombre_tipo }
+  }
+`;
+
+export const CREATE_MARCA_MUTATION = gql`
+  mutation CreateMarca($marca: String!) {
+    createMarca(marca: $marca) { clave_marca marca }
+  }
+`;
+
+export const CREATE_TIPO_DISPOSITIVO_MUTATION = gql`
+  mutation CreateTipoDispositivo($nombre_tipo: String!) {
+    createTipoDispositivo(nombre_tipo: $nombre_tipo) { tipo_disp nombre_tipo }
+  }
+`;
+
+export const CREATE_CAT_MODELO_MUTATION = gql`
+  mutation CreateCatModelo($clave_modelo: ID!, $clave_marca: Int, $descrip_disp: String, $tipo_disp: Int) {
+    createCatModelo(clave_modelo: $clave_modelo, clave_marca: $clave_marca, descrip_disp: $descrip_disp, tipo_disp: $tipo_disp) {
+      clave_modelo
+      descrip_disp
+      clave_marca
+      tipo_disp
+    }
+  }
+`;
+

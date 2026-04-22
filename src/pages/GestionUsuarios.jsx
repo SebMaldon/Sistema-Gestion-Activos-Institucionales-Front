@@ -13,10 +13,11 @@ import {
   Trash2, UserCheck, UserMinus, X, Eye, EyeOff, Copy, CheckCircle,
 } from 'lucide-react';
 
+
 // ─── Constantes de roles ──────────────────────────────────────────────────────
 const ROLE_BADGE = {
-  1: { bg: '#ede9fe', color: '#6d28d9', label: 'Maestro' },
-  2: { bg: '#dcfce7', color: '#166534', label: 'Administrador' },
+  1: { bg: '#dcfce7', color: '#166534', label: 'Administrador' },
+  2: { bg: '#ede9fe', color: '#6d28d9', label: 'Maestro' },
   3: { bg: '#dbeafe', color: '#1e40af', label: 'Usuario' },
 };
 
@@ -42,12 +43,15 @@ import { createPortal } from 'react-dom';
 
 function ModalOverlay({ children, onClose, wide = false }) {
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" onMouseDown={onClose}>
-      <div className="absolute inset-0 bg-black/50 fade-in" />
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" 
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-black/50 fade-in pointer-events-none" />
       <div
         className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] fade-in`}
-        onMouseDown={e => e.stopPropagation()}
-        onClick={e => e.stopPropagation()}
       >
         {children}
       </div>
@@ -434,6 +438,7 @@ export default function GestionUsuarios() {
   const [modalEditar, setModalEditar] = useState(null);
   const [modalReset, setModalReset] = useState(null);
   const [modalDesactivar, setModalDesactivar] = useState(null);
+  const [modalEliminar, setModalEliminar] = useState(null);
 
   // ── Queries
   const { data: catRoles = [] } = useQuery({
@@ -491,12 +496,13 @@ export default function GestionUsuarios() {
     },
   });
 
-  const isAdmin = idRol <= 2;
+  const isAdmin  = idRol <= 2;
+  const isMaestro = idRol === 2;
   const roles = catRoles;
   const unidades = catUnidades;
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 fade-in">
+    <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -515,7 +521,7 @@ export default function GestionUsuarios() {
       </div>
 
       {/* ── TAB: USUARIOS ──────────────────────────────────────────────────── */}
-      <div className="space-y-5">
+      <div className="flex flex-col flex-1 min-h-0 gap-5">
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
             <StatCard label="Totales" val={totalCount} color="#006341" bg="#dcfce7" />
@@ -555,17 +561,12 @@ export default function GestionUsuarios() {
           </div>
 
           {/* Tabla desktop */}
-          <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {isLoading ? (
-              <div className="py-16 text-center text-sm text-gray-400">Cargando usuarios...</div>
-            ) : isError ? (
-              <div className="py-16 text-center text-sm text-red-400">Error al cargar usuarios</div>
-            ) : usuarios.length === 0 ? (
-              <div className="py-16 text-center text-sm text-gray-400">Sin resultados</div>
-            ) : (
+          <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Cabecera fija de la tabla */}
+            <div className="flex-shrink-0 bg-gray-50 border-b border-gray-100">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
+                  <tr>
                     <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
                     <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
                     <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Unidad</th>
@@ -573,77 +574,95 @@ export default function GestionUsuarios() {
                     {isAdmin && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {usuarios.map(u => {
-                    const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
-                    return (
-                      <tr key={u.id_usuario} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                              style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
-                              {getInitials(u.nombre_completo)}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900 text-sm">{u.nombre_completo}</p>
-                              <p className="text-xs text-gray-400">{u.matricula} {u.correo_electronico && `• ${u.correo_electronico}`}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                            style={{ backgroundColor: badge.bg, color: badge.color }}>
-                            {badge.label}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-xs text-gray-600">
-                          {u.unidad?.nombre || u.unidad?.no_ref || '—'}
-                        </td>
-                        <td className="px-5 py-4">
-                          {isAdmin ? (
-                            <button
-                              onClick={() => {
-                                if (!u.estatus) {
-                                  // Reactivar directamente
-                                  toggleEstatus.mutate({ id_usuario: u.id_usuario, estatus: true });
-                                } else {
-                                  setModalDesactivar(u);
-                                }
-                              }}
-                              className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${u.estatus ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                              {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
-                              {u.estatus ? 'Activo' : 'Inactivo'}
-                            </button>
-                          ) : (
-                            <span className={`text-xs font-semibold ${u.estatus ? 'text-green-600' : 'text-gray-400'}`}>
-                              {u.estatus ? 'Activo' : 'Inactivo'}
-                            </span>
-                          )}
-                        </td>
-                        {isAdmin && (
+              </table>
+            </div>
+            {/* Cuerpo scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              {isLoading ? (
+                <div className="py-16 text-center text-sm text-gray-400">Cargando usuarios...</div>
+              ) : isError ? (
+                <div className="py-16 text-center text-sm text-red-400">Error al cargar usuarios</div>
+              ) : usuarios.length === 0 ? (
+                <div className="py-16 text-center text-sm text-gray-400">Sin resultados</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-gray-50">
+                    {usuarios.map(u => {
+                      const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
+                      return (
+                        <tr key={u.id_usuario} className="hover:bg-gray-50 transition-colors">
                           <td className="px-5 py-4">
-                            <div className="flex items-center gap-1.5">
-                              <button onClick={() => setModalEditar(u)}
-                                className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors" title="Editar">
-                                <Edit size={14} />
-                              </button>
-                              <button onClick={() => setModalReset(u)}
-                                className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Resetear contraseña">
-                                <Shield size={14} />
-                              </button>
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
+                                {getInitials(u.nombre_completo)}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 text-sm">{u.nombre_completo}</p>
+                                <p className="text-xs text-gray-400">{u.matricula} {u.correo_electronico && `• ${u.correo_electronico}`}</p>
+                              </div>
                             </div>
                           </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+                          <td className="px-5 py-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                              style={{ backgroundColor: badge.bg, color: badge.color }}>
+                              {badge.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-xs text-gray-600">
+                            {u.unidad?.nombre || u.unidad?.no_ref || '—'}
+                          </td>
+                          <td className="px-5 py-4">
+                            {isAdmin ? (
+                              <button
+                                onClick={() => {
+                                  if (!u.estatus) {
+                                    toggleEstatus.mutate({ id_usuario: u.id_usuario, estatus: true });
+                                  } else {
+                                    setModalDesactivar(u);
+                                  }
+                                }}
+                                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${u.estatus ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
+                                {u.estatus ? 'Activo' : 'Inactivo'}
+                              </button>
+                            ) : (
+                              <span className={`text-xs font-semibold ${u.estatus ? 'text-green-600' : 'text-gray-400'}`}>
+                                {u.estatus ? 'Activo' : 'Inactivo'}
+                              </span>
+                            )}
+                          </td>
+                          {isAdmin && (
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => setModalEditar(u)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors" title="Editar">
+                                  <Edit size={14} />
+                                </button>
+                                <button onClick={() => setModalReset(u)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Resetear contraseña">
+                                  <Shield size={14} />
+                                </button>
+                                {isMaestro && (
+                                  <button onClick={() => setModalEliminar(u)}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Eliminar usuario">
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
 
           {/* Cards móvil */}
-          <div className="md:hidden space-y-3">
+          <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 pb-2">
             {isLoading ? (
               <div className="py-8 text-center text-sm text-gray-400">Cargando...</div>
             ) : usuarios.map(u => {
@@ -681,6 +700,12 @@ export default function GestionUsuarios() {
                         className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
                         <Shield size={14} />
                       </button>
+                      {isMaestro && (
+                        <button onClick={() => setModalEliminar(u)}
+                          className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-500">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -688,9 +713,9 @@ export default function GestionUsuarios() {
             })}
           </div>
 
-          {/* Paginación */}
+          {/* Paginación — estática */}
           {(pageInfo?.hasNextPage || cursors.length > 0) && (
-            <div className="flex items-center justify-between">
+            <div className="flex-shrink-0 flex items-center justify-between py-1">
               <button onClick={handlePrevPage} disabled={cursors.length === 0}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
                 <ChevronLeft size={15} /> Anterior
@@ -705,7 +730,6 @@ export default function GestionUsuarios() {
             </div>
           )}
         </div>
-
 
       {/* ── MODALES ──────────────────────────────────────────────────────── */}
       {modalCrear && (
