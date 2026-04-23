@@ -132,6 +132,16 @@ export default function App() {
               <AppLayout page="garantias"><Garantias /></AppLayout>
             </RoleRoute>
           } />
+          <Route path="/unidades" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="unidades"><Unidades /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/inmuebles" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="inmuebles"><Inmuebles /></AppLayout>
+            </RoleRoute>
+          } />
           <Route path="/movimientos" element={
             <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
               <AppLayout page="movimientos"><Movimientos /></AppLayout>
@@ -139,16 +149,6 @@ export default function App() {
           } />
 
           {/* Rutas restringidas de Sistema: Solo Maestro (1) */}
-          <Route path="/unidades" element={
-            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
-              <AppLayout page="unidades"><Unidades /></AppLayout>
-            </RoleRoute>
-          } />
-          <Route path="/inmuebles" element={
-            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
-              <AppLayout page="inmuebles"><Inmuebles /></AppLayout>
-            </RoleRoute>
-          } />
           <Route path="/usuarios" element={
             <RoleRoute allowedRoles={[ROL_MAESTRO]}>
               <AppLayout page="usuarios"><GestionUsuarios /></AppLayout>
