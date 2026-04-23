@@ -274,7 +274,7 @@ export const DELETE_INCIDENCIA_MUTATION = gql`
 
 export const GET_UNIDADES_QUERY = gql`
   query GetUnidades {
-    unidades(estatus: 1) {
+    catUnidades {
       id_unidad
       nombre
       no_ref

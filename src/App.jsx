@@ -17,6 +17,8 @@ import GestionUsuarios from './pages/GestionUsuarios';
 import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
 import Garantias from './pages/Garantias';
+import Unidades from './pages/Unidades';
+
 
 // ─── Roles reales de BD ──────────────────────────────────────────────────────
 // 1 = Maestro, 2 = Administrador, 3 = Usuario Estándar, 4 = Sin Acceso
@@ -127,6 +129,11 @@ export default function App() {
           <Route path="/garantias" element={
             <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
               <AppLayout page="garantias"><Garantias /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/unidades" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="unidades"><Unidades /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/movimientos" element={

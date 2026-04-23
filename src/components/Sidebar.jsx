@@ -16,6 +16,7 @@ const NAV_BY_ROL = {
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Gestión' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Gestión' },
     { path: '/movimientos', label: 'Traspasos y Salidas', icon: ArrowLeftRight, group: 'Gestión' },
+    { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
     { path: '/usuarios', label: 'Gestión de Usuarios', icon: Users, group: 'Sistema' },
     { path: '/auditoria', label: 'Bitácora de Auditoría', icon: ShieldCheck, group: 'Sistema' },
@@ -27,6 +28,7 @@ const NAV_BY_ROL = {
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Administración' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Administración' },
     { path: '/movimientos', label: 'Traspasos y Salidas', icon: ArrowLeftRight, group: 'Administración' },
+    { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Administración' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
   ],
   3: [ // Usuario Estándar (solo consulta)

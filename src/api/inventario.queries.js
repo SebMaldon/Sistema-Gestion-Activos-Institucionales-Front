@@ -130,7 +130,7 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       descrip_disp
       clave_marca
     }
-    unidades {
+    catUnidades {
       id_unidad
       nombre
       clave

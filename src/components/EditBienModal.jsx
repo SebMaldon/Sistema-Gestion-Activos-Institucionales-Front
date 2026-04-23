@@ -10,7 +10,7 @@ import { useApp } from '../context/AppContext';
 const GET_CATALOGS_QUERY = gql`
   query GetCatalogs {
     catCategoriasActivo { id_categoria nombre_categoria }
-    unidades { id_unidad nombre }
+    catUnidades { id_unidad nombre }
     usuarios(estatus: true, pagination: { first: 20000 }) {
       edges {
         node {
@@ -379,7 +379,7 @@ export function EditBienModal({ asset, onClose }) {
                       onChange={e => setFormData({ ...formData, id_unidad: e.target.value, id_ubicacion: '' })}
                       className={selectCls}>
                       <option value="">-- Seleccionar --</option>
-                      {catalogs?.unidades?.map(u => (
+                      {catalogs?.catUnidades?.map(u => (
                         <option key={u.id_unidad} value={u.id_unidad}>{u.nombre}</option>
                       ))}
                     </select>
