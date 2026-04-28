@@ -130,12 +130,12 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       descrip_disp
       clave_marca
     }
-    catUnidades {
+    unidades: catUnidades {
       id_unidad
       nombre
       clave
     }
-    inmuebles {
+    inmuebles: catLegacyInmuebles {
       clave
       descripcion
       desc_corta
