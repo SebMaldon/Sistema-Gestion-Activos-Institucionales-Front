@@ -1,28 +1,163 @@
-import React from 'react';
-import { mockAuditLog } from '../data/mockData';
-import { ShieldCheck, LogIn, Edit, Trash2, Download, AlertTriangle, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { GET_BITACORA } from '../api/bitacora.queries';
+import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Activity, X, Braces, Search, Filter } from 'lucide-react';
+import { formatDateTime } from '../lib/utils';
 
 const ACTION_CONFIG = {
-  LOGIN: { icon: LogIn, bg: '#dcfce7', color: '#16a34a' },
-  CREATE: { icon: Edit, bg: '#dbeafe', color: '#2563eb' },
-  UPDATE: { icon: Edit, bg: '#fff7ed', color: '#ea580c' },
-  READ: { icon: Eye, bg: '#f3f4f6', color: '#6b7280' },
-  DELETE: { icon: Trash2, bg: '#fee2e2', color: '#dc2626' },
-  EXPORT: { icon: Download, bg: '#ede9fe', color: '#7c3aed' },
+  CREACION: { icon: FilePlus, bg: '#dcfce7', color: '#16a34a', label: 'Creación' },
+  EDICION: { icon: Edit, bg: '#fff7ed', color: '#ea580c', label: 'Edición' },
+  ELIMINACION: { icon: Trash2, bg: '#fee2e2', color: '#dc2626', label: 'Eliminación' },
+  LECTURA: { icon: Eye, bg: '#f3f4f6', color: '#6b7280', label: 'Lectura' },
+  LOGIN: { icon: ShieldCheck, bg: '#e0f2fe', color: '#0369a1', label: 'Inicio de Sesión' },
 };
 
-const RESULT_BADGE = {
-  'Exitoso': { bg: '#dcfce7', color: '#166534' },
-  'Fallido': { bg: '#fee2e2', color: '#991b1b' },
-};
+function parseDetalles(jsonStr) {
+  if (!jsonStr) return null;
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    // Si no es JSON, devolvemos un objeto con el texto original para que el visor lo muestre
+    return { mensaje: jsonStr };
+  }
+}
+
+function DetalleJSONModal({ isOpen, onClose, log }) {
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'auto';
+    return () => { document.body.style.overflow = 'auto'; };
+  }, [isOpen]);
+
+  if (!isOpen || !log) return null;
+  const parsed = parseDetalles(log.detalles_movimiento);
+  const isEdicion = log.accion === 'EDICION' && parsed?.estadoAnterior && parsed?.estadoNuevo;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
+      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-slide-up">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Braces size={20} className="text-indigo-500" />
+            Inspeccionar Detalles
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-xl transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto bg-gray-50/30 flex-1">
+          <div className="flex flex-wrap gap-4 mb-6">
+            <div className="bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm flex-1 min-w-[200px]">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Módulo Afectado</p>
+              <p className="text-sm font-bold text-gray-800">{log.tabla_afectada} <span className="text-gray-400 ml-1">#{log.registro_afectado || 'N/A'}</span></p>
+            </div>
+            <div className="bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm flex-1 min-w-[200px]">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Acción Realizada</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ACTION_CONFIG[log.accion]?.color || '#9ca3af' }} />
+                <p className="text-sm font-bold text-gray-800 uppercase tracking-tight">{ACTION_CONFIG[log.accion]?.label || log.accion}</p>
+              </div>
+            </div>
+          </div>
+
+          {isEdicion ? (
+            <div className="space-y-4">
+              <h4 className="text-xs font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                Comparativa de Cambios
+              </h4>
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-100 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-xs font-black text-gray-600 uppercase tracking-wider w-1/3">Propiedad</th>
+                      <th className="px-4 py-3 text-xs font-black text-red-600 uppercase tracking-wider w-1/3 border-l border-gray-200">Valor Anterior</th>
+                      <th className="px-4 py-3 text-xs font-black text-green-600 uppercase tracking-wider w-1/3 border-l border-gray-200">Valor Nuevo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {parsed.columnasModificadas?.map(col => {
+                      const vAnterior = parsed.estadoAnterior[col];
+                      const vNuevo = parsed.estadoNuevo[col];
+                      return (
+                        <tr key={col} className="hover:bg-gray-50/50">
+                          <td className="px-4 py-3 font-mono text-[11px] font-semibold text-gray-700 bg-gray-50/50 border-r border-gray-100">{col}</td>
+                          <td className="px-4 py-3 font-mono text-[11px] text-red-700 bg-red-50/20 break-all border-r border-gray-100">{vAnterior !== null && vAnterior !== undefined ? String(vAnterior) : 'NULL'}</td>
+                          <td className="px-4 py-3 font-mono text-[11px] text-green-700 bg-green-50/20 break-all">{vNuevo !== null && vNuevo !== undefined ? String(vNuevo) : 'NULL'}</td>
+                        </tr>
+                      );
+                    })}
+                    {(!parsed.columnasModificadas || parsed.columnasModificadas.length === 0) && (
+                      <tr>
+                        <td colSpan="3" className="px-4 py-5 text-center text-xs text-gray-400 italic">La entidad se procesó sin modificaciones estructurales.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                Estado del Registro ({ACTION_CONFIG[log.accion]?.label || 'Operación'})
+              </h4>
+              <div className="bg-[#1e1e2e] rounded-xl p-5 shadow-inner overflow-x-auto border border-gray-800">
+                <pre className="text-[11px] font-mono text-[#a6accd] leading-relaxed">
+                  {JSON.stringify(parsed, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Auditoria() {
+  const [cursor, setCursor] = useState(null);
+  const [cursors, setCursors] = useState([]);
+  const [filterAccion, setFilterAccion] = useState('');
+  const [filterModulo, setFilterModulo] = useState('');
+  const [modalLog, setModalLog] = useState(null);
+  const PAGE_SIZE = 10;
+
+  const { data: bitacoraData, isLoading, isError } = useQuery({
+    queryKey: ['bitacora', filterAccion, filterModulo, cursor],
+    queryFn: () => gqlClient.request(GET_BITACORA, {
+      accion: filterAccion || undefined,
+      tabla_afectada: filterModulo || undefined,
+      first: PAGE_SIZE,
+      after: cursor ?? undefined,
+    }),
+    select: d => d.bitacora,
+  });
+
+  const logs = bitacoraData?.edges?.map(e => e.node) ?? [];
+  const pageInfo = bitacoraData?.pageInfo;
+  const totalCount = pageInfo?.totalCount ?? 0;
+
+  const handleNextPage = () => {
+    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
+      setCursors(p => [...p, cursor]);
+      setCursor(pageInfo.endCursor);
+    }
+  };
+
+  const handlePrevPage = () => {
+    const prev = [...cursors];
+    const prevCursor = prev.pop() ?? null;
+    setCursors(prev);
+    setCursor(prevCursor);
+  };
+
   return (
-    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 fade-in">
+    <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bitácora de Auditoría</h1>
-          <p className="text-sm text-gray-500 mt-1">Registro de accesos y operaciones — Solo lectura</p>
+          <p className="text-sm text-gray-500 mt-1">Registro global de movimientos del sistema — Solo lectura</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50">
           <ShieldCheck size={16} style={{ color: '#ca8a04' }} />
@@ -30,112 +165,180 @@ export default function Auditoria() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: 'Accesos Exitosos', val: 5, color: '#166534', bg: '#dcfce7' },
-          { label: 'Accesos Fallidos', val: 1, color: '#991b1b', bg: '#fee2e2' },
-          { label: 'Modificaciones', val: 4, color: '#1e40af', bg: '#dbeafe' },
-          { label: 'Exportaciones', val: 1, color: '#6d28d9', bg: '#ede9fe' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl p-3 sm:p-4 border border-gray-100 shadow-sm text-center">
-            <p className="text-xl sm:text-2xl font-bold" style={{ color: s.color }}>{s.val}</p>
-            <p className="text-xs text-gray-500 mt-1 leading-tight">{s.label}</p>
+      <div className="flex flex-col flex-1 min-h-0 gap-4">
+        {/* Filtros rápidos */}
+        <div className="bg-white flex gap-3 p-3 rounded-2xl border border-gray-100 shadow-sm flex-wrap items-center">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm border border-gray-100 font-semibold text-gray-600">
+            <Activity size={16} /> Total Eventos: {totalCount}
           </div>
-        ))}
-      </div>
+          
+          <div className="h-6 w-px bg-gray-200 hidden sm:block mx-1"></div>
 
-      {/* MOBILE: Card list */}
-      <div className="md:hidden space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-bold text-gray-800">Registro de Eventos</h2>
-          <span className="text-xs text-gray-400">{mockAuditLog.length} entradas</span>
-        </div>
-        {mockAuditLog.map(log => {
-          const conf = ACTION_CONFIG[log.accion] || ACTION_CONFIG.READ;
-          const Icon = conf.icon;
-          const resBadge = RESULT_BADGE[log.resultado] || RESULT_BADGE['Exitoso'];
-          return (
-            <div key={log.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: conf.bg }}>
-                  <Icon size={14} style={{ color: conf.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold truncate" style={{ color: conf.color }}>{log.accion}</p>
-                  <p className="text-xs text-gray-500 truncate">{log.modulo}</p>
-                </div>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0"
-                  style={{ backgroundColor: resBadge.bg, color: resBadge.color }}>
-                  {log.resultado}
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 space-y-0.5">
-                <p><span className="text-gray-400">Usuario:</span> {log.usuario}</p>
-                <p><span className="text-gray-400">IP:</span> <span className="font-mono">{log.ip}</span></p>
-                <p><span className="text-gray-400">Fecha:</span> <span className="font-mono">{log.fecha}</span></p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+          <div className="relative">
+            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <select value={filterAccion} onChange={e => { setFilterAccion(e.target.value); setCursor(null); setCursors([]); }}
+              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none">
+              <option value="">Todas las acciones</option>
+              <option value="CREACION">Creaciones</option>
+              <option value="EDICION">Ediciones</option>
+              <option value="ELIMINACION">Eliminaciones</option>
+            </select>
+          </div>
 
-      {/* DESKTOP: Table */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-gray-800">Registro de Eventos</h2>
-          <span className="text-xs text-gray-400">{mockAuditLog.length} entradas</span>
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <select value={filterModulo} onChange={e => { setFilterModulo(e.target.value); setCursor(null); setCursors([]); }}
+              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none">
+              <option value="">Todos los módulos</option>
+              <option value="Incidencias">Incidencias</option>
+              <option value="Notas">Notas de Incidencia</option>
+              <option value="Bienes">Bienes / Activos</option>
+              <option value="Usuarios">Usuarios</option>
+              <option value="Garantias">Garantías</option>
+              <option value="Unidades">Unidades Operativas</option>
+              <option value="Inmuebles">Inmuebles</option>
+            </select>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {['Fecha / Hora', 'Usuario', 'IP', 'Acción', 'Módulo', 'Resultado'].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {mockAuditLog.map(log => {
-                const conf = ACTION_CONFIG[log.accion] || ACTION_CONFIG.READ;
-                const Icon = conf.icon;
-                const resBadge = RESULT_BADGE[log.resultado] || RESULT_BADGE['Exitoso'];
-                return (
-                  <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5">
-                      <span className="font-mono text-xs text-gray-600">{log.fecha}</span>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs font-medium text-gray-800 max-w-[150px] truncate">{log.usuario}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="font-mono text-xs text-gray-500">{log.ip}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: conf.bg }}>
-                          <Icon size={12} style={{ color: conf.color }} />
+
+        {/* Tabla desktop */}
+        <div className="hidden md:block flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-auto">
+          {isLoading ? (
+             <div className="py-16 text-center text-sm text-gray-400">Cargando bitácora...</div>
+          ) : isError ? (
+             <div className="py-16 text-center text-sm text-red-400">Error al cargar la auditoría</div>
+          ) : logs.length === 0 ? (
+             <div className="py-16 text-center text-sm text-gray-400">No hay registros aún</div>
+          ) : (
+            <table className="w-full text-sm text-left table-fixed">
+              <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[18%]">Fecha / Hora</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[32%]">Usuario</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[18%]">Acción</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[18%]">Módulo Afectado</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-[14%]">Detalles</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {logs.map(log => {
+                  const conf = ACTION_CONFIG[log.accion] || ACTION_CONFIG.LECTURA;
+                  const Icon = conf.icon;
+                  return (
+                    <tr key={log.id_bitacora} className="hover:bg-gray-50/80 transition-colors group">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-mono text-[11px] font-semibold text-gray-500">{formatDateTime(log.fecha_movimiento)}</span>
+                      </td>
+                      <td className="px-6 py-4 truncate">
+                        <p className="font-bold text-gray-800 truncate" title={log.usuario.nombre_completo}>{log.usuario.nombre_completo}</p>
+                        <p className="text-gray-400 font-mono text-[10px] mt-0.5">{log.usuario.matricula}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: conf.bg }}>
+                            <Icon size={14} style={{ color: conf.color }} />
+                          </div>
+                          <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: conf.color }}>{conf.label}</span>
                         </div>
-                        <span className="text-xs font-bold" style={{ color: conf.color }}>{log.accion}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs text-gray-600">{log.modulo}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                        style={{ backgroundColor: resBadge.bg, color: resBadge.color }}>
-                        {log.resultado}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[11px] text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 uppercase tracking-wide">
+                            {log.tabla_afectada}
+                          </span>
+                          {log.registro_afectado && <span className="text-[11px] font-mono font-bold text-gray-400">#{log.registro_afectado}</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center whitespace-nowrap">
+                        {log.detalles_movimiento && log.detalles_movimiento !== 'null' ? (
+                          <button
+                            onClick={() => setModalLog(log)}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-600 text-[11px] uppercase tracking-wide font-black hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm active:scale-95"
+                          >
+                            <Braces size={14} /> Inspeccionar
+                          </button>
+                        ) : (
+                          <span className="text-[11px] font-bold uppercase text-gray-400 italic">N/A</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
-          <p className="text-xs text-gray-400">
-            Datos auditables bajo normativa MAAGTIC-SI y Ley Federal de Transparencia. Retención: 5 años.
-          </p>
+
+        {/* Móvil View */}
+        <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 pb-2">
+          {isLoading ? (
+            <div className="py-8 text-center text-sm text-gray-400">Cargando...</div>
+          ) : logs.map(log => {
+            const conf = ACTION_CONFIG[log.accion] || ACTION_CONFIG.LECTURA;
+            const Icon = conf.icon;
+            return (
+              <div key={log.id_bitacora} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: conf.bg }}>
+                    <Icon size={18} style={{ color: conf.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold truncate" style={{ color: conf.color }}>{conf.label}</p>
+                      <span className="text-[10px] font-mono text-gray-400">{formatDateTime(log.fecha_movimiento)}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 font-semibold mt-0.5">
+                      Módulo: {log.tabla_afectada} {log.registro_afectado ? <span className="font-mono text-gray-400">#{log.registro_afectado}</span> : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <p className="text-xs text-gray-600"><span className="text-gray-400 font-medium">Por:</span> <span className="font-semibold text-gray-800">{log.usuario.nombre_completo}</span></p>
+                  {log.detalles_movimiento && log.detalles_movimiento !== 'null' && (
+                    <button
+                      onClick={() => setModalLog(log)}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors"
+                    >
+                      <Braces size={14} /> Inspeccionar Cambios
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Paginación */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0 rounded-b-2xl">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-gray-500 font-medium">
+              Total: <span className="text-gray-900 font-bold">{totalCount}</span> eventos registrados.
+            </p>
+            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+              Página {cursors.length + 1} de {Math.ceil(totalCount / PAGE_SIZE) || 1}
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevPage}
+              disabled={cursors.length === 0}
+              className="px-4 py-1.5 text-xs font-bold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1"
+            >
+              <ChevronLeft size={14} /> Anterior
+            </button>
+            <button
+              onClick={handleNextPage}
+              disabled={!pageInfo?.hasNextPage}
+              className="px-4 py-1.5 text-xs font-bold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm flex items-center gap-1"
+            >
+              Siguiente <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       </div>
+
+      <DetalleJSONModal isOpen={!!modalLog} onClose={() => setModalLog(null)} log={modalLog} />
     </div>
   );
 }

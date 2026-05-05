@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Loader2, Building2, AlertTriangle, Eye, Home, MapPin, User, ChevronRight } from 'lucide-react';
 import { useInmuebles, useCreateInmueble, useUpdateInmueble, useDeleteInmueble } from '../hooks/useInmuebles';
+import { useApp } from '../context/AppContext';
 import InmuebleModal from '../components/InmuebleModal';
 import ConfirmModal from '../components/ConfirmModal';
 import DetalleInmuebleModal from '../components/DetalleInmuebleModal';
@@ -9,6 +10,7 @@ export default function Inmuebles() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inmuebleToEdit, setInmuebleToEdit] = useState(null);
+  const { showToast } = useApp();
   
   // Detail state
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -86,8 +88,10 @@ export default function Inmuebles() {
       await deleteInmueble.mutateAsync({ clave: inmuebleToDelete.clave });
       setIsDeleteModalOpen(false);
       setInmuebleToDelete(null);
+      showToast('Inmueble eliminado correctamente', 'success');
     } catch (err) {
-      alert('Error al eliminar el inmueble.');
+      const msg = err.response?.errors?.[0]?.message || 'Error al eliminar el inmueble.';
+      showToast(msg, 'error');
     }
   };
 
@@ -99,8 +103,10 @@ export default function Inmuebles() {
         await createInmueble.mutateAsync(formData);
       }
       setIsModalOpen(false);
+      showToast(`Inmueble ${inmuebleToEdit ? 'actualizado' : 'creado'} correctamente`, 'success');
     } catch (err) {
-      alert('Error al guardar el inmueble: ' + (err.response?.errors?.[0]?.message || err.message));
+      const msg = err.response?.errors?.[0]?.message || err.message;
+      showToast('Error al guardar el inmueble: ' + msg, 'error');
     }
   };
 

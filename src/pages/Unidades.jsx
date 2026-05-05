@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Loader2, Building2, AlertTriangle, CheckCircle2, Eye } from 'lucide-react';
 import { useUnidades, useCreateUnidad, useUpdateUnidad, useDeleteUnidad } from '../hooks/useUnidades';
+import { useApp } from '../context/AppContext';
 import UnidadModal from '../components/UnidadModal';
 import ConfirmModal from '../components/ConfirmModal';
 import DetalleUnidadModal from '../components/DetalleUnidadModal';
@@ -9,6 +10,7 @@ export default function Unidades() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [unidadToEdit, setUnidadToEdit] = useState(null);
+  const { showToast } = useApp();
   
   // Detail state
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -83,8 +85,10 @@ export default function Unidades() {
       await deleteUnidad.mutateAsync({ id_unidad: Number(unidadToDelete.id_unidad) });
       setIsDeleteModalOpen(false);
       setUnidadToDelete(null);
+      showToast('Unidad eliminada correctamente', 'success');
     } catch (err) {
-      alert('Error al eliminar la unidad.');
+      const msg = err.response?.errors?.[0]?.message || 'Error al eliminar la unidad.';
+      showToast(msg, 'error');
     }
   };
 
@@ -99,9 +103,11 @@ export default function Unidades() {
         await createUnidad.mutateAsync(formData);
       }
       setIsModalOpen(false);
+      showToast(`Unidad ${unidadToEdit ? 'actualizada' : 'creada'} correctamente`, 'success');
     } catch (err) {
       console.error(err);
-      alert('Error al guardar la unidad.');
+      const msg = err.response?.errors?.[0]?.message || 'Error al guardar la unidad.';
+      showToast(msg, 'error');
     }
   };
 

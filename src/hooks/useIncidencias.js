@@ -140,7 +140,7 @@ export function useUnidades(filtros = {}) {
     queryFn: async () => {
       try {
         const data = await gqlClient.request(GET_UNIDADES_QUERY, filtros);
-        return data.unidades;
+        return data.catUnidades;
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
         if (code === 'UNAUTHENTICATED') clearAuth();
