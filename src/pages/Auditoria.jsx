@@ -35,8 +35,14 @@ function DetalleJSONModal({ isOpen, onClose, log }) {
   const isEdicion = log.accion === 'EDICION' && parsed?.estadoAnterior && parsed?.estadoNuevo;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-slide-up">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <Braces size={20} className="text-indigo-500" />
@@ -123,7 +129,7 @@ export default function Auditoria() {
   const [modalLog, setModalLog] = useState(null);
   const PAGE_SIZE = 10;
 
-  const { data: bitacoraData, isLoading, isError } = useQuery({
+  const { data: bitacoraData, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['bitacora', filterAccion, filterModulo, cursor],
     queryFn: () => gqlClient.request(GET_BITACORA, {
       accion: filterAccion || undefined,
@@ -132,6 +138,8 @@ export default function Auditoria() {
       after: cursor ?? undefined,
     }),
     select: d => d.bitacora,
+    refetchInterval: 15000, // Auto-refrescar cada 15 segundos
+    refetchOnWindowFocus: true,
   });
 
   const logs = bitacoraData?.edges?.map(e => e.node) ?? [];
@@ -159,9 +167,23 @@ export default function Auditoria() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bitácora de Auditoría</h1>
           <p className="text-sm text-gray-500 mt-1">Registro global de movimientos del sistema — Solo lectura</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50">
-          <ShieldCheck size={16} style={{ color: '#ca8a04' }} />
-          <span className="text-xs font-semibold text-amber-700">Modo Supervisión</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              isFetching 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
+                : 'bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50 active:scale-95'
+            }`}
+          >
+            <Activity size={14} className={isFetching ? 'animate-spin' : ''} />
+            {isFetching ? 'ACTUALIZANDO...' : 'REFRESCAR'}
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50">
+            <ShieldCheck size={16} style={{ color: '#ca8a04' }} />
+            <span className="text-xs font-semibold text-amber-700">Modo Supervisión</span>
+          </div>
         </div>
       </div>
 
@@ -176,19 +198,26 @@ export default function Auditoria() {
 
           <div className="relative">
             <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select value={filterAccion} onChange={e => { setFilterAccion(e.target.value); setCursor(null); setCursors([]); }}
-              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none">
+            <select 
+              value={filterAccion} 
+              onChange={e => { setFilterAccion(e.target.value); setCursor(null); setCursors([]); }}
+              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none font-semibold text-gray-700"
+            >
               <option value="">Todas las acciones</option>
               <option value="CREACION">Creaciones</option>
               <option value="EDICION">Ediciones</option>
               <option value="ELIMINACION">Eliminaciones</option>
+              <option value="LOGIN">Inicios de Sesión</option>
             </select>
           </div>
 
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select value={filterModulo} onChange={e => { setFilterModulo(e.target.value); setCursor(null); setCursors([]); }}
-              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none">
+            <select 
+              value={filterModulo} 
+              onChange={e => { setFilterModulo(e.target.value); setCursor(null); setCursors([]); }}
+              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none font-semibold text-gray-700"
+            >
               <option value="">Todos los módulos</option>
               <option value="Incidencias">Incidencias</option>
               <option value="Notas">Notas de Incidencia</option>
