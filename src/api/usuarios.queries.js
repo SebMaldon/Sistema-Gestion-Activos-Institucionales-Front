@@ -48,6 +48,20 @@ export const GET_UNIDADES = gql`
   }
 `;
 
+export const TOGGLE_ESTATUS_USUARIO = gql`
+  mutation ToggleEstatusUsuario($id_usuario: ID!, $estatus: Boolean!) {
+    updateUsuario(id_usuario: $id_usuario, estatus: $estatus) {
+      id_usuario estatus
+    }
+  }
+`;
+
+export const HARD_DELETE_USUARIO = gql`
+  mutation HardDeleteUsuario($id_usuario: ID!) {
+    deleteUsuario(id_usuario: $id_usuario)
+  }
+`;
+
 // ─── MUTATIONS ───────────────────────────────────────────────────────────────
 
 export const CREATE_USUARIO = gql`

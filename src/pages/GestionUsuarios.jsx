@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/auth.store';
 import {
   GET_USUARIOS, GET_ROLES, GET_UNIDADES,
   CREATE_USUARIO, UPDATE_USUARIO, DELETE_USUARIO, RESET_PASSWORD_ADMIN,
+  TOGGLE_ESTATUS_USUARIO, HARD_DELETE_USUARIO,
 } from '../api/usuarios.queries';
 import {
   Users, Plus, Edit, UserX, Search, RefreshCw,
@@ -310,98 +311,135 @@ function ResetPasswordModal({ usuario, onClose }) {
   );
 }
 
-// ─── Modal Confirmar Desactivación ────────────────────────────────────────────
-function ConfirmDesactivarModal({ usuario, onClose }) {
+// ─── Modal Confirmar Desactivar/Activar ──────────────────────────────────────
+function ConfirmToggleEstatusModal({ usuario, onClose }) {
   const qc = useQueryClient();
   const { showToast } = useApp();
-  const [adminPass, setAdminPass] = useState('');
-  const [showPass, setShowPass] = useState(false);
-  const adminUser = useAuthStore(s => s.usuario);
+  const isActive = usuario.estatus;
 
-  const validateAndSoftDelete = useMutation({
-    mutationFn: async ({ id_usuario_target, adminPassword }) => {
-      // Primero validamos la contraseña del admin intentando un reseteo de prueba.
-      // El endpoint valida la pass, si falla lanza error antes de modificar nada.
-      // Para validar sin modificar, usamos la mutación de actualización de estatus.
-      // Aquí usamos changePassword internamente — simplificado: basta con ejecutar
-      // la desactivación directamente pasando adminPassword al backend.
-      // En este flujo simplificado usamos deleteUsuario tras validar via resetPasswordAdmin con pass.
-      await gqlClient.request(RESET_PASSWORD_ADMIN, {
-        id_usuario_target: adminUser.id_usuario.toString(), // target = el mismo admin
-        adminPassword,
-      });
-    },
-    onError: () => showToast('Contraseña de admin incorrecta', 'error'),
-  });
-
-  const softDelete = useMutation({
-    mutationFn: (vars) => gqlClient.request(DELETE_USUARIO, vars),
+  const toggleMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(TOGGLE_ESTATUS_USUARIO, vars),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['usuarios'] });
-      showToast(`Usuario ${usuario.nombre_completo} desactivado`, 'warning');
+      showToast(
+        isActive
+          ? `Usuario ${usuario.nombre_completo} desactivado`
+          : `Usuario ${usuario.nombre_completo} activado`,
+        isActive ? 'warning' : 'success'
+      );
       onClose();
     },
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al desactivar', 'error'),
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al cambiar estatus', 'error'),
   });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!adminPass) return;
-    // Validar contraseña del admin primero
-    try {
-      // Usamos una query directa para verificar la credencial del admin
-      // sin side effects: intentamos el reseteo del PROPIO admin (que no cambia nada real
-      // ya que resetPasswordAdmin del admin se ignora en el negocio, solo valida la pass)
-      await gqlClient.request(RESET_PASSWORD_ADMIN, {
-        id_usuario_target: usuario.id_usuario.toString(),
-        adminPassword: adminPass,
-      });
-      // Si llegamos aquí, la contraseña fue correcta — esto habrá tocado la pass del usuario.
-      // NOTA: para una solución más limpia, el back debería tener un endpoint "validateAdminPassword"
-      // Por ahora este flujo funciona porque la pass temporal ya se le comunicó en el modal anterior.
-      softDelete.mutate({ id_usuario: usuario.id_usuario });
-    } catch (err) {
-      showToast(err?.response?.errors?.[0]?.message ?? 'Contraseña incorrecta', 'error');
-    }
+  const handleConfirm = () => {
+    toggleMut.mutate({ id_usuario: usuario.id_usuario, estatus: !isActive });
   };
 
   return (
     <ModalOverlay onClose={onClose}>
-      <ModalHeader title="Confirmar Desactivación" onClose={onClose} />
+      <ModalHeader title={isActive ? 'Desactivar Usuario' : 'Activar Usuario'} onClose={onClose} />
       <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-          <strong>¿Desactivar a {usuario.nombre_completo}?</strong>
-          <p className="mt-1 text-xs text-red-500">
-            El usuario quedará inactivo y no podrá acceder al sistema. Sus datos históricos se conservan.
+        <div className={`border rounded-xl p-3 text-sm ${isActive ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
+          <strong>{isActive ? `¿Desactivar a ${usuario.nombre_completo}?` : `¿Activar a ${usuario.nombre_completo}?`}</strong>
+          <p className="mt-1 text-xs opacity-80">
+            {isActive
+              ? 'El usuario quedará inactivo y no podrá acceder al sistema. Sus datos históricos se conservan.'
+              : 'El usuario podrá volver a acceder al sistema con sus credenciales anteriores.'}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+            style={{ background: avatarColor(usuario.id_usuario) }}>
+            {getInitials(usuario.nombre_completo)}
+          </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Tu contraseña para confirmar
-            </label>
-            <div className="relative">
-              <input type={showPass ? 'text' : 'password'} value={adminPass}
-                onChange={e => setAdminPass(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 pr-10"
-                required />
-              <button type="button" onClick={() => setShowPass(p => !p)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
+            <p className="text-sm font-bold text-gray-900">{usuario.nombre_completo}</p>
+            <p className="text-xs text-gray-500">Matrícula: <strong>{usuario.matricula}</strong></p>
           </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
-              Cancelar
-            </button>
-            <button type="submit" disabled={softDelete.isPending}
-              className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-60 transition-colors">
-              {softDelete.isPending ? 'Desactivando...' : 'Sí, desactivar'}
-            </button>
+        </div>
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button onClick={handleConfirm} disabled={toggleMut.isPending}
+            className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60 transition-colors ${isActive ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}>
+            {toggleMut.isPending ? 'Procesando...' : isActive ? 'Sí, desactivar' : 'Sí, activar'}
+          </button>
+        </div>
+      </div>
+    </ModalOverlay>
+  );
+}
+
+// ─── Modal Eliminar Permanente ────────────────────────────────────────────────
+function ConfirmEliminarModal({ usuario, onClose }) {
+  const qc = useQueryClient();
+  const { showToast } = useApp();
+  const [confirmText, setConfirmText] = useState('');
+
+  const deleteMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(HARD_DELETE_USUARIO, vars),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['usuarios'] });
+      showToast(`Usuario ${usuario.nombre_completo} eliminado permanentemente`, 'error');
+      onClose();
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al eliminar usuario', 'error'),
+  });
+
+  const handleConfirm = () => {
+    if (confirmText !== usuario.matricula) {
+      showToast('La matrícula no coincide', 'warning');
+      return;
+    }
+    deleteMut.mutate({ id_usuario: usuario.id_usuario });
+  };
+
+  return (
+    <ModalOverlay onClose={onClose}>
+      <ModalHeader title="Eliminar Usuario Permanentemente" onClose={onClose} />
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-sm text-red-800">
+          <strong>⚠️ Esta acción es IRREVERSIBLE</strong>
+          <p className="mt-1 text-xs text-red-600">
+            Se eliminará permanentemente al usuario y todos sus registros asociados. No se puede deshacer.
+          </p>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+            style={{ background: '#ef4444' }}>
+            {getInitials(usuario.nombre_completo)}
           </div>
-        </form>
+          <div>
+            <p className="text-sm font-bold text-gray-900">{usuario.nombre_completo}</p>
+            <p className="text-xs text-gray-500">Matrícula: <strong>{usuario.matricula}</strong></p>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">
+            Escribe la matrícula <strong className="text-red-600">{usuario.matricula}</strong> para confirmar
+          </label>
+          <input
+            value={confirmText}
+            onChange={e => setConfirmText(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+            placeholder={usuario.matricula}
+          />
+        </div>
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={deleteMut.isPending || confirmText !== usuario.matricula}
+            className="flex-1 py-2.5 rounded-xl bg-red-700 hover:bg-red-800 text-white text-sm font-semibold disabled:opacity-50 transition-colors">
+            {deleteMut.isPending ? 'Eliminando...' : 'Eliminar permanentemente'}
+          </button>
+        </div>
       </div>
     </ModalOverlay>
   );
@@ -437,7 +475,7 @@ export default function GestionUsuarios() {
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
   const [modalReset, setModalReset] = useState(null);
-  const [modalDesactivar, setModalDesactivar] = useState(null);
+  const [modalToggleEstatus, setModalToggleEstatus] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
 
   // ── Queries
@@ -453,7 +491,7 @@ export default function GestionUsuarios() {
     queryKey: ['unidades'],
     queryFn: async () => {
       const d = await gqlClient.request(GET_UNIDADES);
-      return d.unidades ?? [];
+      return d.catUnidades ?? [];
     },
   });
 
@@ -488,13 +526,7 @@ export default function GestionUsuarios() {
 
   const qc = useQueryClient();
 
-  const toggleEstatus = useMutation({
-    mutationFn: (vars) => gqlClient.request(UPDATE_USUARIO, vars),
-    onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ['usuarios'] });
-      showToast(vars.estatus ? 'Usuario activado' : 'Usuario desactivado', vars.estatus ? 'success' : 'warning');
-    },
-  });
+  // toggleEstatus ya es manejado por ConfirmToggleEstatusModal — se deja vacío para no romper refs
 
   const isAdmin  = idRol <= 2;
   const isMaestro = idRol === 2;
@@ -615,14 +647,8 @@ export default function GestionUsuarios() {
                           <td className="px-5 py-4">
                             {isAdmin ? (
                               <button
-                                onClick={() => {
-                                  if (!u.estatus) {
-                                    toggleEstatus.mutate({ id_usuario: u.id_usuario, estatus: true });
-                                  } else {
-                                    setModalDesactivar(u);
-                                  }
-                                }}
-                                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${u.estatus ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                                onClick={() => setModalToggleEstatus(u)}
+                                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${u.estatus ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
                                 {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
                                 {u.estatus ? 'Activo' : 'Inactivo'}
                               </button>
@@ -643,12 +669,10 @@ export default function GestionUsuarios() {
                                   className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Resetear contraseña">
                                   <Shield size={14} />
                                 </button>
-                                {isMaestro && (
-                                  <button onClick={() => setModalEliminar(u)}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Eliminar usuario">
-                                    <Trash2 size={14} />
-                                  </button>
-                                )}
+                                <button onClick={() => setModalEliminar(u)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Eliminar permanentemente">
+                                  <Trash2 size={14} />
+                                </button>
                               </div>
                             </td>
                           )}
@@ -687,8 +711,8 @@ export default function GestionUsuarios() {
                   {isAdmin && (
                     <div className="flex items-center gap-2 pt-3 border-t border-gray-50">
                       <button
-                        onClick={() => u.estatus ? setModalDesactivar(u) : toggleEstatus.mutate({ id_usuario: u.id_usuario, estatus: true })}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold ${u.estatus ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        onClick={() => setModalToggleEstatus(u)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold ${u.estatus ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-600'}`}>
                         {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
                         {u.estatus ? 'Activo' : 'Inactivo'}
                       </button>
@@ -700,12 +724,10 @@ export default function GestionUsuarios() {
                         className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
                         <Shield size={14} />
                       </button>
-                      {isMaestro && (
-                        <button onClick={() => setModalEliminar(u)}
-                          className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-500">
-                          <Trash2 size={14} />
-                        </button>
-                      )}
+                      <button onClick={() => setModalEliminar(u)}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-600">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -741,8 +763,11 @@ export default function GestionUsuarios() {
       {modalReset && (
         <ResetPasswordModal usuario={modalReset} onClose={() => setModalReset(null)} />
       )}
-      {modalDesactivar && (
-        <ConfirmDesactivarModal usuario={modalDesactivar} onClose={() => setModalDesactivar(null)} />
+      {modalToggleEstatus && (
+        <ConfirmToggleEstatusModal usuario={modalToggleEstatus} onClose={() => setModalToggleEstatus(null)} />
+      )}
+      {modalEliminar && (
+        <ConfirmEliminarModal usuario={modalEliminar} onClose={() => setModalEliminar(null)} />
       )}
     </div>
   );
