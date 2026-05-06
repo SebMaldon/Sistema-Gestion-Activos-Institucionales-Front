@@ -4,6 +4,18 @@ import { gqlClient } from '../api/client';
 import { GET_BITACORA } from '../api/bitacora.queries';
 import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Activity, X, Braces, Search, Filter } from 'lucide-react';
 import { formatDateTime } from '../lib/utils';
+import { gql } from 'graphql-request';
+
+const GET_BITACORA_LOOKUPS = gql`
+  query GetBitacoraLookups {
+    unidades: catUnidades { id_unidad nombre }
+    inmuebles: catLegacyInmuebles { clave descripcion }
+    usuarios(estatus: true) { edges { node { id_usuario nombre_completo } } }
+    catCategoriasActivo { id_categoria nombre_categoria }
+    catUnidadesMedida { id_unidad_medida nombre_unidad }
+    proveedores { id_proveedor nombre_proveedor }
+  }
+`;
 
 const ACTION_CONFIG = {
   CREACION: { icon: FilePlus, bg: '#dcfce7', color: '#16a34a', label: 'Creación' },
@@ -23,7 +35,7 @@ function parseDetalles(jsonStr) {
   }
 }
 
-function DetalleJSONModal({ isOpen, onClose, log }) {
+function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'auto';
@@ -86,17 +98,100 @@ function DetalleJSONModal({ isOpen, onClose, log }) {
                     {parsed.columnasModificadas?.map(col => {
                       const vAnterior = parsed.estadoAnterior[col];
                       const vNuevo = parsed.estadoNuevo[col];
+                      
+                      // Mapeo de nombres de columnas a etiquetas amigables
+                      const COLUMN_LABELS = {
+                        id_usuario: 'Usuario (ID)',
+                        id_rol: 'Rol del Sistema',
+                        id_unidad: 'Unidad Operativa (ID)',
+                        id_inmueble: 'Inmueble (ID)',
+                        id_proveedor: 'Proveedor (ID)',
+                        id_categoria: 'Categoría (ID)',
+                        id_unidad_medida: 'Unidad de Medida (ID)',
+                        id_bien: 'ID de Activo',
+                        num_serie: 'Número de Serie',
+                        num_inv: 'Número de Inventario',
+                        estatus: 'Estado (Activo/Inactivo)',
+                        matricula: 'Matrícula',
+                        nombre_completo: 'Nombre Completo',
+                        correo: 'Correo Electrónico',
+                        telefono: 'Teléfono',
+                        descripcion: 'Descripción',
+                        observaciones: 'Observaciones',
+                        cantidad: 'Cantidad / Stock',
+                        precio: 'Precio / Costo',
+                        fecha_actualizacion: 'Última Actualización',
+                        fecha_adquisicion: 'Fecha de Adquisición',
+                        fecha_movimiento: 'Fecha del Movimiento',
+                      };
+
+                      const formatVal = (field, val) => {
+                        if (val === null || val === undefined) return 'N/A';
+                        if (typeof val === 'boolean') return val ? 'Sí' : 'No';
+                        if (field === 'estatus') return val === 1 ? 'ACTIVO' : 'INACTIVO';
+                        
+                        // Formateo de fechas si parece una fecha ISO o el nombre del campo lo sugiere
+                        if (field.startsWith('fecha_') || (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}T/))) {
+                          return formatDateTime(val);
+                        }
+
+                        if (field === 'id_rol') {
+                          if (val === 1) return 'MAESTRO (1)';
+                          if (val === 2) return 'ADMINISTRADOR (2)';
+                          if (val === 3) return 'USUARIO (3)';
+                        }
+
+                        // Mapeo dinámico usando catálogos
+                        if (catalogs) {
+                          const valStr = String(val);
+                          
+                          if (field === 'id_usuario' || field === 'id_usuario_resguardo') {
+                            const u = catalogs.usuarios?.edges?.find(e => String(e.node.id_usuario) === valStr)?.node;
+                            if (u) return <span className="text-indigo-600 font-bold">{u.nombre_completo} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'id_unidad') {
+                            const u = catalogs.unidades?.find(u => String(u.id_unidad) === valStr);
+                            if (u) return <span className="text-indigo-600 font-bold">{u.nombre} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'id_inmueble' || field === 'clave_inmueble_ref') {
+                            const i = catalogs.inmuebles?.find(i => String(i.clave) === valStr);
+                            if (i) return <span className="text-indigo-600 font-bold">{i.descripcion} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'id_categoria') {
+                            const c = catalogs.catCategoriasActivo?.find(c => String(c.id_categoria) === valStr);
+                            if (c) return <span className="text-indigo-600 font-bold">{c.nombre_categoria} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'id_unidad_medida') {
+                            const m = catalogs.catUnidadesMedida?.find(m => String(m.id_unidad_medida) === valStr);
+                            if (m) return <span className="text-indigo-600 font-bold">{m.nombre_unidad} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'id_proveedor') {
+                            const p = catalogs.proveedores?.find(p => String(p.id_proveedor) === valStr);
+                            if (p) return <span className="text-indigo-600 font-bold">{p.nombre_proveedor} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                        }
+
+                        return String(val);
+                      };
+
                       return (
-                        <tr key={col} className="hover:bg-gray-50/50">
-                          <td className="px-4 py-3 font-mono text-[11px] font-semibold text-gray-700 bg-gray-50/50 border-r border-gray-100">{col}</td>
-                          <td className="px-4 py-3 font-mono text-[11px] text-red-700 bg-red-50/20 break-all border-r border-gray-100">{vAnterior !== null && vAnterior !== undefined ? String(vAnterior) : 'NULL'}</td>
-                          <td className="px-4 py-3 font-mono text-[11px] text-green-700 bg-green-50/20 break-all">{vNuevo !== null && vNuevo !== undefined ? String(vNuevo) : 'NULL'}</td>
+                        <tr key={col} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-gray-700 bg-gray-50/30 border-r border-gray-100">
+                            <p className="text-[11px] uppercase tracking-tight">{COLUMN_LABELS[col] || col.replace(/_/g, ' ')}</p>
+                            <p className="text-[9px] font-mono text-gray-400 mt-0.5">{col}</p>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[11px] text-red-700 bg-red-50/10 break-all border-r border-gray-100">
+                            {formatVal(col, vAnterior)}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[11px] text-green-700 bg-green-50/10 break-all">
+                            {formatVal(col, vNuevo)}
+                          </td>
                         </tr>
                       );
                     })}
                     {(!parsed.columnasModificadas || parsed.columnasModificadas.length === 0) && (
                       <tr>
-                        <td colSpan="3" className="px-4 py-5 text-center text-xs text-gray-400 italic">La entidad se procesó sin modificaciones estructurales.</td>
+                        <td colSpan="3" className="px-4 py-5 text-center text-xs text-gray-400 italic">La entidad se procesó sin modificaciones estructurales en columnas auditadas.</td>
                       </tr>
                     )}
                   </tbody>
@@ -134,6 +229,8 @@ function DetalleJSONModal({ isOpen, onClose, log }) {
   );
 }
 
+
+
 export default function Auditoria() {
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]);
@@ -141,6 +238,13 @@ export default function Auditoria() {
   const [filterModulo, setFilterModulo] = useState('');
   const [modalLog, setModalLog] = useState(null);
   const PAGE_SIZE = 10;
+
+  // Cargar catálogos completos para mapear IDs a nombres en la bitácora
+  const { data: catalogs } = useQuery({
+    queryKey: ['bitacora-lookups'],
+    queryFn: () => gqlClient.request(GET_BITACORA_LOOKUPS),
+    staleTime: 10 * 60 * 1000, // 10 minutos
+  });
 
   const { data: bitacoraData, isLoading, isError } = useQuery({
     queryKey: ['bitacora', filterAccion, filterModulo, cursor],
@@ -371,7 +475,7 @@ export default function Auditoria() {
         </div>
       </div>
 
-      <DetalleJSONModal isOpen={!!modalLog} onClose={() => setModalLog(null)} log={modalLog} />
+      <DetalleJSONModal isOpen={!!modalLog} onClose={() => setModalLog(null)} log={modalLog} catalogs={catalogs} />
     </div>
   );
 }
