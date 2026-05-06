@@ -19,6 +19,7 @@ import Configuracion from './pages/Configuracion';
 import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
 import Inmuebles from './pages/Inmuebles';
+import { useCurrentUser } from './hooks/useCurrentUser';
 
 
 // ─── Roles reales de BD ──────────────────────────────────────────────────────
@@ -30,8 +31,10 @@ const ROL_USUARIO  = 3;
 // ─── Guard: solo requiere sesión activa ─────────────────────────────────────
 function ProtectedRoute({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const usuario = useAuthStore((s) => s.usuario);
   const location = useLocation();
-  if (!isAuthenticated) {
+
+  if (!isAuthenticated || !usuario) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   return children;
@@ -95,8 +98,22 @@ function AppLayout({ page, children }) {
   );
 }
 
+
+
 // ─── Raíz de la app ────────────────────────────────────────────────────────────
 export default function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { isLoading } = useCurrentUser();
+
+  if (isAuthenticated && isLoading) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-white gap-4">
+        <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-gray-500 animate-pulse">Verificando sesión...</p>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <AppProvider>

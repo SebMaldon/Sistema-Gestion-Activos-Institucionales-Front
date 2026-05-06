@@ -103,6 +103,19 @@ function DetalleJSONModal({ isOpen, onClose, log }) {
                 </table>
               </div>
             </div>
+          ) : log.accion === 'LOGIN' ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mb-5 border border-green-100 shadow-sm">
+                <ShieldCheck size={40} className="text-green-600" />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900">Inicio de Sesión Exitoso</h4>
+              <p className="text-sm text-gray-500 mt-2 max-w-sm leading-relaxed">
+                El usuario ha autenticado correctamente su identidad y ha accedido al sistema de gestión de activos.
+              </p>
+              <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                <Activity size={14} /> Actividad Registrada
+              </div>
+            </div>
           ) : (
             <div className="space-y-3">
               <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
