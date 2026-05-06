@@ -378,12 +378,19 @@ export default function Auditoria() {
                           <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: conf.color }}>{conf.label}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-[11px] text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 uppercase tracking-wide">
+                      <td className="px-6 py-4 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-[11px] text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 uppercase tracking-wide flex-shrink-0">
                             {log.tabla_afectada}
                           </span>
-                          {log.registro_afectado && <span className="text-[11px] font-mono font-bold text-gray-400">#{log.registro_afectado}</span>}
+                          {log.registro_afectado && (
+                            <span 
+                              className="text-[11px] font-mono font-bold text-gray-400 truncate" 
+                              title={log.registro_afectado}
+                            >
+                              #{log.registro_afectado}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center whitespace-nowrap">
@@ -424,8 +431,15 @@ export default function Auditoria() {
                       <p className="text-sm font-bold truncate" style={{ color: conf.color }}>{conf.label}</p>
                       <span className="text-[10px] font-mono text-gray-400">{formatDateTime(log.fecha_movimiento)}</span>
                     </div>
-                    <p className="text-xs text-gray-600 font-semibold mt-0.5">
-                      Módulo: {log.tabla_afectada} {log.registro_afectado ? <span className="font-mono text-gray-400">#{log.registro_afectado}</span> : ''}
+                    <p className="text-xs text-gray-600 font-semibold mt-0.5 truncate">
+                      Módulo: {log.tabla_afectada} {log.registro_afectado ? (
+                        <span 
+                          className="font-mono text-gray-400 truncate" 
+                          title={log.registro_afectado}
+                        >
+                          #{log.registro_afectado}
+                        </span>
+                      ) : ''}
                     </p>
                   </div>
                 </div>

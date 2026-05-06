@@ -287,6 +287,7 @@ export default function Inmuebles() {
         onClose={() => setIsModalOpen(false)}
         inmuebleToEdit={inmuebleToEdit}
         onSubmit={handleSubmit}
+        isLoading={createInmueble.isLoading || updateInmueble.isLoading}
       />
 
       <DetalleInmuebleModal

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Info, Network, Settings } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import { useCatTipoUnidades } from '../hooks/useUnidades';
 
-export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit }) {
+export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, isLoading }) {
+  const { showToast } = useApp();
   const [formData, setFormData] = useState({
     no_ref: '',
     nombre: '',
@@ -156,12 +158,17 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit })
     }
     
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors
+    };
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validate()) {
+    if (e) e.preventDefault();
+    const { isValid, errors: currentErrors } = validate();
+    
+    if (isValid) {
       // Clean numeric fields before sending
       const submissionData = { ...formData };
       ['tipo_unidad', 'bits', 'ip_init', 'estatus', 'regimen', 'vlan', 'monitorear', 'tipo_enlace'].forEach(field => {
@@ -175,6 +182,18 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit })
       if (submissionData.fecha_migracion === '') delete submissionData.fecha_migracion;
 
       onSubmit(submissionData);
+    } else {
+      showToast('Por favor, revisa los errores en el formulario', 'error');
+      // Si hay errores en la otra pestaña, avisar
+      const generalFields = ['no_ref', 'nombre', 'ip', 'clave', 'telefono', 'proveedor'];
+      const hasGeneralErrors = generalFields.some(f => !!currentErrors[f]);
+      const hasTechnicalErrors = Object.keys(currentErrors).some(f => !generalFields.includes(f));
+
+      if (activeTab === 'general' && hasTechnicalErrors && !hasGeneralErrors) {
+        showToast('Hay errores pendientes en la pestaña de Detalles Técnicos', 'info');
+      } else if (activeTab === 'tecnico' && hasGeneralErrors && !hasTechnicalErrors) {
+        showToast('Hay errores pendientes en la pestaña de Datos Generales', 'info');
+      }
     }
   };
 
@@ -197,15 +216,23 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit })
         <div className="flex border-b border-gray-100 px-6 bg-gray-50/50">
           <button 
             onClick={() => setActiveTab('general')}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'general' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 relative ${activeTab === 'general' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <Info size={16} /> Datos Generales
+            <Info size={16} /> 
+            Datos Generales
+            {Object.keys(errors).some(f => ['no_ref', 'nombre', 'ip', 'clave', 'telefono', 'proveedor'].includes(f)) && (
+              <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </button>
           <button 
             onClick={() => setActiveTab('tecnico')}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'tecnico' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 relative ${activeTab === 'tecnico' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <Network size={16} /> Detalles Técnicos
+            <Network size={16} /> 
+            Detalles Técnicos
+            {Object.keys(errors).some(f => !['no_ref', 'nombre', 'ip', 'clave', 'telefono', 'proveedor'].includes(f)) && (
+              <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </button>
         </div>
 
@@ -465,16 +492,31 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit })
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            disabled={isLoading}
+            className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+          >
             Cancelar
           </button>
           <button
-            type="submit"
-            form="unidad-form"
-            className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-200"
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <Save size={16} />
-            {unidadToEdit ? 'Actualizar Unidad' : 'Guardar Unidad'}
+            {isLoading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                {unidadToEdit ? 'Actualizar Unidad' : 'Guardar Unidad'}
+              </>
+            )}
           </button>
         </div>
       </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Info, MapPin, Phone, Settings } from 'lucide-react';
+import { X, Save, Info, MapPin, Phone, Settings, Loader2 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import { useCatTipoUnidades } from '../hooks/useUnidades';
 
-export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmit }) {
+export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmit, isLoading }) {
+  const { showToast } = useApp();
   const [formData, setFormData] = useState({
     clave: '',
     descripcion: '',
@@ -126,12 +128,17 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
     if (formData.telefono && formData.telefono.length > 18) newErrors.telefono = 'Máximo 18 caracteres';
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors
+    };
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validate()) {
+    if (e) e.preventDefault();
+    const { isValid, errors: currentErrors } = validate();
+
+    if (isValid) {
       const submissionData = { ...formData };
       // Convert numeric fields
       ['clave_a', 'nivel', 'no_inmueble', 'regimen', 'tipo_unidad'].forEach(field => {
@@ -139,6 +146,23 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
         else submissionData[field] = parseInt(submissionData[field]);
       });
       onSubmit(submissionData);
+    } else {
+      showToast('Por favor, revisa los errores en el formulario', 'error');
+      
+      const generalFields = ['clave', 'descripcion', 'desc_corta', 'encargado'];
+      const locationFields = ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'telefono'];
+      
+      const hasGeneralErrors = generalFields.some(f => !!currentErrors[f]);
+      const hasLocationErrors = locationFields.some(f => !!currentErrors[f]);
+      const hasTechnicalErrors = Object.keys(currentErrors).some(f => !generalFields.includes(f) && !locationFields.includes(f));
+
+      if (activeTab === 'general' && (hasLocationErrors || hasTechnicalErrors) && !hasGeneralErrors) {
+        showToast(`Hay errores pendientes en otras pestañas (${hasLocationErrors ? 'Ubicación' : ''} ${hasTechnicalErrors ? 'Técnico' : ''})`, 'info');
+      } else if (activeTab === 'ubicacion' && (hasGeneralErrors || hasTechnicalErrors) && !hasLocationErrors) {
+        showToast(`Hay errores pendientes en otras pestañas (${hasGeneralErrors ? 'General' : ''} ${hasTechnicalErrors ? 'Técnico' : ''})`, 'info');
+      } else if (activeTab === 'tecnico' && (hasGeneralErrors || hasLocationErrors) && !hasTechnicalErrors) {
+        showToast(`Hay errores pendientes en otras pestañas (${hasGeneralErrors ? 'General' : ''} ${hasLocationErrors ? 'Ubicación' : ''})`, 'info');
+      }
     }
   };
 
@@ -161,21 +185,33 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
         <div className="flex border-b border-gray-100 px-6 bg-gray-50/50">
           <button 
             onClick={() => setActiveTab('general')}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'general' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 relative ${activeTab === 'general' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <Info size={16} /> Datos Generales
+            <Info size={16} /> 
+            Datos Generales
+            {Object.keys(errors).some(f => ['clave', 'descripcion', 'desc_corta', 'encargado'].includes(f)) && (
+              <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </button>
           <button 
             onClick={() => setActiveTab('ubicacion')}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'ubicacion' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 relative ${activeTab === 'ubicacion' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <MapPin size={16} /> Ubicación y Contacto
+            <MapPin size={16} /> 
+            Ubicación y Contacto
+            {Object.keys(errors).some(f => ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'telefono'].includes(f)) && (
+              <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </button>
           <button 
             onClick={() => setActiveTab('tecnico')}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'tecnico' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 relative ${activeTab === 'tecnico' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <Settings size={16} /> Datos Técnicos
+            <Settings size={16} /> 
+            Datos Técnicos
+            {Object.keys(errors).some(f => !['clave', 'descripcion', 'desc_corta', 'encargado', 'direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'telefono'].includes(f)) && (
+              <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </button>
         </div>
 
@@ -440,16 +476,31 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            disabled={isLoading}
+            className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+          >
             Cancelar
           </button>
           <button
-            type="submit"
-            form="inmueble-form"
-            className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-200"
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <Save size={16} />
-            {inmuebleToEdit ? 'Actualizar Inmueble' : 'Guardar Inmueble'}
+            {isLoading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                {inmuebleToEdit ? 'Actualizar Inmueble' : 'Guardar Inmueble'}
+              </>
+            )}
           </button>
         </div>
       </div>

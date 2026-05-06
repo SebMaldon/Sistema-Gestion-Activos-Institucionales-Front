@@ -286,6 +286,7 @@ export default function Unidades() {
         onClose={() => setIsModalOpen(false)}
         unidadToEdit={unidadToEdit}
         onSubmit={handleSubmit}
+        isLoading={createUnidad.isLoading || updateUnidad.isLoading}
       />
 
       <DetalleUnidadModal
