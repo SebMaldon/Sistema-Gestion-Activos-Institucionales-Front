@@ -129,7 +129,7 @@ export default function Auditoria() {
   const [modalLog, setModalLog] = useState(null);
   const PAGE_SIZE = 10;
 
-  const { data: bitacoraData, isLoading, isError, refetch, isFetching } = useQuery({
+  const { data: bitacoraData, isLoading, isError } = useQuery({
     queryKey: ['bitacora', filterAccion, filterModulo, cursor],
     queryFn: () => gqlClient.request(GET_BITACORA, {
       accion: filterAccion || undefined,
@@ -140,6 +140,8 @@ export default function Auditoria() {
     select: d => d.bitacora,
     refetchInterval: 15000, // Auto-refrescar cada 15 segundos
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   const logs = bitacoraData?.edges?.map(e => e.node) ?? [];
@@ -168,18 +170,7 @@ export default function Auditoria() {
           <p className="text-sm text-gray-500 mt-1">Registro global de movimientos del sistema — Solo lectura</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              isFetching 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
-                : 'bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50 active:scale-95'
-            }`}
-          >
-            <Activity size={14} className={isFetching ? 'animate-spin' : ''} />
-            {isFetching ? 'ACTUALIZANDO...' : 'REFRESCAR'}
-          </button>
+
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50">
             <ShieldCheck size={16} style={{ color: '#ca8a04' }} />
             <span className="text-xs font-semibold text-amber-700">Modo Supervisión</span>
@@ -220,7 +211,7 @@ export default function Auditoria() {
             >
               <option value="">Todos los módulos</option>
               <option value="Incidencias">Incidencias</option>
-              <option value="Notas">Notas de Incidencia</option>
+              <option value="Notas">Notas</option>
               <option value="Bienes">Bienes / Activos</option>
               <option value="Usuarios">Usuarios</option>
               <option value="Garantias">Garantías</option>
