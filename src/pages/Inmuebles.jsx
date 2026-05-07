@@ -186,29 +186,24 @@ export default function Inmuebles() {
                 edges.map(({ node }) => (
                   <tr key={node.clave} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                          <Home size={18} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-800 line-clamp-1">{node.descripcion || 'Sin descripción'}</p>
-                          <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{node.clave}</p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-800 break-words" title={node.descripcion}>{node.descripcion || 'Sin descripción'}</p>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{node.clave}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 max-w-[200px]">
                       <div className="flex items-center gap-2 text-gray-600 font-medium">
-                        <MapPin size={14} className="text-red-400" />
-                        <span className="text-sm">{node.ciudad ? `${node.ciudad}, ${node.municipio || ''}` : 'No definida'}</span>
+                        <MapPin size={14} className="text-red-400 flex-shrink-0" />
+                        <span className="text-sm break-words">{node.ciudad ? `${node.ciudad}, ${node.municipio || ''}` : 'No definida'}</span>
                       </div>
-                      <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{node.direccion}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5 break-words line-clamp-2">{node.direccion}</p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 max-w-[180px]">
                       <div className="flex items-center gap-2 text-gray-700">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                           <User size={12} className="text-blue-600" />
                         </div>
-                        <span className="text-sm font-bold">{node.encargado || 'No asignado'}</span>
+                        <span className="text-sm font-bold break-words">{node.encargado || 'No asignado'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

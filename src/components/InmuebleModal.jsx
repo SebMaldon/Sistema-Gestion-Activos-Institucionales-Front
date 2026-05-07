@@ -115,7 +115,16 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
     if (!formData.clave_zona.trim()) newErrors.clave_zona = 'La clave de zona es obligatoria';
     else if (formData.clave_zona.length > 5) newErrors.clave_zona = 'Máximo 5 caracteres';
 
-    if (formData.descripcion && formData.descripcion.length > 100) newErrors.descripcion = 'Máximo 100 caracteres';
+    if (!formData.descripcion.trim()) {
+      newErrors.descripcion = 'La descripción es obligatoria';
+    } else if (formData.descripcion.length > 100) {
+      newErrors.descripcion = 'Máximo 100 caracteres';
+    }
+
+    if (!formData.tipo_unidad) {
+      newErrors.tipo_unidad = 'Debes seleccionar un tipo de unidad';
+    }
+
     if (formData.desc_corta && formData.desc_corta.length > 15) newErrors.desc_corta = 'Máximo 15 caracteres';
     if (formData.encargado && formData.encargado.length > 200) newErrors.encargado = 'Máximo 200 caracteres';
     if (formData.direccion && formData.direccion.length > 200) newErrors.direccion = 'Máximo 200 caracteres';
@@ -125,7 +134,15 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
     if (formData.ciudad && formData.ciudad.length > 50) newErrors.ciudad = 'Máximo 50 caracteres';
     if (formData.municipio && formData.municipio.length > 50) newErrors.municipio = 'Máximo 50 caracteres';
     if (formData.cp && formData.cp.length > 50) newErrors.cp = 'Máximo 50 caracteres';
-    if (formData.telefono && formData.telefono.length > 18) newErrors.telefono = 'Máximo 18 caracteres';
+    
+    if (formData.telefono) {
+      const telRegex = /^[0-9\s\-()+]+$/;
+      if (!telRegex.test(formData.telefono)) {
+        newErrors.telefono = 'Formato de teléfono inválido';
+      } else if (formData.telefono.length > 18) {
+        newErrors.telefono = 'Máximo 18 caracteres';
+      }
+    }
 
     setErrors(newErrors);
     return {
@@ -142,8 +159,11 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
       const submissionData = { ...formData };
       // Convert numeric fields
       ['clave_a', 'nivel', 'no_inmueble', 'regimen', 'tipo_unidad'].forEach(field => {
-        if (submissionData[field] === '') delete submissionData[field];
-        else submissionData[field] = parseInt(submissionData[field]);
+        if (submissionData[field] === '' || submissionData[field] === null) {
+          submissionData[field] = null;
+        } else {
+          submissionData[field] = parseInt(submissionData[field]);
+        }
       });
       onSubmit(submissionData);
     } else {
@@ -236,15 +256,16 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
                 </div>
 
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Descripción *</label>
                   <input
                     type="text"
                     name="descripcion"
                     value={formData.descripcion}
                     onChange={handleChange}
                     placeholder="Descripción completa..."
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className={`w-full px-3 py-2 text-sm border ${errors.descripcion ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
                   />
+                  {errors.descripcion && <p className="text-[10px] text-red-500 mt-1 font-semibold">{errors.descripcion}</p>}
                 </div>
 
                 <div className="md:col-span-1">
@@ -418,12 +439,12 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
                 </div>
 
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Unidad</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Unidad *</label>
                   <select
                     name="tipo_unidad"
                     value={formData.tipo_unidad}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className={`w-full px-3 py-2 text-sm border ${errors.tipo_unidad ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
                     disabled={loadingTipos}
                   >
                     <option value="">-- Seleccionar Tipo --</option>
@@ -431,6 +452,7 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
                       <option key={t.id_tipo} value={t.id_tipo}>{t.tipo_unidad}</option>
                     ))}
                   </select>
+                  {errors.tipo_unidad && <p className="text-[10px] text-red-500 mt-1 font-semibold">{errors.tipo_unidad}</p>}
                 </div>
 
                 <div className="md:col-span-1">

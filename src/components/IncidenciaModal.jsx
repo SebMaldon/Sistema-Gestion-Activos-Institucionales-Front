@@ -14,18 +14,21 @@ import {
 
 
 
-// ─── Combobox con búsqueda ────────────────────────────────────────────────────
-
-function SearchableSelect({ options, value, onChange, placeholder, loading, disabled }) {
+// ─── Combobox con búsqueda Optimizado ──────────────────────────────────────────
+const SearchableSelect = React.memo(({ options, value, onChange, placeholder, loading, disabled }) => {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
   const selectedLabel = options.find(o => String(o.value) === String(value))?.label ?? '';
 
-  const filtered = query.trim()
-    ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
-    : options;
+  const filtered = useMemo(() => {
+    if (!query.trim()) return options.slice(0, 50);
+    const lowerQuery = query.toLowerCase();
+    return options
+      .filter(o => o.label.toLowerCase().includes(lowerQuery))
+      .slice(0, 50); // Limitar a 50 resultados para fluidez total
+  }, [query, options]);
 
   const handleSelect = (opt) => {
     onChange(opt.value);
@@ -82,7 +85,7 @@ function SearchableSelect({ options, value, onChange, placeholder, loading, disa
       )}
     </div>
   );
-}
+});
 
 // ─── Modal Principal ──────────────────────────────────────────────────────────
 

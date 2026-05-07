@@ -115,8 +115,10 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
       newErrors.no_ref = 'Máximo 50 caracteres';
     }
 
-    if (formData.nombre && formData.nombre.length > 200) {
-      newErrors.nombre = 'Máximo 200 caracteres';
+    if (!formData.nombre.trim()) {
+      newErrors.nombre = 'El nombre de la unidad es obligatorio';
+    } else if (formData.nombre.length > 200) {
+      newErrors.nombre = 'El nombre no puede exceder los 200 caracteres';
     }
 
     if (!formData.ip.trim()) {
@@ -128,16 +130,25 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
       }
     }
 
+    if (!formData.tipo_unidad) {
+      newErrors.tipo_unidad = 'Debes seleccionar un tipo de unidad';
+    }
+
     if (formData.clave && formData.clave.length > 13) {
       newErrors.clave = 'La clave no puede exceder 13 caracteres';
     }
 
-    if (formData.telefono && formData.telefono.length > 50) {
-      newErrors.telefono = 'Máximo 50 caracteres';
+    if (formData.telefono) {
+      const telRegex = /^[0-9\s\-()+]+$/;
+      if (!telRegex.test(formData.telefono)) {
+        newErrors.telefono = 'Formato de teléfono inválido';
+      } else if (formData.telefono.length > 50) {
+        newErrors.telefono = 'Máximo 50 caracteres';
+      }
     }
 
     if (formData.proveedor && formData.proveedor.length > 500) {
-      newErrors.proveedor = 'Máximo 500 caracteres';
+      newErrors.proveedor = 'La descripción del proveedor es muy larga';
     }
 
     if (formData.velocidad && formData.velocidad.length > 50) {
@@ -172,8 +183,8 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
       // Clean numeric fields before sending
       const submissionData = { ...formData };
       ['tipo_unidad', 'bits', 'ip_init', 'estatus', 'regimen', 'vlan', 'monitorear', 'tipo_enlace'].forEach(field => {
-        if (submissionData[field] === '') {
-          delete submissionData[field];
+        if (submissionData[field] === '' || submissionData[field] === null || submissionData[field] === undefined) {
+          submissionData[field] = null;
         } else {
           submissionData[field] = parseInt(submissionData[field]);
         }
@@ -257,7 +268,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                 </div>
 
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nombre de la Unidad</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Nombre de la Unidad *</label>
                   <input
                     type="text"
                     name="nombre"
@@ -356,12 +367,12 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
             {activeTab === 'tecnico' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
                 <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Unidad</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Unidad *</label>
                   <select
                     name="tipo_unidad"
                     value={formData.tipo_unidad}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className={`w-full px-3 py-2 text-sm border ${errors.tipo_unidad ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
                     disabled={loadingTipos}
                   >
                     <option value="">-- Seleccionar Tipo --</option>
@@ -369,6 +380,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                       <option key={t.id_tipo} value={t.id_tipo}>{t.tipo_unidad}</option>
                     ))}
                   </select>
+                  {errors.tipo_unidad && <p className="text-[10px] text-red-500 mt-1 font-semibold">{errors.tipo_unidad}</p>}
                 </div>
 
                 <div className="md:col-span-1">

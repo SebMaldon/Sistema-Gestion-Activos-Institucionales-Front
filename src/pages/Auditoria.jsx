@@ -180,10 +180,10 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
                             <p className="text-[11px] uppercase tracking-tight">{COLUMN_LABELS[col] || col.replace(/_/g, ' ')}</p>
                             <p className="text-[9px] font-mono text-gray-400 mt-0.5">{col}</p>
                           </td>
-                          <td className="px-4 py-3 font-mono text-[11px] text-red-700 bg-red-50/10 break-all border-r border-gray-100">
+                          <td className="px-4 py-3 font-mono text-[11px] text-red-700 bg-red-50/10 break-words border-r border-gray-100">
                             {formatVal(col, vAnterior)}
                           </td>
-                          <td className="px-4 py-3 font-mono text-[11px] text-green-700 bg-green-50/10 break-all">
+                          <td className="px-4 py-3 font-mono text-[11px] text-green-700 bg-green-50/10 break-words">
                             {formatVal(col, vNuevo)}
                           </td>
                         </tr>
@@ -296,45 +296,64 @@ export default function Auditoria() {
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 gap-4">
-        {/* Filtros rápidos */}
-        <div className="bg-white flex gap-3 p-3 rounded-2xl border border-gray-100 shadow-sm flex-wrap items-center">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg text-sm border border-gray-100 font-semibold text-gray-600">
-            <Activity size={16} /> Total Eventos: {totalCount}
-          </div>
+        {/* Filtros rápidos - Responsive Optimized */}
+        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
           
-          <div className="h-6 w-px bg-gray-200 hidden sm:block mx-1"></div>
-
-          <div className="relative">
-            <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select 
-              value={filterAccion} 
-              onChange={e => { setFilterAccion(e.target.value); setCursor(null); setCursors([]); }}
-              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none font-semibold text-gray-700"
-            >
-              <option value="">Todas las acciones</option>
-              <option value="CREACION">Creaciones</option>
-              <option value="EDICION">Ediciones</option>
-              <option value="ELIMINACION">Eliminaciones</option>
-              <option value="LOGIN">Inicios de Sesión</option>
-            </select>
+          {/* Badge de contador (compacto en móvil) */}
+          <div className="flex items-center justify-between lg:justify-start gap-3">
+            <div className="flex items-center gap-2.5 px-3.5 py-2 bg-indigo-50/50 rounded-xl text-xs sm:text-sm border border-indigo-100/50 font-bold text-indigo-700 shadow-sm">
+              <Activity size={16} className="text-indigo-500" />
+              <span className="whitespace-nowrap">Eventos: <span className="text-gray-900 ml-0.5">{totalCount}</span></span>
+            </div>
+            
+            {/* Divisor solo en mobile para separar del resto si fuera necesario, o indicador visual */}
+            <div className="h-8 w-px bg-gray-100 lg:hidden"></div>
+            
+            <p className="text-[10px] sm:text-xs text-gray-400 font-medium lg:hidden italic">Filtros de búsqueda</p>
           </div>
 
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select 
-              value={filterModulo} 
-              onChange={e => { setFilterModulo(e.target.value); setCursor(null); setCursors([]); }}
-              className="pl-9 pr-8 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white cursor-pointer appearance-none font-semibold text-gray-700"
-            >
-              <option value="">Todos los módulos</option>
-              <option value="Incidencias">Incidencias</option>
-              <option value="Notas">Notas</option>
-              <option value="Bienes">Bienes / Activos</option>
-              <option value="Usuarios">Usuarios</option>
-              <option value="Garantias">Garantías</option>
-              <option value="Unidades">Unidades Operativas</option>
-              <option value="Inmuebles">Inmuebles</option>
-            </select>
+          <div className="hidden lg:block h-8 w-px bg-gray-200 mx-1"></div>
+
+          {/* Contenedor de Selects: 2 columnas en móvil, flex en desktop */}
+          <div className="grid grid-cols-2 lg:flex lg:flex-1 gap-2.5 sm:gap-3">
+            <div className="relative group flex-1 min-w-0">
+              <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+              <select 
+                value={filterAccion} 
+                onChange={e => { setFilterAccion(e.target.value); setCursor(null); setCursors([]); }}
+                className="w-full pl-10 pr-8 py-2.5 text-[11px] sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white cursor-pointer appearance-none font-bold text-gray-700 transition-all hover:bg-gray-50/50"
+              >
+                <option value="">Acciones</option>
+                <option value="CREACION">Creaciones</option>
+                <option value="EDICION">Ediciones</option>
+                <option value="ELIMINACION">Eliminaciones</option>
+                <option value="LOGIN">Sesiones</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronRight size={14} className="text-gray-300 rotate-90" />
+              </div>
+            </div>
+
+            <div className="relative group flex-1 min-w-0">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+              <select 
+                value={filterModulo} 
+                onChange={e => { setFilterModulo(e.target.value); setCursor(null); setCursors([]); }}
+                className="w-full pl-10 pr-8 py-2.5 text-[11px] sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white cursor-pointer appearance-none font-bold text-gray-700 transition-all hover:bg-gray-50/50"
+              >
+                <option value="">Módulos</option>
+                <option value="Incidencias">Incidencias</option>
+                <option value="Notas">Notas</option>
+                <option value="Bienes">Activos</option>
+                <option value="Usuarios">Usuarios</option>
+                <option value="Garantias">Garantías</option>
+                <option value="Unidades">Unidades</option>
+                <option value="Inmuebles">Inmuebles</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronRight size={14} className="text-gray-300 rotate-90" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -370,12 +389,12 @@ export default function Auditoria() {
                         <p className="font-bold text-gray-800 truncate" title={log.usuario.nombre_completo}>{log.usuario.nombre_completo}</p>
                         <p className="text-gray-400 font-mono text-[10px] mt-0.5">{log.usuario.matricula}</p>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: conf.bg }}>
                             <Icon size={14} style={{ color: conf.color }} />
                           </div>
-                          <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: conf.color }}>{conf.label}</span>
+                          <span className="text-[11px] font-black uppercase tracking-wider break-words" style={{ color: conf.color }}>{conf.label}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 min-w-0">

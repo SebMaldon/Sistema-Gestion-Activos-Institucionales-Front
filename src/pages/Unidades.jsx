@@ -190,13 +190,13 @@ export default function Unidades() {
                   <tr key={u.id_unidad} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4 text-sm font-mono text-gray-400">#{u.id_unidad}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 break-words max-w-[100px]">
                         {u.no_ref}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-gray-800">{u.nombre || '—'}</p>
-                      {u.clave && <p className="text-[10px] text-gray-400 uppercase tracking-tighter">Clave: {u.clave}</p>}
+                    <td className="px-6 py-4 max-w-[250px]">
+                      <p className="text-sm font-bold text-gray-800 break-words">{u.nombre || '—'}</p>
+                      {u.clave && <p className="text-[10px] text-gray-400 uppercase tracking-tighter break-words">Clave: {u.clave}</p>}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
@@ -204,7 +204,7 @@ export default function Unidades() {
                         {u.ip}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[180px] break-words">
                       {u.encargado || <span className="text-gray-300">No asignado</span>}
                     </td>
                     <td className="px-6 py-4 text-center">

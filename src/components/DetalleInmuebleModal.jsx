@@ -5,13 +5,13 @@ export default function DetalleInmuebleModal({ isOpen, onClose, inmueble }) {
   if (!isOpen || !inmueble) return null;
 
   const DetailItem = ({ icon: Icon, label, value, color = "blue" }) => (
-    <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors">
+    <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors min-w-0">
       <div className={`p-2 rounded-lg bg-${color}-100 text-${color}-600 flex-shrink-0`}>
         <Icon size={18} />
       </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-semibold text-gray-900 leading-tight">{value || '—'}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 leading-tight break-words">{value || '—'}</p>
       </div>
     </div>
   );
@@ -26,8 +26,8 @@ export default function DetalleInmuebleModal({ isOpen, onClose, inmueble }) {
             <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-100">
               <Building2 size={24} />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{inmueble.descripcion || 'Sin descripción'}</h2>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-gray-900 break-words leading-tight" title={inmueble.descripcion}>{inmueble.descripcion || 'Sin descripción'}</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 uppercase">
                   Clave: {inmueble.clave}

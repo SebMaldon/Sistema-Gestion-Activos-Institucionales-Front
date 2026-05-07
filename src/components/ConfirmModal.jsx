@@ -73,9 +73,9 @@ export default function ConfirmModal({
             <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${theme.iconBg} ${theme.iconColor}`}>
               <Icon size={24} />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-              <p className="text-sm text-gray-600 mt-1">{message}</p>
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold text-gray-900 break-words">{title}</h3>
+              <p className="text-sm text-gray-600 mt-1 break-words">{message}</p>
             </div>
           </div>
         </div>

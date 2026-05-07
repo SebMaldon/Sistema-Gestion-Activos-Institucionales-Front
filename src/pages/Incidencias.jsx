@@ -231,18 +231,18 @@ const IncidenciaCard = memo(function IncidenciaCard({
       {expanded && (
         <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 fade-in">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 border border-gray-100 shadow-sm">
+            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 border border-gray-100 shadow-sm min-w-0">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <Hash size={10} /> Dispositivo
               </p>
-              <p className="text-xs text-gray-800 font-bold leading-tight" title={inc.equipo}>{inc.equipo}</p>
+              <p className="text-xs text-gray-800 font-bold leading-tight break-words" title={inc.equipo}>{inc.equipo}</p>
               <p className="text-[10px] text-gray-400 mt-1 font-mono">ID: {inc.id}</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-50/50 to-white rounded-2xl p-3 border border-blue-50 shadow-sm">
+            <div className="bg-gradient-to-br from-blue-50/50 to-white rounded-2xl p-3 border border-blue-50 shadow-sm min-w-0">
               <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <User size={10} /> Reportado por
               </p>
-              <p className="text-xs text-blue-900 font-bold leading-tight">{inc.generadoPor || 'Personal IMSS'}</p>
+              <p className="text-xs text-blue-900 font-bold leading-tight break-words">{inc.generadoPor || 'Personal IMSS'}</p>
               <p className="text-[10px] text-blue-600/70 mt-1 truncate">REQ: {inc.requerimiento || 'S/N'}</p>
             </div>
           </div>
@@ -370,7 +370,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
         ) : incidenciasNodes.length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-400">No hay incidencias.</div>
         ) : (
-          <table className="w-full text-left text-xs whitespace-nowrap">
+          <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 text-gray-500 sticky top-0 uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3 font-semibold">Num Serie</th>
@@ -386,10 +386,10 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
             <tbody className="divide-y divide-gray-50">
               {incidenciasNodes.map(inc => (
                 <tr key={inc.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-800">{inc.numSerie}</td>
-                  <td className="px-4 py-3 text-blue-600 font-medium">{inc.alias || '—'}</td>
-                  <td className="px-4 py-3 text-blue-600 font-medium">{inc.tipoIncidencia}</td>
-                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-800 break-words max-w-[120px]">{inc.numSerie}</td>
+                  <td className="px-4 py-3 text-blue-600 font-medium break-words max-w-[120px]">{inc.alias || '—'}</td>
+                  <td className="px-4 py-3 text-blue-600 font-medium truncate max-w-[100px]">{inc.tipoIncidencia}</td>
+                  <td className="px-4 py-3 text-gray-600 max-w-[250px] break-words" title={inc.falla}>{inc.falla}</td>
                   <td className="px-4 py-3 text-gray-700">{inc.requerimiento || '—'}</td>
                   <td className="px-4 py-3 text-gray-600 font-medium">{inc.fecha}</td>
                   <td className="px-4 py-3 text-green-700 font-medium">

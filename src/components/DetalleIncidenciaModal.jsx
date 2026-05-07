@@ -54,26 +54,26 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                   <Monitor size={16} className="text-blue-500" /> Información del Equipo
                 </h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Número de Serie:</span>
-                    <span className="font-semibold text-gray-900">{incidencia.numSerie}</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500 flex-shrink-0">Número de Serie:</span>
+                    <span className="font-semibold text-gray-900 break-words text-right">{incidencia.numSerie}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Alias:</span>
-                    <span className="font-semibold text-blue-600">{incidencia.alias || '—'}</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500 flex-shrink-0">Alias:</span>
+                    <span className="font-semibold text-blue-600 break-words text-right">{incidencia.alias || '—'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Requerimiento:</span>
-                    <span className="font-semibold text-gray-900">{incidencia.requerimiento || '—'}</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500 flex-shrink-0">Requerimiento:</span>
+                    <span className="font-semibold text-gray-900 break-words text-right">{incidencia.requerimiento || '—'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Equipo:</span>
-                    <span className="font-semibold text-gray-900 text-right max-w-[200px] truncate" title={incidencia.equipo}>{incidencia.equipo}</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-gray-500 flex-shrink-0">Equipo:</span>
+                    <span className="font-semibold text-gray-900 text-right break-words overflow-hidden" title={incidencia.equipo}>{incidencia.equipo}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500">Unidad:</span>
-                    <span className="font-semibold text-gray-900 flex items-center gap-1">
-                      <Building2 size={13} className="text-gray-400" /> {incidencia.unidad || 'Sin unidad'}
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="text-gray-500 flex-shrink-0">Unidad:</span>
+                    <span className="font-semibold text-gray-900 flex items-center gap-1 text-right break-words">
+                      <Building2 size={13} className="text-gray-400 flex-shrink-0" /> {incidencia.unidad || 'Sin unidad'}
                     </span>
                   </div>
                 </div>
@@ -89,7 +89,7 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
 
                   <div>
                     <span className="block text-xs font-semibold text-gray-500 uppercase mb-0.5">Registrado en sistema por</span>
-                    <span className="font-medium text-gray-800">
+                    <span className="font-medium text-gray-800 break-words block">
                       {incidencia.generadoPor || 'Usuario del Sistema'} {incidencia.matriculaGenera && `(${incidencia.matriculaGenera})`}
                     </span>
                   </div>
@@ -127,10 +127,10 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                     </p>
                     
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                      <div className="flex items-center gap-1 text-gray-700">
-                        <CheckCircle size={13} className="text-green-500" />
-                        <span className="font-semibold text-gray-500 mr-1">Resolvió:</span>
-                        <span className="font-bold">{incidencia._raw?.usuarioResuelve?.nombre_completo || 'Usuario Desconocido'}</span>
+                      <div className="flex items-center gap-1 text-gray-700 min-w-0 flex-1">
+                        <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
+                        <span className="font-semibold text-gray-500 mr-1 flex-shrink-0">Resolvió:</span>
+                        <span className="font-bold break-words">{incidencia._raw?.usuarioResuelve?.nombre_completo || 'Usuario Desconocido'}</span>
                       </div>
                       <div className="flex items-center gap-1 text-gray-700">
                         <Calendar size={13} className="text-gray-400" />
