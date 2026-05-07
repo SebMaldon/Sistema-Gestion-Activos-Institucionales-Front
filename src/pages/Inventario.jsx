@@ -24,6 +24,8 @@ import {
 } from '../api/inventario.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
+import PrintLabelsTab from '../components/PrintLabelsTab';
+import PrintStickerSheet from '../components/PrintStickerSheet';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -362,6 +364,10 @@ export default function Inventario() {
   const [tiForm, setTiForm] = useState(TI_EMPTY);
   const [formErrors, setFormErrors] = useState({});
 
+  // ── Estado para Impresión ─────────────────────────────────────────────────
+  const [printSelectedBienes, setPrintSelectedBienes] = useState([]);
+  const [printStartOffset, setPrintStartOffset] = useState(0);
+
   // ── Datos ─────────────────────────────────────────────────────────────────
   const { data: bienesData, isLoading, isError, refetch } = useBienes({}, { first: 200 });
   const bienes = bienesData?.items ?? [];
@@ -592,7 +598,8 @@ export default function Inventario() {
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-4 fade-in">
+    <>
+    <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-4 fade-in no-print">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -627,6 +634,7 @@ export default function Inventario() {
         {[
           { key: 'Capitalizable',    label: 'Bienes Capitalizables',     count: capitalCount },
           { key: 'No Capitalizable', label: 'Bienes No Capitalizables',  count: noCapitalCount },
+          { key: 'Impresión de Etiquetas', label: 'Impresión de Etiquetas QR', count: null },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -636,20 +644,24 @@ export default function Inventario() {
             }`}
           >
             {tab.label}
-            <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full"
-              style={{
-                backgroundColor: activeTab === tab.key ? '#dcfce7' : '#e5e7eb',
-                color: activeTab === tab.key ? '#006341' : '#6b7280'
-              }}>
-              {tab.count}
-            </span>
+            {tab.count !== null && (
+              <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full"
+                style={{
+                  backgroundColor: activeTab === tab.key ? '#dcfce7' : '#e5e7eb',
+                  color: activeTab === tab.key ? '#006341' : '#6b7280'
+                }}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-3">
+      {activeTab !== 'Impresión de Etiquetas' ? (
+        <>
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -837,6 +849,14 @@ export default function Inventario() {
         <div className="flex-shrink-0">
           <Pagination page={page} totalPages={totalPages} onPage={setPage} />
         </div>
+      )}
+        </>
+      ) : (
+        <PrintLabelsTab 
+          bienes={bienes} 
+          onUpdateSelection={setPrintSelectedBienes} 
+          onUpdateOffset={setPrintStartOffset} 
+        />
       )}
 
       {/* ════════════════════════════════════════════════════════════════════
@@ -1276,6 +1296,8 @@ export default function Inventario() {
       )}
 
     </div>
+    <PrintStickerSheet items={printSelectedBienes} startOffset={printStartOffset} />
+    </>
   );
 }
 
