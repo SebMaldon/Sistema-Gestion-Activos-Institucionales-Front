@@ -1,7 +1,9 @@
-import React from 'react';
 import { X, Building2, MapPin, User, Phone, Hash, Layers, Info, Settings, Shield } from 'lucide-react';
+import { useCatTipoUnidades } from '../hooks/useUnidades';
 
 export default function DetalleInmuebleModal({ isOpen, onClose, inmueble }) {
+  const { data: catTipos } = useCatTipoUnidades();
+
   if (!isOpen || !inmueble) return null;
 
   const DetailItem = ({ icon: Icon, label, value, color = "blue" }) => (
@@ -86,8 +88,18 @@ export default function DetalleInmuebleModal({ isOpen, onClose, inmueble }) {
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight text-purple-700">Datos Técnicos y Clasificación</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              <DetailItem icon={Settings} label="Tipo de Unidad" value={inmueble.tipoUnidadInfo?.tipo_unidad || `ID: ${inmueble.tipo_unidad}`} color="purple" />
-              <DetailItem icon={Shield} label="Régimen" value={inmueble.regimen === 19 ? 'Ordinario (19)' : (inmueble.regimen === 64 ? 'IMSS-B (64)' : (inmueble.regimen === 69 ? 'OPD IMSS-B (69)' : inmueble.regimen))} color="purple" />
+              <DetailItem 
+                icon={Settings} 
+                label="Tipo de Unidad" 
+                value={inmueble.tipoUnidadInfo?.tipo_unidad || catTipos?.find(t => t.id_tipo === inmueble.tipo_unidad)?.tipo_unidad || inmueble.tipo_unidad || 'SIN TIPO'} 
+                color="purple" 
+              />
+              <DetailItem 
+                icon={Shield} 
+                label="Régimen" 
+                value={inmueble.regimen} 
+                color="purple" 
+              />
               <DetailItem icon={Layers} label="Nivel" value={inmueble.nivel} color="purple" />
               <DetailItem icon={Layers} label="No. Inmueble" value={inmueble.no_inmueble} color="purple" />
               <DetailItem icon={Layers} label="Ppal" value={inmueble.ppal} color="purple" />

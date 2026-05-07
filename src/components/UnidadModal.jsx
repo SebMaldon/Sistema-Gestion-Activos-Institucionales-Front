@@ -31,11 +31,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
   // Catalogs
   const { data: tipoUnidades, isLoading: loadingTipos } = useCatTipoUnidades();
   
-  const REGIMENES = [
-    { value: 19, label: 'Ordinario (19)' },
-    { value: 64, label: 'IMSS-Bienestar (64)' },
-    { value: 69, label: 'OPD IMSS-Bienestar (69)' }
-  ];
 
   const ENLACES = [
     { value: 1, label: 'Fibra Óptica (1)' },
@@ -182,7 +177,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
     if (isValid) {
       // Clean numeric fields before sending
       const submissionData = { ...formData };
-      ['tipo_unidad', 'bits', 'ip_init', 'estatus', 'regimen', 'vlan', 'monitorear', 'tipo_enlace'].forEach(field => {
+      ['tipo_unidad', 'bits', 'ip_init', 'estatus', 'vlan', 'monitorear', 'tipo_enlace'].forEach(field => {
         if (submissionData[field] === '' || submissionData[field] === null || submissionData[field] === undefined) {
           submissionData[field] = null;
         } else {
@@ -430,17 +425,14 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
 
                 <div className="md:col-span-1">
                   <label className="block text-xs font-bold text-gray-700 mb-1">Régimen</label>
-                  <select
+                  <input
+                    type="text"
                     name="regimen"
                     value={formData.regimen}
                     onChange={handleChange}
+                    placeholder="Escriba el régimen..."
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">-- Seleccionar Régimen --</option>
-                    {REGIMENES.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div className="md:col-span-1">

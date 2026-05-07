@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Loader2, Building2, AlertTriangle, Eye, Home, MapPin, User, ChevronRight } from 'lucide-react';
 import { useInmuebles, useCreateInmueble, useUpdateInmueble, useDeleteInmueble } from '../hooks/useInmuebles';
+import { useCatTipoUnidades } from '../hooks/useUnidades';
 import { useApp } from '../context/AppContext';
 import InmuebleModal from '../components/InmuebleModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -39,6 +40,7 @@ export default function Inmuebles() {
   const createInmueble = useCreateInmueble();
   const updateInmueble = useUpdateInmueble();
   const deleteInmueble = useDeleteInmueble();
+  const { data: catTipos } = useCatTipoUnidades();
 
   // Handlers
   const handleOpenCreate = () => {
@@ -209,9 +211,11 @@ export default function Inmuebles() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-black text-gray-500 rounded-md w-fit uppercase line-clamp-1">
-                          {node.tipoUnidadInfo?.tipo_unidad || `Tipo: ${node.tipo_unidad}`}
+                          Tipo: {node.tipoUnidadInfo?.tipo_unidad || catTipos?.find(t => t.id_tipo === node.tipo_unidad)?.tipo_unidad || node.tipo_unidad || 'SIN TIPO'}
                         </span>
-                        <span className="px-2 py-0.5 bg-blue-50 text-[10px] font-black text-blue-600 rounded-md w-fit uppercase">Zona: {node.clave_zona}</span>
+                        <span className="px-2 py-0.5 bg-blue-50 text-[10px] font-black text-blue-600 rounded-md w-fit uppercase">
+                          Zona: {node.clave_zona}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">

@@ -157,11 +157,9 @@ export default function Unidades() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">No. Referencia</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nombre</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Dirección IP</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Encargado</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Estatus</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
               </tr>
@@ -188,7 +186,6 @@ export default function Unidades() {
               ) : (
                 unidades.map((u) => (
                   <tr key={u.id_unidad} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-6 py-4 text-sm font-mono text-gray-400">#{u.id_unidad}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 break-words max-w-[100px]">
                         {u.no_ref}
@@ -203,9 +200,6 @@ export default function Unidades() {
                         <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                         {u.ip}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[180px] break-words">
-                      {u.encargado || <span className="text-gray-300">No asignado</span>}
                     </td>
                     <td className="px-6 py-4 text-center">
                       {u.estatus === 1 ? (

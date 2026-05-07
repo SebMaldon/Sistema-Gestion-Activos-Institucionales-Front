@@ -34,11 +34,6 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
   // Catalogs for consistency (Using the ones from Unidades)
   const { data: tipoUnidades, isLoading: loadingTipos } = useCatTipoUnidades();
   
-  const REGIMENES = [
-    { value: 19, label: 'Ordinario (19)' },
-    { value: 64, label: 'IMSS-Bienestar (64)' },
-    { value: 69, label: 'OPD IMSS-Bienestar (69)' }
-  ];
 
   useEffect(() => {
     if (inmuebleToEdit) {
@@ -158,7 +153,7 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
     if (isValid) {
       const submissionData = { ...formData };
       // Convert numeric fields
-      ['clave_a', 'nivel', 'no_inmueble', 'regimen', 'tipo_unidad'].forEach(field => {
+      ['clave_a', 'nivel', 'no_inmueble', 'tipo_unidad'].forEach(field => {
         if (submissionData[field] === '' || submissionData[field] === null) {
           submissionData[field] = null;
         } else {
@@ -457,17 +452,14 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
 
                 <div className="md:col-span-1">
                   <label className="block text-xs font-bold text-gray-700 mb-1">Régimen</label>
-                  <select
+                  <input
+                    type="text"
                     name="regimen"
                     value={formData.regimen}
                     onChange={handleChange}
+                    placeholder="Escriba el régimen..."
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">-- Seleccionar Régimen --</option>
-                    {REGIMENES.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div className="md:col-span-1">

@@ -1,8 +1,12 @@
 import React from 'react';
 import { X, Building2, Globe, Shield, Activity, Calendar, Phone, User, Hash, Zap } from 'lucide-react';
+import { useCatTipoUnidades } from '../hooks/useUnidades';
 
 export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
+  const { data: catTipos } = useCatTipoUnidades();
+
   if (!isOpen || !unidad) return null;
+
 
   const DetailItem = ({ icon: Icon, label, value, color = "blue" }) => (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors min-w-0">
@@ -85,8 +89,18 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight text-purple-700">Clasificación Operativa</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <DetailItem icon={Building2} label="Tipo de Unidad (ID)" value={unidad.tipo_unidad} color="purple" />
-              <DetailItem icon={Shield} label="Régimen" value={unidad.regimen} color="purple" />
+              <DetailItem 
+                icon={Building2} 
+                label="Tipo de Unidad" 
+                value={unidad.tipoUnidadInfo?.tipo_unidad || catTipos?.find(t => t.id_tipo === unidad.tipo_unidad)?.tipo_unidad || unidad.tipo_unidad || 'SIN TIPO'} 
+                color="purple" 
+              />
+              <DetailItem 
+                icon={Shield} 
+                label="Régimen" 
+                value={unidad.regimen} 
+                color="purple" 
+              />
             </div>
           </section>
 

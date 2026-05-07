@@ -25,6 +25,9 @@ export const GET_UNIDADES_QUERY = gql`
           fecha_migracion
           velocidad
           tipo_enlace
+          tipoUnidadInfo {
+            tipo_unidad
+          }
         }
         cursor
       }
@@ -60,6 +63,9 @@ export const GET_UNIDAD_BY_ID_QUERY = gql`
       fecha_migracion
       velocidad
       tipo_enlace
+      tipoUnidadInfo {
+        tipo_unidad
+      }
     }
   }
 `;
