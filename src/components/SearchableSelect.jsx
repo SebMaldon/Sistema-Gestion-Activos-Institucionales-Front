@@ -22,10 +22,10 @@ export default function SearchableSelect({
   [options, value]);
 
   const filteredOptions = useMemo(() => {
-    if (!query) return options;
+    if (!query) return options.slice(0, 100);
     return options.filter(opt => 
       opt.label.toLowerCase().includes(query.toLowerCase())
-    );
+    ).slice(0, 100);
   }, [options, query]);
 
   useEffect(() => {

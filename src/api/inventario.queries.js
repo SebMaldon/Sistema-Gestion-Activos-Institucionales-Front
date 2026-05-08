@@ -140,7 +140,7 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       descripcion
       desc_corta
     }
-    usuarios(estatus: true) {
+    usuarios(pagination: { first: 20000 }) {
       edges {
         node {
           id_usuario

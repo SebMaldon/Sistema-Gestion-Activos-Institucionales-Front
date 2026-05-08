@@ -11,7 +11,7 @@ const GET_CATALOGS_QUERY = gql`
   query GetCatalogs {
     catCategoriasActivo { id_categoria nombre_categoria }
     catUnidades { id_unidad nombre }
-    usuarios(estatus: true, pagination: { first: 20000 }) {
+    usuarios(pagination: { first: 20000 }) {
       edges {
         node {
           id_usuario
