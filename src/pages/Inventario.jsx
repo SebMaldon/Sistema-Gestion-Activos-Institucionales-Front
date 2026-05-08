@@ -854,6 +854,7 @@ export default function Inventario() {
       ) : (
         <PrintLabelsTab 
           bienes={bienes} 
+          categorias={catalogos?.categorias ?? []}
           onUpdateSelection={setPrintSelectedBienes} 
           onUpdateOffset={setPrintStartOffset} 
         />
