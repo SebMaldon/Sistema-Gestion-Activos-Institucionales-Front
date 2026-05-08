@@ -61,6 +61,9 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           // — Garantías
           garantias: node.garantias || [],
 
+          // — Notas de observación
+          notas: node.notas || [],
+
           // — Relaciones completas para el formulario
           modelo: node.modelo,
           unidad: node.unidad,

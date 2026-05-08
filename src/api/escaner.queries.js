@@ -48,6 +48,14 @@ export const GET_BIEN_BY_TERMINO = gql`
         switch_red
         modelo_so
       }
+      notas {
+        id_nota
+        contenido_nota
+        fecha_creacion
+        usuarioAutor {
+          nombre_completo
+        }
+      }
     }
   }
 `;

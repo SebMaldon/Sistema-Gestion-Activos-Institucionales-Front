@@ -182,6 +182,38 @@ export default function EscanerQR() {
               </div>
             </div>
           </div>
+
+          {/* Notas en Columna Izquierda (solo si hay un bien encontrado) */}
+          {foundAsset && foundAsset.notas && foundAsset.notas.length > 0 && (
+            <div className="border-t border-gray-200 bg-gray-50">
+              <details className="group">
+                <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <StickyNote size={15} className="text-gray-500" />
+                    <span className="text-sm font-semibold text-gray-700">
+                      Notas de Observación ({foundAsset.notas.length})
+                    </span>
+                  </div>
+                  <span className="text-gray-400 group-open:rotate-180 transition-transform">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </span>
+                </summary>
+                <div className="p-4 pt-0 space-y-3">
+                  {foundAsset.notas.map(nota => (
+                    <div key={nota.id_nota} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm text-sm">
+                      <p className="text-gray-800">{nota.contenido_nota}</p>
+                      <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                        <span>{nota.usuarioAutor?.nombre_completo || 'Sistema'}</span>
+                        <span>{new Date(isNaN(Number(nota.fecha_creacion)) ? nota.fecha_creacion : Number(nota.fecha_creacion)).toLocaleString('es-MX')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
+          )}
         </div>{/* /col-izquierda */}
 
         {/* ═══ COLUMNA DERECHA: Resultado + Nota ═══ */}
@@ -261,6 +293,7 @@ export default function EscanerQR() {
                   </div>
                 </div>
               )}
+
 
               {/* Acciones */}
               <div className="px-6 pb-5 flex gap-2 border-t border-gray-100 pt-4">

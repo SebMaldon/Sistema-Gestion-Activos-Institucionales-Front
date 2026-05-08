@@ -76,6 +76,14 @@ const BIEN_FIELDS = gql`
         nombre_proveedor
       }
     }
+    notas {
+      id_nota
+      contenido_nota
+      fecha_creacion
+      usuarioAutor {
+        nombre_completo
+      }
+    }
   }
 `;
 

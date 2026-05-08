@@ -12,7 +12,7 @@ import {
   ChevronLeft, ChevronRight, X, AlertTriangle,
   Server, Monitor, Cpu, HardDrive, Wifi, Save,
   Package, Shield, Calendar, MapPin, User, Tag,
-  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark
+  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -904,6 +904,27 @@ export default function Inventario() {
                   <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(modalFicha.especificacionTI.dir_ip)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(modalFicha.especificacionTI.mac_address)} mono />
                   <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(modalFicha.especificacionTI.modelo_so)} />
+                </div>
+              </div>
+            )}
+
+            {/* Notas de Observación */}
+            {modalFicha.notas && modalFicha.notas.length > 0 && (
+              <div className="rounded-xl border border-gray-200 overflow-hidden mt-4">
+                <div className="bg-gray-50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100">
+                  <StickyNote size={15} className="text-gray-500" />
+                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Notas de Observación</span>
+                </div>
+                <div className="p-4 space-y-3 bg-white">
+                  {modalFicha.notas.map((nota) => (
+                    <div key={nota.id_nota} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <p className="text-sm text-gray-800">{nota.contenido_nota}</p>
+                      <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                        <span>{nota.usuarioAutor?.nombre_completo || 'Sistema'}</span>
+                        <span>{new Date(isNaN(Number(nota.fecha_creacion)) ? nota.fecha_creacion : Number(nota.fecha_creacion)).toLocaleString('es-MX')}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

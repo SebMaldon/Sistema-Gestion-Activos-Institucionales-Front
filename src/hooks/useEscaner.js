@@ -45,7 +45,8 @@ export function useBienByQR(termino) {
             puerto_red: node.especificacionTI.puerto_red || '',
             switch_red: node.especificacionTI.switch_red || '',
             os: node.especificacionTI.modelo_so || ''
-          } : { hasSpecs: false }
+          } : { hasSpecs: false },
+          notas: node.notas || []
         };
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
