@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Printer, AlertTriangle, Check, Filter } from 'lucide-react';
+import { Search, Plus, Trash2, Printer, AlertTriangle, Check, Filter, GripVertical } from 'lucide-react';
 
 export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelection, onUpdateOffset }) {
   const [search, setSearch] = useState('');
   const [selectedBienes, setSelectedBienes] = useState([]);
   const [startOffset, setStartOffset] = useState(0); // 0 to 29
   const [categoryFilter, setCategoryFilter] = useState('1'); // Default to Equipo de Cómputo
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   // Para poder mandar el estado al componente padre (Inventario)
   // que es quien realmente pasará estos datos al PrintStickerSheet oculto
@@ -55,6 +56,38 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
     setSelectedBienes(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => {
+      e.target.style.opacity = '0.5';
+    }, 0);
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedIndex(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    setSelectedBienes(prev => {
+      const newArr = [...prev];
+      const draggedItem = newArr[draggedIndex];
+      newArr.splice(draggedIndex, 1);
+      newArr.splice(targetIndex, 0, draggedItem);
+      return newArr;
+    });
+    setDraggedIndex(null);
+  };
+
   const handlePrint = () => {
     if (selectedBienes.length === 0) return;
     // Forzamos un pequeño delay para asegurar que React haya renderizado el PrintStickerSheet con los datos correctos
@@ -102,13 +135,13 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0">
+    <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 overflow-y-auto md:overflow-y-visible pb-4 md:pb-0">
       {/* ── LADO IZQUIERDO: BUSCADOR ── */}
-      <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-0">
+      <div className="flex-none md:flex-1 h-[400px] md:h-auto bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-100 shrink-0 space-y-3">
           <h2 className="text-base font-bold text-gray-900">Seleccionar Bienes</h2>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input 
@@ -120,7 +153,7 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
               />
             </div>
             
-            <div className="relative w-40 shrink-0">
+            <div className="relative w-full sm:w-40 shrink-0">
               <select
                 value={categoryFilter}
                 onChange={e => setCategoryFilter(e.target.value)}
@@ -183,7 +216,7 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
                     ) : (
                       <button 
                         onClick={() => addBien(bien)}
-                        className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-green-100 shrink-0"
+                        className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-green-100 shrink-0"
                         title="Añadir a lista de impresión"
                       >
                         <Plus size={16} />
@@ -198,7 +231,7 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
       </div>
 
       {/* ── LADO DERECHO: CONFIGURACIÓN E IMPRESIÓN ── */}
-      <div className="w-full md:w-80 lg:w-96 flex flex-col gap-4 min-h-0">
+      <div className="w-full md:w-80 lg:w-96 flex-none md:flex-1 lg:flex-none flex flex-col gap-4 min-h-0">
         
         {/* Panel de Configuración */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 shrink-0">
@@ -239,7 +272,7 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
         </div>
 
         {/* Panel de Lista a Imprimir */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-0 flex-1">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[300px] md:min-h-0 flex-1">
           <div className="p-4 border-b border-gray-100 shrink-0 flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-900">Cola de Impresión</h2>
             <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">
@@ -256,8 +289,21 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
             ) : (
               <div className="space-y-1">
                 {selectedBienes.map((bien, i) => (
-                  <div key={`${bien.id_bien}-${i}`} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-100 shadow-sm">
-                    <div className="min-w-0 flex-1 pr-2">
+                  <div 
+                    key={`${bien.id_bien}-${i}`} 
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, i)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, i)}
+                    className={`flex items-center justify-between p-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing transition-colors ${
+                      draggedIndex === i ? 'border-green-400 bg-green-50' : 'border-gray-100 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 pr-2 flex items-center gap-2">
+                      <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500">
+                        <GripVertical size={16} />
+                      </div>
                       <p className="text-xs font-semibold text-gray-800 truncate">
                         <span className="text-gray-400 mr-1">{startOffset + i + 1}.</span> 
                         {bien.equipo}

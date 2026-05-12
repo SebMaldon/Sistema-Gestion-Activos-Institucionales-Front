@@ -114,7 +114,19 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
       setNuevaMarca('');
       showToast(`Marca "${data.createMarca.marca}" creada`, 'success');
     },
-    onError: () => showToast('Error al crear la marca', 'error'),
+    onError: (e) => {
+      const msg = e?.response?.errors?.[0]?.message ?? '';
+      if (msg.startsWith('LA_MARCA_YA_EXISTE:')) {
+        // Parsear: LA_MARCA_YA_EXISTE:clave_marca:nombre
+        const parts = msg.split(':');
+        const nombre = parts.slice(2).join(':');
+        showToast(`La marca "${nombre}" ya existe. Seleccionándola.`, 'warning');
+        setNuevaMarca('');
+        setTab('modelos');
+      } else {
+        showToast(msg || 'Error al crear la marca', 'error');
+      }
+    },
   });
 
   const mutTipo = useMutation({
@@ -125,7 +137,17 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
       setNuevoTipo('');
       showToast(`Tipo "${data.createTipoDispositivo.nombre_tipo}" creado`, 'success');
     },
-    onError: () => showToast('Error al crear el tipo', 'error'),
+    onError: (e) => {
+      const msg = e?.response?.errors?.[0]?.message ?? '';
+      if (msg.startsWith('EL_TIPO_YA_EXISTE:')) {
+        const parts = msg.split(':');
+        const nombre = parts.slice(2).join(':');
+        showToast(`El tipo "${nombre}" ya existe.`, 'warning');
+        setNuevoTipo('');
+      } else {
+        showToast(msg || 'Error al crear el tipo', 'error');
+      }
+    },
   });
 
   const mutModelo = useMutation({
@@ -139,28 +161,65 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
       onClose();
     },
     onError: (e) => {
-      console.error('Error al crear modelo:', e);
-      showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear modelo', 'error');
+      const msg = e?.response?.errors?.[0]?.message ?? '';
+      if (msg.startsWith('EL_MODELO_YA_EXISTE:')) {
+        // Parsear: EL_MODELO_YA_EXISTE:clave:descrip
+        const parts = msg.split(':');
+        const clave = parts[1];
+        showToast(`El modelo "${clave}" ya existe. Seleccionándolo.`, 'warning');
+        onSelectModelo(clave);
+        onClose();
+      } else {
+        showToast(msg || 'Error al crear modelo', 'error');
+      }
     },
   });
 
   const handleCrearMarca = () => {
-    if (!nuevaMarca.trim()) return;
-    mutMarca.mutate({ marca: nuevaMarca.trim() });
+    const trimmed = nuevaMarca.trim();
+    if (!trimmed) return;
+    // Verificar duplicado local (case-insensitive)
+    const dup = marcas.find(m => m.marca?.toLowerCase() === trimmed.toLowerCase());
+    if (dup) {
+      showToast(`La marca "${dup.marca}" ya existe. Seleccionándola automáticamente.`, 'warning');
+      setNuevaMarca('');
+      // Cambiar a tab de modelos para que el usuario pueda asociarla
+      setTab('modelos');
+      return;
+    }
+    mutMarca.mutate({ marca: trimmed });
   };
+
   const handleCrearTipo = () => {
-    if (!nuevoTipo.trim()) return;
-    mutTipo.mutate({ nombre_tipo: nuevoTipo.trim() });
+    const trimmed = nuevoTipo.trim();
+    if (!trimmed) return;
+    // Verificar duplicado local (case-insensitive)
+    const dup = tipos.find(t => t.nombre_tipo?.toLowerCase() === trimmed.toLowerCase());
+    if (dup) {
+      showToast(`El tipo "${dup.nombre_tipo}" ya existe.`, 'warning');
+      setNuevoTipo('');
+      return;
+    }
+    mutTipo.mutate({ nombre_tipo: trimmed });
   };
+
   const handleCrearModelo = () => {
-    if (!nuevoModelo.clave_modelo.trim()) return showToast('La clave del modelo es obligatoria', 'warning');
+    const clave = nuevoModelo.clave_modelo.trim().toUpperCase();
+    if (!clave) return showToast('La clave del modelo es obligatoria', 'warning');
+    // Verificar duplicado local
+    const dup = modelos.find(m => m.clave_modelo?.toUpperCase() === clave);
+    if (dup) {
+      showToast(`El modelo "${clave}" ya existe. Seleccionándolo automáticamente.`, 'warning');
+      onSelectModelo(dup.clave_modelo);
+      onClose();
+      return;
+    }
     const vars = {
-      clave_modelo: nuevoModelo.clave_modelo.trim().toUpperCase(),
+      clave_modelo: clave,
       descrip_disp: nuevoModelo.descrip_disp?.trim() || null,
       clave_marca:  nuevoModelo.clave_marca ? parseInt(nuevoModelo.clave_marca) : null,
       tipo_disp:    nuevoModelo.tipo_disp ? parseInt(nuevoModelo.tipo_disp) : null,
     };
-    console.log('Creando modelo con vars:', vars);
     mutModelo.mutate(vars);
   };
 
@@ -630,7 +689,7 @@ export default function Inventario() {
       </div>
 
       {/* ── Pestañas ────────────────────────────────────────────────────── */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit overflow-x-auto">
+      <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
         {[
           { key: 'Capitalizable',    label: 'Bienes Capitalizables',     count: capitalCount },
           { key: 'No Capitalizable', label: 'Bienes No Capitalizables',  count: noCapitalCount },
@@ -639,7 +698,7 @@ export default function Inventario() {
           <button
             key={tab.key}
             onClick={() => { setActiveTab(tab.key); setPage(1); }}
-            className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+            className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${
               activeTab === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -1029,16 +1088,33 @@ export default function Inventario() {
                   {formErrors.id_unidad_medida && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_unidad_medida}</p>}
                 </div>
 
-                {/* Número de Serie — visible para todas las categorías que manejen serie individual */}
+                {/* Número de Serie */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Número de Serie</label>
                   <input
                     type="text"
                     value={form.num_serie}
-                    onChange={(e) => setForm((f) => ({ ...f, num_serie: e.target.value }))}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, num_serie: e.target.value }));
+                      if (formErrors.num_serie) setFormErrors(e2 => { const n = {...e2}; delete n.num_serie; return n; });
+                    }}
+                    onBlur={() => {
+                      const val = form.num_serie?.trim();
+                      if (!val) return;
+                      const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
+                      const dup = bienes.find(b => b.numSerie === val && b.id_bien !== currentId);
+                      if (dup) {
+                        setFormErrors(e2 => ({ ...e2, num_serie: `Ya está registrado en otro bien` }));
+                      } else {
+                        setFormErrors(e2 => { const n = {...e2}; delete n.num_serie; return n; });
+                      }
+                    }}
                     placeholder="Ej. SN202400001"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
+                      formErrors.num_serie ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                    }`}
                   />
+                  {formErrors.num_serie && <p className="text-xs text-red-500 mt-0.5">{formErrors.num_serie}</p>}
                 </div>
 
                 {/* Modelo — selector con mini-CRUD */}
@@ -1078,17 +1154,36 @@ export default function Inventario() {
                   </div>
                 </div>
 
+
                 {/* Número de Inventario */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Número de Inventario</label>
                   <input
                     type="text"
                     value={form.num_inv}
-                    onChange={(e) => setForm((f) => ({ ...f, num_inv: e.target.value }))}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, num_inv: e.target.value }));
+                      if (formErrors.num_inv) setFormErrors(e2 => { const n = {...e2}; delete n.num_inv; return n; });
+                    }}
+                    onBlur={() => {
+                      const val = form.num_inv?.trim();
+                      if (!val) return;
+                      const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
+                      const dup = bienes.find(b => b.numInv === val && b.id_bien !== currentId);
+                      if (dup) {
+                        setFormErrors(e2 => ({ ...e2, num_inv: `Ya está registrado en otro bien` }));
+                      } else {
+                        setFormErrors(e2 => { const n = {...e2}; delete n.num_inv; return n; });
+                      }
+                    }}
                     placeholder="Ej. INV-2024-001"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
+                      formErrors.num_inv ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                    }`}
                   />
+                  {formErrors.num_inv && <p className="text-xs text-red-500 mt-0.5">{formErrors.num_inv}</p>}
                 </div>
+
 
                 {/* Estatus Operativo */}
                 <div>
