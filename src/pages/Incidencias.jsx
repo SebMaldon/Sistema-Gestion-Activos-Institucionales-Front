@@ -211,12 +211,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
           <span className="truncate font-bold tracking-tight">{inc.unidad || 'Ubicación General'}</span>
         </div>
         
-        {inc.tecnico && (
-          <div className="flex items-center gap-2 text-blue-600 bg-blue-50/50 px-2 py-1 rounded-lg border border-blue-100/50">
-            <User size={12} className="flex-shrink-0" />
-            <span className="truncate font-black tracking-tight max-w-[100px]">{inc.tecnico.split(' ')[0]}</span>
-          </div>
-        )}
+
       </div>
 
       {/* Ver más indicador */}
@@ -555,13 +550,12 @@ export default function Incidencias() {
     }
   }, [pasarAEnProceso, updateEstatus, showToast]);
 
-  const handleConfirmarResolucion = useCallback(async (id, resolucion_textual, id_usuario_resuelve) => {
+  const handleConfirmarResolucion = useCallback(async (id, resolucion_textual) => {
     try {
       await resolverIncidencia.mutateAsync({
         id_incidencia: String(id),
         estatus_cierre: 'Resuelto',
         resolucion_textual,
-        id_usuario_resuelve,
       });
       showToast('Incidencia finalizada correctamente', 'success');
     } catch {

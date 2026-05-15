@@ -122,7 +122,6 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   const [estatus, setEstatus] = useState('Pendiente');
   const [notaSeguimiento, setNotaSeguimiento] = useState('');     // Si "En proceso"
   const [resolucionTextual, setResolucionTextual] = useState(''); // Si "Resuelto"
-  const [idUsuarioResuelve, setIdUsuarioResuelve] = useState(''); // Si "Resuelto"
 
   // ── Estado de Errores ──
   const [errors, setErrors] = useState({});
@@ -149,18 +148,13 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     label: u.nombre || u.no_ref,
   })), [unidades]);
 
-  const optsResuelve = useMemo(() => usuarios.map(u => ({
-    value: u.id_usuario,
-    label: `${u.nombre_completo} (${u.matricula})`,
-  })), [usuarios]);
-
   // ── Limpiar al cerrar ──
   useEffect(() => {
     if (!isOpen) {
       setNumSerieInput(''); setNumSerie(''); setEquipoEncontrado(null);
       setTipoIncidencia(''); setNuevoTipo(''); setIsAddingTipo(false);
       setDescripcion(''); setUnidadId(''); setAlias(''); setRequerimiento('');
-      setEstatus('Pendiente'); setNotaSeguimiento(''); setResolucionTextual(''); setIdUsuarioResuelve('');
+      setEstatus('Pendiente'); setNotaSeguimiento(''); setResolucionTextual('');
       setErrors({});
     }
   }, [isOpen]);
@@ -188,7 +182,6 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
     if (estatus === 'Resuelto') {
       if (!resolucionTextual.trim()) newErrors.resolution = 'Ingrese los detalles de la solución';
-      if (!idUsuarioResuelve) newErrors.resolver = 'Seleccione quién resolvió';
     }
 
     setErrors(newErrors);
@@ -240,7 +233,6 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
           id_incidencia: String(idNueva),
           estatus_cierre: 'Resuelto',
           resolucion_textual: resolucionTextual.trim(),
-          id_usuario_resuelve: parseInt(idUsuarioResuelve),
         });
       }
 
@@ -501,24 +493,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
                 {/* CONDICIONAL: Resuelto → Quién resolvió + Detalle */}
                 {estatus === 'Resuelto' && (
-                  <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-5 fade-in border-t border-gray-200 pt-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                        Técnico que Resolvió <span className="text-red-500">*</span>
-                      </label>
-                      <SearchableSelect
-                        options={optsResuelve}
-                        value={idUsuarioResuelve}
-                        onChange={(val) => {
-                          setIdUsuarioResuelve(val);
-                          setErrors(prev => ({ ...prev, resolver: null }));
-                        }}
-                        placeholder="Buscar técnico..."
-                        loading={loadingUsuarios}
-                      />
-                      {errors.resolver && <p className="text-[10px] font-bold text-red-600 mt-1">{errors.resolver}</p>}
-                    </div>
-
+                  <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-1 gap-5 fade-in border-t border-gray-200 pt-4">
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                         Detalles Finales de la Resolución <span className="text-red-500">*</span>

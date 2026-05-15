@@ -127,11 +127,6 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                     </p>
                     
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                      <div className="flex items-center gap-1 text-gray-700 min-w-0 flex-1">
-                        <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
-                        <span className="font-semibold text-gray-500 mr-1 flex-shrink-0">Resolvió:</span>
-                        <span className="font-bold break-words">{incidencia._raw?.usuarioResuelve?.nombre_completo || 'Usuario Desconocido'}</span>
-                      </div>
                       <div className="flex items-center gap-1 text-gray-700">
                         <Calendar size={13} className="text-gray-400" />
                         <span className="font-semibold text-gray-500 mr-1">Fecha:</span>
