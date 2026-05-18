@@ -58,7 +58,7 @@ export default function DetalleInmuebleModal({ isOpen, onClose, inmueble }) {
               <DetailItem icon={Hash} label="Clave Inmueble" value={inmueble.clave} />
               <DetailItem icon={Info} label="Desc. Corta" value={inmueble.desc_corta} />
               <DetailItem icon={User} label="Encargado" value={inmueble.encargado} />
-              <DetailItem icon={Phone} label="Teléfono" value={inmueble.telefono} />
+              <DetailItem icon={MapPin} label="C.P." value={inmueble.cp} />
             </div>
           </section>
 

@@ -143,7 +143,7 @@ export function EditBienModal({ asset, onClose }) {
   });
 
   const [specsData, setSpecsData] = useState({
-    nom_pc: '', cpu: '', ram: '', almacenamiento: '',
+    cpu: '', ram: '', almacenamiento: '',
     mac_wifi: '', ip: '', mac_eth: '', puerto_red: '', switch_red: '', os: ''
   });
 
@@ -161,7 +161,6 @@ export function EditBienModal({ asset, onClose }) {
       });
       if (asset.specs) {
         setSpecsData({
-          nom_pc: asset.specs.nom_pc || '',
           cpu: asset.specs.cpu || '',
           ram: asset.specs.ram || '',
           almacenamiento: asset.specs.almacenamiento || '',
@@ -472,12 +471,6 @@ export function EditBienModal({ asset, onClose }) {
                 <div className="space-y-5 fade-in">
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                      <label className={labelCls}>Nombre del Equipo</label>
-                      <input type="text" value={specsData.nom_pc} placeholder="Ej. PC-CAJA-03"
-                        onChange={e => setSpecsData({ ...specsData, nom_pc: e.target.value })}
-                        className={inputCls} />
-                    </div>
                     <div>
                       <label className={labelCls}>Sistema Operativo</label>
                       <input type="text" value={specsData.os} placeholder="Win 10, Mac OS..."

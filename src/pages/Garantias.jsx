@@ -65,7 +65,6 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   const [isSearching, setIsSearching] = useState(false);
   const [isAddingProveedor, setIsAddingProveedor] = useState(false);
   const [newProveedorName, setNewProveedorName] = useState('');
-  const [newProveedorContacto, setNewProveedorContacto] = useState('');
 
   const createMut = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
@@ -97,7 +96,6 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
       setForm(p => ({ ...p, id_proveedor: nuevo.id_proveedor }));
       setIsAddingProveedor(false);
       setNewProveedorName('');
-      setNewProveedorContacto('');
       showToast(`Proveedor "${nuevo.nombre_proveedor}" creado`, 'success');
     },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear proveedor', 'error'),
@@ -107,7 +105,6 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
     if (!newProveedorName.trim()) return;
     createProveedorMut.mutate({
       nombre_proveedor: newProveedorName.trim(),
-      informacion_contacto: newProveedorContacto.trim() || null,
     });
   };
 
@@ -267,20 +264,12 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setIsAddingProveedor(false); setNewProveedorName(''); setNewProveedorContacto(''); }}
+                    onClick={() => { setIsAddingProveedor(false); setNewProveedorName(''); }}
                     className="px-3 py-2 border border-gray-200 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
                   >
                     <X size={15} />
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={newProveedorContacto}
-                  onChange={e => setNewProveedorContacto(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateProveedor(); } }}
-                  placeholder="Información de contacto (opcional): tel, email, dirección..."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-400 text-gray-600"
-                />
               </div>
             ) : (
               <div className="flex gap-2">

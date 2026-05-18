@@ -1,9 +1,6 @@
 import React from 'react';
 import { X, Building2, Globe, Shield, Activity, Calendar, Phone, User, Hash, Zap } from 'lucide-react';
-import { useCatTipoUnidades } from '../hooks/useUnidades';
-
 export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
-  const { data: catTipos } = useCatTipoUnidades();
 
   if (!isOpen || !unidad) return null;
 
@@ -89,12 +86,6 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-tight text-purple-700">Clasificación Operativa</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <DetailItem 
-                icon={Building2} 
-                label="Tipo de Unidad" 
-                value={unidad.tipoUnidadInfo?.tipo_unidad || catTipos?.find(t => t.id_tipo === unidad.tipo_unidad)?.tipo_unidad || unidad.tipo_unidad || 'SIN TIPO'} 
-                color="purple" 
-              />
               <DetailItem 
                 icon={Shield} 
                 label="Régimen" 

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Info, Network, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useCatTipoUnidades } from '../hooks/useUnidades';
-
 export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, isLoading }) {
   const { showToast } = useApp();
   const [formData, setFormData] = useState({
@@ -12,7 +10,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
     encargado: '',
     telefono: '',
     clave: '',
-    tipo_unidad: '',
     bits: '',
     ip_init: '',
     estatus: 1,
@@ -27,10 +24,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
 
   const [activeTab, setActiveTab] = useState('general'); // 'general' | 'tecnico'
   const [errors, setErrors] = useState({});
-
-  // Catalogs
-  const { data: tipoUnidades, isLoading: loadingTipos } = useCatTipoUnidades();
-  
 
   const ENLACES = [
     { value: 1, label: 'Fibra Óptica (1)' },
@@ -48,7 +41,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
         encargado: unidadToEdit.encargado ?? '',
         telefono: unidadToEdit.telefono ?? '',
         clave: unidadToEdit.clave ?? '',
-        tipo_unidad: unidadToEdit.tipo_unidad ?? '',
         bits: unidadToEdit.bits ?? '',
         ip_init: unidadToEdit.ip_init ?? '',
         estatus: unidadToEdit.estatus ?? 1,
@@ -68,7 +60,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
         encargado: '',
         telefono: '',
         clave: '',
-        tipo_unidad: '',
         bits: '',
         ip_init: '',
         estatus: 1,
@@ -125,10 +116,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
       }
     }
 
-    if (!formData.tipo_unidad) {
-      newErrors.tipo_unidad = 'Debes seleccionar un tipo de unidad';
-    }
-
     if (formData.clave && formData.clave.length > 13) {
       newErrors.clave = 'La clave no puede exceder 13 caracteres';
     }
@@ -177,7 +164,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
     if (isValid) {
       // Clean numeric fields before sending
       const submissionData = { ...formData };
-      ['tipo_unidad', 'bits', 'ip_init', 'estatus', 'vlan', 'monitorear', 'tipo_enlace'].forEach(field => {
+      ['bits', 'ip_init', 'estatus', 'vlan', 'monitorear', 'tipo_enlace'].forEach(field => {
         if (submissionData[field] === '' || submissionData[field] === null || submissionData[field] === undefined) {
           submissionData[field] = null;
         } else {
@@ -361,22 +348,6 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
 
             {activeTab === 'tecnico' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-300">
-                <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Unidad *</label>
-                  <select
-                    name="tipo_unidad"
-                    value={formData.tipo_unidad}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 text-sm border ${errors.tipo_unidad ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
-                    disabled={loadingTipos}
-                  >
-                    <option value="">-- Seleccionar Tipo --</option>
-                    {tipoUnidades?.map(t => (
-                      <option key={t.id_tipo} value={t.id_tipo}>{t.tipo_unidad}</option>
-                    ))}
-                  </select>
-                  {errors.tipo_unidad && <p className="text-[10px] text-red-500 mt-1 font-semibold">{errors.tipo_unidad}</p>}
-                </div>
 
                 <div className="md:col-span-1">
                   <label className="block text-xs font-bold text-gray-700 mb-1">Bits (Mascara)</label>

@@ -10,24 +10,26 @@ export const GET_BIEN_BY_TERMINO = gql`
       estatus_operativo
       cantidad
       id_categoria
-      id_unidad
+      id_segmento
       id_usuario_resguardo
-      clave_inmueble_ref
+      clave_unidad_ref
       categoria {
         nombre_categoria
       }
       modelo {
         descrip_disp
       }
-      unidad {
+      segmento {
         nombre
+        clave
       }
       ubicacion {
         id_ubicacion
         nombre_ubicacion
       }
-      inmueble {
-        nombre_ubicacion
+      unidad {
+        clave
+        descripcion
       }
       usuarioResguardo {
         id_usuario
@@ -37,7 +39,6 @@ export const GET_BIEN_BY_TERMINO = gql`
       fecha_actualizacion
       fecha_adquisicion
       especificacionTI {
-        nom_pc
         cpu_info
         ram_gb
         almacenamiento_gb
@@ -67,11 +68,11 @@ export const UPDATE_BIEN = gql`
   mutation UpdateBien(
     $id_bien: ID!
     $id_categoria: Int
-    $id_unidad: Int
+    $id_segmento: Int
     $num_serie: String
     $cantidad: Float
     $estatus_operativo: String
-    $clave_inmueble_ref: String
+    $clave_unidad_ref: String
     $id_usuario_resguardo: Int
     $id_ubicacion: Int
     $fecha_adquisicion: Date
@@ -79,11 +80,11 @@ export const UPDATE_BIEN = gql`
     updateBien(
       id_bien: $id_bien
       id_categoria: $id_categoria
-      id_unidad: $id_unidad
+      id_segmento: $id_segmento
       num_serie: $num_serie
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
-      clave_inmueble_ref: $clave_inmueble_ref
+      clave_unidad_ref: $clave_unidad_ref
       id_usuario_resguardo: $id_usuario_resguardo
       id_ubicacion: $id_ubicacion
       fecha_adquisicion: $fecha_adquisicion
@@ -97,7 +98,6 @@ export const UPDATE_BIEN = gql`
 export const UPSERT_ESPEC_TI = gql`
   mutation UpsertEspecificacionTI(
     $id_bien: ID!
-    $nom_pc: String
     $cpu_info: String
     $ram_gb: Int
     $almacenamiento_gb: Int
@@ -110,7 +110,6 @@ export const UPSERT_ESPEC_TI = gql`
   ) {
     upsertEspecificacionTI(
       id_bien: $id_bien
-      nom_pc: $nom_pc
       cpu_info: $cpu_info
       ram_gb: $ram_gb
       almacenamiento_gb: $almacenamiento_gb
@@ -121,15 +120,14 @@ export const UPSERT_ESPEC_TI = gql`
       switch_red: $switch_red
       modelo_so: $modelo_so
     ) {
-      nom_pc
       cpu_info
     }
   }
 `;
 
 export const DELETE_BIEN = gql`
-  mutation DeleteBien($id: ID!) {
-    deleteBien(id: $id)
+  mutation DeleteBien($id_bien: ID!) {
+    deleteBien(id_bien: $id_bien)
   }
 `;
 

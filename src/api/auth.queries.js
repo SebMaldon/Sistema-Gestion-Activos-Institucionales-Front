@@ -15,7 +15,7 @@ export const LOGIN_MUTATION = gql`
         id_unidad
         estatus
         rol { id_rol nombre_rol }
-        unidad { id_unidad nombre no_ref clave }
+        unidad: segmento { id_unidad: id_segmento nombre no_ref clave }
       }
     }
   }
@@ -32,7 +32,7 @@ export const ME_QUERY = gql`
       id_unidad
       estatus
       rol { id_rol nombre_rol }
-      unidad { id_unidad nombre no_ref clave }
+      unidad: segmento { id_unidad: id_segmento nombre no_ref clave }
     }
   }
 `;

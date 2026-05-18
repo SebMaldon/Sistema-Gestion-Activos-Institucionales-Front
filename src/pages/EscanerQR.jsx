@@ -277,7 +277,6 @@ export default function EscanerQR() {
                   <p className="text-[10px] uppercase font-bold tracking-wider text-blue-600 mb-3">Especificaciones TI</p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     {[
-                      ['Nombre Equipo', foundAsset.specs.nom_pc],
                       ['CPU', foundAsset.specs.cpu],
                       ['RAM (GB)', foundAsset.specs.ram],
                       ['Almacenamiento (GB)', foundAsset.specs.almacenamiento],

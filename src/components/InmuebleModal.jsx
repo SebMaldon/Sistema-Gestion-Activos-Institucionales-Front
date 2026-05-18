@@ -20,7 +20,6 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
     ppal: '',
     clave_zona: '',
     clave_a: '',
-    telefono: '',
     zona_reporte: '',
     nivel: '',
     no_inmueble: '',
@@ -52,7 +51,6 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
         ppal: inmuebleToEdit.ppal ?? '',
         clave_zona: inmuebleToEdit.clave_zona ?? '',
         clave_a: inmuebleToEdit.clave_a ?? '',
-        telefono: inmuebleToEdit.telefono ?? '',
         zona_reporte: inmuebleToEdit.zona_reporte ?? '',
         nivel: inmuebleToEdit.nivel ?? '',
         no_inmueble: inmuebleToEdit.no_inmueble ?? '',
@@ -75,7 +73,6 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
         ppal: '',
         clave_zona: '',
         clave_a: '',
-        telefono: '',
         zona_reporte: '',
         nivel: '',
         no_inmueble: '',
@@ -129,15 +126,6 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
     if (formData.ciudad && formData.ciudad.length > 50) newErrors.ciudad = 'Máximo 50 caracteres';
     if (formData.municipio && formData.municipio.length > 50) newErrors.municipio = 'Máximo 50 caracteres';
     if (formData.cp && formData.cp.length > 50) newErrors.cp = 'Máximo 50 caracteres';
-    
-    if (formData.telefono) {
-      const telRegex = /^[0-9\s\-()+]+$/;
-      if (!telRegex.test(formData.telefono)) {
-        newErrors.telefono = 'Formato de teléfono inválido';
-      } else if (formData.telefono.length > 18) {
-        newErrors.telefono = 'Máximo 18 caracteres';
-      }
-    }
 
     setErrors(newErrors);
     return {
@@ -165,7 +153,7 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
       showToast('Por favor, revisa los errores en el formulario', 'error');
       
       const generalFields = ['clave', 'descripcion', 'desc_corta', 'encargado'];
-      const locationFields = ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'telefono'];
+      const locationFields = ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp'];
       
       const hasGeneralErrors = generalFields.some(f => !!currentErrors[f]);
       const hasLocationErrors = locationFields.some(f => !!currentErrors[f]);
@@ -214,7 +202,7 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
           >
             <MapPin size={16} /> 
             Ubicación y Contacto
-            {Object.keys(errors).some(f => ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'telefono'].includes(f)) && (
+            {Object.keys(errors).some(f => ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp'].includes(f)) && (
               <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             )}
           </button>
@@ -224,7 +212,7 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
           >
             <Settings size={16} /> 
             Datos Técnicos
-            {Object.keys(errors).some(f => !['clave', 'descripcion', 'desc_corta', 'encargado', 'direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'telefono'].includes(f)) && (
+            {Object.keys(errors).some(f => !['clave', 'descripcion', 'desc_corta', 'encargado', 'direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp'].includes(f)) && (
               <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             )}
           </button>
@@ -366,18 +354,6 @@ export default function InmuebleModal({ isOpen, onClose, inmuebleToEdit, onSubmi
                     name="municipio"
                     value={formData.municipio}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div className="md:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
-                  <input
-                    type="text"
-                    name="telefono"
-                    value={formData.telefono}
-                    onChange={handleChange}
-                    placeholder="18 carac. máx"
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>

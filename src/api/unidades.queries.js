@@ -1,33 +1,26 @@
 import { gql } from 'graphql-request';
 
-// ─── QUERIES ─────────────────────────────────────────────────────────────────
+// ─── QUERIES — Segmentos (antes "Unidades" de red) ───────────────────────────
 
-export const GET_UNIDADES_QUERY = gql`
-  query GetUnidades($search: String, $pagination: PaginationInput) {
-    unidades(search: $search, pagination: $pagination) {
+export const GET_SEGMENTOS_QUERY = gql`
+  query GetSegmentos($search: String, $pagination: PaginationInput) {
+    segmentos(search: $search, pagination: $pagination) {
       edges {
         node {
-          id_unidad
+          id_segmento
           no_ref
           nombre
           ip
-          encargado
-          telefono
           clave
-          tipo_unidad
           bits
           ip_init
           estatus
-          regimen
           vlan
           monitorear
           proveedor
           fecha_migracion
           velocidad
           tipo_enlace
-          tipoUnidadInfo {
-            tipo_unidad
-          }
         }
         cursor
       }
@@ -42,49 +35,38 @@ export const GET_UNIDADES_QUERY = gql`
   }
 `;
 
-export const GET_UNIDAD_BY_ID_QUERY = gql`
-  query GetUnidadById($id_unidad: Int!) {
-    unidadById(id_unidad: $id_unidad) {
-      id_unidad
+export const GET_SEGMENTO_BY_ID_QUERY = gql`
+  query GetSegmentoById($id_segmento: ID!) {
+    segmento(id_segmento: $id_segmento) {
+      id_segmento
       no_ref
       nombre
       ip
-      encargado
-      telefono
       clave
-      tipo_unidad
       bits
       ip_init
       estatus
-      regimen
       vlan
       monitorear
       proveedor
       fecha_migracion
       velocidad
       tipo_enlace
-      tipoUnidadInfo {
-        tipo_unidad
-      }
     }
   }
 `;
 
 // ─── MUTATIONS ───────────────────────────────────────────────────────────────
 
-export const CREATE_UNIDAD_MUTATION = gql`
-  mutation CreateUnidad(
+export const CREATE_SEGMENTO_MUTATION = gql`
+  mutation CreateSegmento(
     $no_ref: String!
     $nombre: String
     $ip: String!
-    $encargado: String
-    $telefono: String
     $clave: String
-    $tipo_unidad: Int
     $bits: Int
     $ip_init: Int
     $estatus: Int
-    $regimen: Int
     $vlan: Int
     $monitorear: Int
     $proveedor: String
@@ -92,18 +74,14 @@ export const CREATE_UNIDAD_MUTATION = gql`
     $velocidad: String
     $tipo_enlace: Int
   ) {
-    createUnidad(
+    createSegmento(
       no_ref: $no_ref
       nombre: $nombre
       ip: $ip
-      encargado: $encargado
-      telefono: $telefono
       clave: $clave
-      tipo_unidad: $tipo_unidad
       bits: $bits
       ip_init: $ip_init
       estatus: $estatus
-      regimen: $regimen
       vlan: $vlan
       monitorear: $monitorear
       proveedor: $proveedor
@@ -111,7 +89,7 @@ export const CREATE_UNIDAD_MUTATION = gql`
       velocidad: $velocidad
       tipo_enlace: $tipo_enlace
     ) {
-      id_unidad
+      id_segmento
       no_ref
       nombre
       ip
@@ -119,20 +97,16 @@ export const CREATE_UNIDAD_MUTATION = gql`
   }
 `;
 
-export const UPDATE_UNIDAD_MUTATION = gql`
-  mutation UpdateUnidad(
-    $id_unidad: Int!
+export const UPDATE_SEGMENTO_MUTATION = gql`
+  mutation UpdateSegmento(
+    $id_segmento: Int!
     $no_ref: String
     $nombre: String
     $ip: String
-    $encargado: String
-    $telefono: String
     $clave: String
-    $tipo_unidad: Int
     $bits: Int
     $ip_init: Int
     $estatus: Int
-    $regimen: Int
     $vlan: Int
     $monitorear: Int
     $proveedor: String
@@ -140,19 +114,15 @@ export const UPDATE_UNIDAD_MUTATION = gql`
     $velocidad: String
     $tipo_enlace: Int
   ) {
-    updateUnidad(
-      id_unidad: $id_unidad
+    updateSegmento(
+      id_segmento: $id_segmento
       no_ref: $no_ref
       nombre: $nombre
       ip: $ip
-      encargado: $encargado
-      telefono: $telefono
       clave: $clave
-      tipo_unidad: $tipo_unidad
       bits: $bits
       ip_init: $ip_init
       estatus: $estatus
-      regimen: $regimen
       vlan: $vlan
       monitorear: $monitorear
       proveedor: $proveedor
@@ -160,7 +130,7 @@ export const UPDATE_UNIDAD_MUTATION = gql`
       velocidad: $velocidad
       tipo_enlace: $tipo_enlace
     ) {
-      id_unidad
+      id_segmento
       no_ref
       nombre
       ip
@@ -168,9 +138,9 @@ export const UPDATE_UNIDAD_MUTATION = gql`
   }
 `;
 
-export const DELETE_UNIDAD_MUTATION = gql`
-  mutation DeleteUnidad($id_unidad: Int!) {
-    deleteUnidad(id_unidad: $id_unidad)
+export const DELETE_SEGMENTO_MUTATION = gql`
+  mutation DeleteSegmento($id_segmento: Int!) {
+    deleteSegmento(id_segmento: $id_segmento)
   }
 `;
 
@@ -182,3 +152,15 @@ export const GET_CAT_TIPO_UNIDADES = gql`
     }
   }
 `;
+
+// ─── Aliases para compatibilidad con código existente ────────────────────────
+/** @deprecated Usar GET_SEGMENTOS_QUERY */
+export const GET_UNIDADES_QUERY = GET_SEGMENTOS_QUERY;
+/** @deprecated Usar CREATE_SEGMENTO_MUTATION */
+export const CREATE_UNIDAD_MUTATION = CREATE_SEGMENTO_MUTATION;
+/** @deprecated Usar UPDATE_SEGMENTO_MUTATION */
+export const UPDATE_UNIDAD_MUTATION = UPDATE_SEGMENTO_MUTATION;
+/** @deprecated Usar DELETE_SEGMENTO_MUTATION */
+export const DELETE_UNIDAD_MUTATION = DELETE_SEGMENTO_MUTATION;
+/** @deprecated Usar GET_SEGMENTO_BY_ID_QUERY */
+export const GET_UNIDAD_BY_ID_QUERY = GET_SEGMENTO_BY_ID_QUERY;

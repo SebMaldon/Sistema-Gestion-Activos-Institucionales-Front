@@ -26,6 +26,7 @@ import { formatDate, formatDateTime } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
 import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
+import BienAtributosPanel from '../components/BienAtributosPanel';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -72,8 +73,7 @@ const FORM_EMPTY = {
   fecha_adquisicion: '',
 };
 const TI_EMPTY = {
-  nom_pc: '', cpu_info: '', ram_gb: '', almacenamiento_gb: '',
-  dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '',
+  cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: ''
 };
 // ─── Mini-CRUD: Modal de Catálogos (Marcas / Tipos / Modelos) ────────────────
 function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }) {
@@ -438,9 +438,9 @@ export default function Inventario() {
   const [newUbicacionName, setNewUbicacionName] = useState('');
 
   const { data: ubicacionesData } = useQuery({
-    queryKey: ['ubicaciones', form.id_unidad],
-    queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: parseInt(form.id_unidad) }),
-    enabled: !!form.id_unidad,
+    queryKey: ['ubicaciones', form.id_segmento],
+    queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: form.id_segmento }),
+    enabled: !!form.id_segmento,
   });
   const ubicacionesUnidad = ubicacionesData?.ubicacionesPorUnidad ?? [];
 
@@ -458,7 +458,7 @@ export default function Inventario() {
 
   const handleCreateUbicacion = () => {
     if (!newUbicacionName.trim()) return;
-    createUbicacion({ id_unidad: parseInt(form.id_unidad), nombre_ubicacion: newUbicacionName });
+    createUbicacion({ id_unidad: form.id_segmento, nombre_ubicacion: newUbicacionName });
   };
 
   // ── Mutaciones ─────────────────────────────────────────────────────────────
@@ -517,22 +517,21 @@ export default function Inventario() {
 
   const openEdit = useCallback((bien) => {
     setForm({
-      id_categoria: bien.idCategoria ?? '',
-      id_unidad_medida: bien.idUnidadMedida ?? '',
-      id_unidad: bien.idUnidad ?? '',
-      id_ubicacion: bien.id_ubicacion ?? '',
-      num_serie: bien.numSerie === 'N/D' ? '' : (bien.numSerie ?? ''),
-      num_inv: bien.numInv === 'N/D' ? '' : (bien.numInv ?? ''),
-      cantidad: bien.cantidad ?? 1,
-      estatus_operativo: bien.estatusOperativo ?? 'ACTIVO',
-      clave_inmueble_ref: bien.claveInmuebleRef ?? '',
-      clave_modelo: bien.claveModelo ?? '',
+      id_categoria:       bien.idCategoria ?? '',
+      id_unidad_medida:   bien.idUnidadMedida ?? '',
+      id_segmento:        bien.idSegmento ?? '',
+      id_ubicacion:       bien.id_ubicacion ?? '',
+      num_serie:          bien.numSerie === 'N/D' ? '' : (bien.numSerie ?? ''),
+      num_inv:            bien.numInv === 'N/D' ? '' : (bien.numInv ?? ''),
+      cantidad:           bien.cantidad ?? 1,
+      estatus_operativo:  bien.estatusOperativo ?? 'ACTIVO',
+      clave_unidad_ref:   bien.claveUnidadRef ?? '',
+      clave_modelo:       bien.claveModelo ?? '',
       id_usuario_resguardo: bien.idUsuarioResguardo ?? '',
       fecha_adquisicion: bien.fechaAdquisicion
         ? new Date(bien.fechaAdquisicion).toISOString().split('T')[0] : '',
     });
     setTiForm({
-      nom_pc: bien.especificacionTI?.nom_pc ?? '',
       cpu_info: bien.especificacionTI?.cpu_info ?? '',
       ram_gb: bien.especificacionTI?.ram_gb ?? '',
       almacenamiento_gb: bien.especificacionTI?.almacenamiento_gb ?? '',
@@ -599,14 +598,13 @@ export default function Inventario() {
     const vars = {
       id_categoria:      Number(form.id_categoria),
       id_unidad_medida:  Number(form.id_unidad_medida),
-      id_unidad:         form.id_unidad ? Number(form.id_unidad) : null,
+      id_segmento:       form.id_segmento ? Number(form.id_segmento) : null,
       id_ubicacion:      form.id_ubicacion ? Number(form.id_ubicacion) : null,
       num_serie:         form.num_serie || null,
       num_inv:           form.num_inv || null,
-      // Si la categoría maneja serie individual siempre es 1
       cantidad:          esSerie ? 1 : (Number(form.cantidad) || 1),
       estatus_operativo: form.estatus_operativo,
-      clave_inmueble_ref: form.clave_inmueble_ref || null,
+      clave_unidad_ref:  form.clave_unidad_ref || null,
       clave_modelo:      form.clave_modelo || null,
       id_usuario_resguardo: form.id_usuario_resguardo ? Number(form.id_usuario_resguardo) : null,
       fecha_adquisicion: form.fecha_adquisicion || null,
@@ -645,7 +643,6 @@ export default function Inventario() {
   };
 
   const parseTI = () => ({
-    nom_pc:            tiForm.nom_pc || null,
     cpu_info:          tiForm.cpu_info || null,
     ram_gb:            tiForm.ram_gb ? Number(tiForm.ram_gb) : null,
     almacenamiento_gb: tiForm.almacenamiento_gb ? Number(tiForm.almacenamiento_gb) : null,
@@ -957,7 +954,6 @@ export default function Inventario() {
                   <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Especificaciones TI</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                  <InfoField icon={<Server size={13}/>}    label="Nombre PC"      value={fmt(modalFicha.especificacionTI.nom_pc)} />
                   <InfoField icon={<Cpu size={13}/>}       label="CPU"            value={fmt(modalFicha.especificacionTI.cpu_info)} />
                   <InfoField icon={<Server size={13}/>}    label="RAM"            value={modalFicha.especificacionTI.ram_gb ? `${modalFicha.especificacionTI.ram_gb} GB` : '—'} />
                   <InfoField icon={<HardDrive size={13}/>} label="Almacenamiento" value={modalFicha.especificacionTI.almacenamiento_gb ? `${modalFicha.especificacionTI.almacenamiento_gb} GB` : '—'} />
@@ -1212,23 +1208,23 @@ export default function Inventario() {
                   />
                 </div>
 
-                {/* Unidad Operativa */}
+                {/* Segmento de Red */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Operativa</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Segmento de Red</label>
                   <SearchableSelect
-                    value={form.id_unidad ? String(form.id_unidad) : ''}
+                    value={form.id_segmento ? String(form.id_segmento) : ''}
                     onChange={(val) => {
-                      setForm((f) => ({ ...f, id_unidad: val, id_ubicacion: '' }));
+                      setForm((f) => ({ ...f, id_segmento: val, id_ubicacion: '' }));
                       setIsAddingUbicacion(false);
                       setNewUbicacionName('');
                     }}
-                    options={(catalogos?.unidades ?? []).map(u => ({ value: String(u.id_unidad), label: u.nombre || u.clave }))}
-                    placeholder="Sin unidad"
+                    options={(catalogos?.segmentos ?? []).map(u => ({ value: String(u.id_segmento), label: u.nombre || u.clave }))}
+                    placeholder="Sin segmento"
                   />
                 </div>
 
-                {/* Ubicacion Física (Depende de Unidad) */}
-                {form.id_unidad && (
+                {/* Ubicacion Física (Depende de Segmento) */}
+                {form.id_segmento && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Área / Ubicación Física</label>
                     {isAddingUbicacion ? (
@@ -1269,14 +1265,14 @@ export default function Inventario() {
                   </div>
                 )}
 
-                {/* Inmueble */}
+                {/* Unidad (Inmueble Físico) */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Inmueble / Ubicación</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad (Inmueble)</label>
                   <SearchableSelect
-                    value={form.clave_inmueble_ref || ''}
-                    onChange={(val) => setForm((f) => ({ ...f, clave_inmueble_ref: val }))}
+                    value={form.clave_unidad_ref || ''}
+                    onChange={(val) => setForm((f) => ({ ...f, clave_unidad_ref: val }))}
                     options={(catalogos?.inmuebles ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
-                    placeholder="Sin inmueble"
+                    placeholder="Sin unidad"
                   />
                 </div>
 
@@ -1317,7 +1313,6 @@ export default function Inventario() {
                   {showTI && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                       {[
-                        { key: 'nom_pc',            label: 'Nombre PC / Hostname', placeholder: 'IMSS-PC-001' },
                         { key: 'cpu_info',           label: 'CPU',                  placeholder: 'Intel Core i5-12400' },
                         { key: 'ram_gb',             label: 'RAM (GB)',              placeholder: '8', type: 'number' },
                         { key: 'almacenamiento_gb',  label: 'Almacenamiento (GB)',   placeholder: '256', type: 'number' },
@@ -1342,7 +1337,23 @@ export default function Inventario() {
                 </div>
               )}
 
-              {/* — Botones — */}
+              {/* — Sección Atributos Técnicos (edición) — */}
+              {modalForm !== 'create' && modalForm?.id_bien && (
+                <div className="rounded-xl border border-purple-200 overflow-hidden">
+                  <div className="px-4 py-3 bg-purple-50 flex items-center gap-2">
+                    <Tag size={14} className="text-purple-700" />
+                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Atributos Técnicos</span>
+                    <span className="text-xs text-purple-400 ml-auto">Cualquier tipo de dispositivo</span>
+                  </div>
+                  <div className="p-4">
+                    <BienAtributosPanel
+                      id_bien={modalForm.id_bien}
+                      tipo_disp={modalForm.modelo?.tipo_disp}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={closeForm}
                   className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">

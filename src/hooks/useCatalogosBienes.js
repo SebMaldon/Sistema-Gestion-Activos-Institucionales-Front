@@ -12,16 +12,17 @@ export function useCatalogosBienes() {
     queryFn: async () => {
       const data = await gqlClient.request(GET_CATALOGOS_BIENES_QUERY);
       return {
-        categorias: data.catCategoriasActivo ?? [],
+        categorias:     data.catCategoriasActivo ?? [],
         unidadesMedida: data.catUnidadesMedida ?? [],
-        modelos: data.catModelos ?? [],
-        unidades: data.unidades ?? [],
-        // inmuebles (tabla legacy con descripcion completa)
-        inmuebles: data.inmuebles ?? [],
+        modelos:        data.catModelos ?? [],
+        // Segmentos de red (antes "unidades") — id_segmento, nombre, clave
+        segmentos:      data.segmentos ?? [],
+        // Unidades físicas / inmuebles — clave, descripcion, desc_corta
+        inmuebles:      data.inmuebles ?? [],
         // Usuarios activos para resguardo
-        usuarios: data.usuarios?.edges?.map((e) => e.node) ?? [],
+        usuarios:       data.usuarios?.edges?.map((e) => e.node) ?? [],
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 min — los catálogos cambian poco
+    staleTime: 5 * 60 * 1000,
   });
 }

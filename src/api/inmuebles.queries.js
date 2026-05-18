@@ -1,6 +1,6 @@
 import { gql } from 'graphql-request';
 
-// ─── QUERIES ─────────────────────────────────────────────────────────────────
+// ─── QUERIES — Inmuebles (tabla: unidades — datos físicos de la unidad) ───────
 
 export const GET_INMUEBLES_QUERY = gql`
   query GetInmuebles($search: String, $pagination: PaginationInput) {
@@ -21,7 +21,6 @@ export const GET_INMUEBLES_QUERY = gql`
           ppal
           clave_zona
           clave_a
-          telefono
           zona_reporte
           nivel
           no_inmueble
@@ -61,7 +60,6 @@ export const GET_INMUEBLE_BY_ID_QUERY = gql`
       ppal
       clave_zona
       clave_a
-      telefono
       zona_reporte
       nivel
       no_inmueble
@@ -89,7 +87,6 @@ export const CREATE_INMUEBLE_MUTATION = gql`
     $ppal: String
     $clave_zona: String!
     $clave_a: Int
-    $telefono: String
     $zona_reporte: String
     $nivel: Int
     $no_inmueble: Int
@@ -111,7 +108,6 @@ export const CREATE_INMUEBLE_MUTATION = gql`
       ppal: $ppal
       clave_zona: $clave_zona
       clave_a: $clave_a
-      telefono: $telefono
       zona_reporte: $zona_reporte
       nivel: $nivel
       no_inmueble: $no_inmueble
@@ -140,7 +136,6 @@ export const UPDATE_INMUEBLE_MUTATION = gql`
     $ppal: String
     $clave_zona: String
     $clave_a: Int
-    $telefono: String
     $zona_reporte: String
     $nivel: Int
     $no_inmueble: Int
@@ -162,7 +157,6 @@ export const UPDATE_INMUEBLE_MUTATION = gql`
       ppal: $ppal
       clave_zona: $clave_zona
       clave_a: $clave_a
-      telefono: $telefono
       zona_reporte: $zona_reporte
       nivel: $nivel
       no_inmueble: $no_inmueble
@@ -178,5 +172,15 @@ export const UPDATE_INMUEBLE_MUTATION = gql`
 export const DELETE_INMUEBLE_MUTATION = gql`
   mutation DeleteInmueble($clave: ID!) {
     deleteInmueble(clave: $clave)
+  }
+`;
+
+export const GET_CAT_INMUEBLES_QUERY = gql`
+  query GetCatInmuebles {
+    catInmuebles {
+      clave
+      descripcion
+      desc_corta
+    }
   }
 `;

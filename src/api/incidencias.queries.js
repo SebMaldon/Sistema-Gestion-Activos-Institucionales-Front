@@ -5,7 +5,7 @@ export const UPDATE_INCIDENCIA_MUTATION = gql`
     $id_incidencia: ID!
     $id_tipo_incidencia: Int
     $descripcion_falla: String
-    $id_unidad: Int
+    $id_unidad: String
     $alias: String
     $requerimiento: String
   ) {
@@ -146,14 +146,14 @@ export const GET_BIEN_BY_TERMINO_QUERY = gql`
       categoria {
         nombre_categoria
       }
-      unidad {
-        id_unidad
+      segmento {
+        id_segmento
         nombre
         no_ref
       }
-      inmueble {
-        clave_inmueble
-        nombre_ubicacion
+      unidad {
+        clave
+        descripcion
       }
       usuarioResguardo {
         id_usuario
@@ -170,7 +170,7 @@ export const CREATE_INCIDENCIA_MUTATION = gql`
     $id_bien: ID!
     $id_tipo_incidencia: Int!
     $descripcion_falla: String!
-    $id_unidad: Int
+    $id_unidad: String
     $alias: String
     $requerimiento: String
   ) {
@@ -273,9 +273,9 @@ export const DELETE_INCIDENCIA_MUTATION = gql`
 `;
 
 export const GET_UNIDADES_QUERY = gql`
-  query GetUnidades {
-    catUnidades {
-      id_unidad
+  query GetSegmentos {
+    catSegmentos {
+      id_segmento
       nombre
       no_ref
     }

@@ -21,7 +21,7 @@ export const GET_USUARIOS = gql`
           id_unidad
           estatus
           rol { id_rol nombre_rol }
-          unidad { id_unidad nombre no_ref }
+          unidad: segmento { id_unidad: id_segmento nombre no_ref }
         }
         cursor
       }
@@ -86,7 +86,7 @@ export const CREATE_USUARIO = gql`
       id_usuario matricula nombre_completo tipo_usuario correo_electronico
       id_rol id_unidad estatus
       rol { id_rol nombre_rol }
-      unidad { id_unidad nombre no_ref }
+      unidad: segmento { id_unidad: id_segmento nombre no_ref }
     }
   }
 `;
@@ -113,7 +113,7 @@ export const UPDATE_USUARIO = gql`
       id_usuario matricula nombre_completo tipo_usuario correo_electronico
       id_rol id_unidad estatus
       rol { id_rol nombre_rol }
-      unidad { id_unidad nombre no_ref }
+      unidad: segmento { id_unidad: id_segmento nombre no_ref }
     }
   }
 `;

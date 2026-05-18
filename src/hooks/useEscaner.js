@@ -35,7 +35,6 @@ export function useBienByQR(termino) {
           adquisicion: node.fecha_adquisicion ? new Date(isNaN(Number(node.fecha_adquisicion)) ? node.fecha_adquisicion : Number(node.fecha_adquisicion)).toISOString().split('T')[0] : '',
           specs: node.especificacionTI ? {
             hasSpecs: true,
-            nom_pc: node.especificacionTI.nom_pc || '',
             cpu: node.especificacionTI.cpu_info || '',
             ram: node.especificacionTI.ram_gb || '',
             almacenamiento: node.especificacionTI.almacenamiento_gb || '',
@@ -95,7 +94,6 @@ export function useUpsertSpecsTI() {
       // Filtrar y castear numericos
       const payload = {
         id_bien,
-        nom_pc: specs.nom_pc,
         cpu_info: specs.cpu,
         ram_gb: specs.ram ? parseInt(specs.ram, 10) : null,
         almacenamiento_gb: specs.almacenamiento ? parseInt(specs.almacenamiento, 10) : null,

@@ -9,12 +9,12 @@ const BIEN_FIELDS = gql`
     qr_hash
     cantidad
     estatus_operativo
-    clave_inmueble_ref
+    clave_unidad_ref
     clave_presupuestal
     clave_modelo
     id_categoria
     id_unidad_medida
-    id_unidad
+    id_segmento
     id_ubicacion
     id_usuario_resguardo
     fecha_adquisicion
@@ -36,8 +36,8 @@ const BIEN_FIELDS = gql`
       nombre_unidad
       abreviatura
     }
-    unidad {
-      id_unidad
+    segmento {
+      id_segmento
       nombre
       clave
     }
@@ -45,9 +45,10 @@ const BIEN_FIELDS = gql`
       id_ubicacion
       nombre_ubicacion
     }
-    inmueble {
-      clave_inmueble
-      nombre_ubicacion
+    unidad {
+      clave
+      descripcion
+      desc_corta
     }
     usuarioResguardo {
       id_usuario
@@ -56,7 +57,6 @@ const BIEN_FIELDS = gql`
     }
     especificacionTI {
       id_bien
-      nom_pc
       cpu_info
       ram_gb
       almacenamiento_gb
@@ -138,12 +138,12 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       descrip_disp
       clave_marca
     }
-    unidades: catUnidades {
-      id_unidad
+    segmentos: catSegmentos {
+      id_segmento
       nombre
       clave
     }
-    inmuebles: catLegacyInmuebles {
+    inmuebles: catInmuebles {
       clave
       descripcion
       desc_corta
@@ -167,13 +167,13 @@ export const CREATE_BIEN_MUTATION = gql`
   mutation CreateBien(
     $id_categoria: Int!
     $id_unidad_medida: Int!
-    $id_unidad: Int
+    $id_segmento: Int
     $id_ubicacion: Int
     $num_serie: String
     $num_inv: String
     $cantidad: Float
     $estatus_operativo: String
-    $clave_inmueble_ref: String
+    $clave_unidad_ref: String
     $clave_modelo: String
     $id_usuario_resguardo: Int
     $fecha_adquisicion: Date
@@ -181,13 +181,13 @@ export const CREATE_BIEN_MUTATION = gql`
     createBien(
       id_categoria: $id_categoria
       id_unidad_medida: $id_unidad_medida
-      id_unidad: $id_unidad
+      id_segmento: $id_segmento
       id_ubicacion: $id_ubicacion
       num_serie: $num_serie
       num_inv: $num_inv
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
-      clave_inmueble_ref: $clave_inmueble_ref
+      clave_unidad_ref: $clave_unidad_ref
       clave_modelo: $clave_modelo
       id_usuario_resguardo: $id_usuario_resguardo
       fecha_adquisicion: $fecha_adquisicion
@@ -203,13 +203,13 @@ export const UPDATE_BIEN_MUTATION = gql`
     $id_bien: ID!
     $id_categoria: Int
     $id_unidad_medida: Int
-    $id_unidad: Int
+    $id_segmento: Int
     $id_ubicacion: Int
     $num_serie: String
     $num_inv: String
     $cantidad: Float
     $estatus_operativo: String
-    $clave_inmueble_ref: String
+    $clave_unidad_ref: String
     $clave_modelo: String
     $id_usuario_resguardo: Int
     $fecha_adquisicion: Date
@@ -218,13 +218,13 @@ export const UPDATE_BIEN_MUTATION = gql`
       id_bien: $id_bien
       id_categoria: $id_categoria
       id_unidad_medida: $id_unidad_medida
-      id_unidad: $id_unidad
+      id_segmento: $id_segmento
       id_ubicacion: $id_ubicacion
       num_serie: $num_serie
       num_inv: $num_inv
       cantidad: $cantidad
       estatus_operativo: $estatus_operativo
-      clave_inmueble_ref: $clave_inmueble_ref
+      clave_unidad_ref: $clave_unidad_ref
       clave_modelo: $clave_modelo
       id_usuario_resguardo: $id_usuario_resguardo
       fecha_adquisicion: $fecha_adquisicion
@@ -243,7 +243,6 @@ export const DELETE_BIEN_MUTATION = gql`
 export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
   mutation UpsertEspecificacionTI(
     $id_bien: ID!
-    $nom_pc: String
     $cpu_info: String
     $ram_gb: Int
     $almacenamiento_gb: Int
@@ -256,7 +255,6 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
   ) {
     upsertEspecificacionTI(
       id_bien: $id_bien
-      nom_pc: $nom_pc
       cpu_info: $cpu_info
       ram_gb: $ram_gb
       almacenamiento_gb: $almacenamiento_gb
@@ -268,7 +266,6 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
       modelo_so: $modelo_so
     ) {
       id_bien
-      nom_pc
       cpu_info
       ram_gb
       almacenamiento_gb
@@ -281,7 +278,7 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
 `;
 
 export const GET_UBICACIONES_POR_UNIDAD = gql`
-  query GetUbicacionesPorUnidad($id_unidad: Int!) {
+  query GetUbicacionesPorUnidad($id_unidad: String!) {
     ubicacionesPorUnidad(id_unidad: $id_unidad) {
       id_ubicacion
       nombre_ubicacion
@@ -290,7 +287,7 @@ export const GET_UBICACIONES_POR_UNIDAD = gql`
 `;
 
 export const CREATE_UBICACION = gql`
-  mutation CreateUbicacion($id_unidad: Int!, $nombre_ubicacion: String!) {
+  mutation CreateUbicacion($id_unidad: String!, $nombre_ubicacion: String!) {
     createUbicacion(id_unidad: $id_unidad, nombre_ubicacion: $nombre_ubicacion) {
       id_ubicacion
       id_unidad
@@ -330,4 +327,3 @@ export const CREATE_CAT_MODELO_MUTATION = gql`
     }
   }
 `;
-
