@@ -12,7 +12,7 @@ import {
   ChevronLeft, ChevronRight, X, AlertTriangle,
   Server, Monitor, Cpu, HardDrive, Wifi, Save,
   Package, Shield, Calendar, MapPin, User, Tag,
-  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote
+  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
 import BienAtributosPanel from '../components/BienAtributosPanel';
+import AtributosCatalogModal from '../components/AtributosCatalogModal';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -417,6 +418,7 @@ export default function Inventario() {
   const [modalConfirmDel, setModalConfirmDel] = useState(null);
   const [showTI, setShowTI]             = useState(false);
   const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [showAtributosModal, setShowAtributosModal] = useState(false);
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [form, setForm]   = useState(FORM_EMPTY);
@@ -686,9 +688,10 @@ export default function Inventario() {
       </div>
 
       {/* ── Pestañas ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
-        {[
-          { key: 'Capitalizable',    label: 'Bienes Capitalizables',     count: capitalCount },
+      <div className="flex items-center justify-between flex-wrap gap-4 w-full">
+        <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
+          {[
+            { key: 'Capitalizable',    label: 'Bienes Capitalizables',     count: capitalCount },
           { key: 'No Capitalizable', label: 'Bienes No Capitalizables',  count: noCapitalCount },
           { key: 'Impresión de Etiquetas', label: 'Impresión de Etiquetas QR', count: null },
         ].map((tab) => (
@@ -711,6 +714,15 @@ export default function Inventario() {
             )}
           </button>
         ))}
+        </div>
+        {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
+          <button
+            onClick={() => setShowAtributosModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all border border-purple-200 text-purple-700 hover:bg-purple-50 shrink-0 bg-white shadow-sm"
+          >
+            <Settings size={15} /> Gestión de Atributos EAV
+          </button>
+        )}
       </div>
 
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
@@ -1337,19 +1349,34 @@ export default function Inventario() {
                 </div>
               )}
 
-              {/* — Sección Atributos Técnicos (edición) — */}
-              {modalForm !== 'create' && modalForm?.id_bien && (
+              {/* — Sección Atributos Técnicos — */}
+              {(modalForm !== 'create' || [ROL_ADMIN, ROL_MAESTRO].includes(idRol)) && (
                 <div className="rounded-xl border border-purple-200 overflow-hidden">
-                  <div className="px-4 py-3 bg-purple-50 flex items-center gap-2">
-                    <Tag size={14} className="text-purple-700" />
-                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Atributos Técnicos</span>
-                    <span className="text-xs text-purple-400 ml-auto">Cualquier tipo de dispositivo</span>
+                  <div className="px-4 py-3 bg-purple-50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Tag size={14} className="text-purple-700" />
+                      <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Atributos Técnicos</span>
+                    </div>
+                    {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
+                      <button 
+                        onClick={() => setShowAtributosModal(true)}
+                        className="text-xs flex items-center gap-1 text-purple-600 hover:text-purple-800 bg-purple-100 hover:bg-purple-200 px-2 py-1 rounded transition-colors"
+                      >
+                        <Settings size={12} /> Configurar Catálogo
+                      </button>
+                    )}
                   </div>
-                  <div className="p-4">
-                    <BienAtributosPanel
-                      id_bien={modalForm.id_bien}
-                      tipo_disp={modalForm.modelo?.tipo_disp}
-                    />
+                  <div className="p-4 bg-white">
+                    {modalForm !== 'create' && modalForm?.id_bien ? (
+                      <BienAtributosPanel
+                        id_bien={modalForm.id_bien}
+                        tipo_disp={modalForm.modelo?.tipo_disp}
+                      />
+                    ) : (
+                      <p className="text-xs text-gray-500 text-center py-2">
+                        Los atributos técnicos se asignan después de registrar el bien por primera vez.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -1421,6 +1448,10 @@ export default function Inventario() {
           modeloActual={form.clave_modelo}
           catalogos={catalogos}
         />
+      )}
+
+      {showAtributosModal && (
+        <AtributosCatalogModal onClose={() => setShowAtributosModal(false)} />
       )}
 
     </div>
