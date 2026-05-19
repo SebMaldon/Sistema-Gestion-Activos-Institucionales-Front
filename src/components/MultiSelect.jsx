@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import { ChevronDown, Check, X, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -15,7 +15,7 @@ export default function MultiSelect({
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef(null);
   const dropdownRef = useRef(null);
-  const [dropdownStyles, setDropdownStyles] = useState({});
+  const [dropdownStyles, setDropdownStyles] = useState({ opacity: 0, pointerEvents: 'none' });
 
   // Asegurar que selectedValues es siempre un array
   const safeSelected = useMemo(() => Array.isArray(selectedValues) ? selectedValues : [], [selectedValues]);
@@ -45,8 +45,8 @@ export default function MultiSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Calcular la posición flotante del portal
-  useEffect(() => {
+  // Calcular la posición flotante del portal de manera síncrona antes del paint
+  useLayoutEffect(() => {
     if (isOpen && containerRef.current) {
       const updatePosition = () => {
         if (!containerRef.current) return;
@@ -60,6 +60,8 @@ export default function MultiSelect({
             bottom: window.innerHeight - rect.top + 4,
             left: rect.left,
             width: rect.width,
+            opacity: 1,
+            pointerEvents: 'auto'
           });
         } else {
           setDropdownStyles({
@@ -67,6 +69,8 @@ export default function MultiSelect({
             top: rect.bottom + 4,
             left: rect.left,
             width: rect.width,
+            opacity: 1,
+            pointerEvents: 'auto'
           });
         }
       };
@@ -78,6 +82,8 @@ export default function MultiSelect({
         window.removeEventListener('scroll', updatePosition, true);
         window.removeEventListener('resize', updatePosition);
       };
+    } else {
+      setDropdownStyles({ opacity: 0, pointerEvents: 'none' });
     }
   }, [isOpen]);
 
