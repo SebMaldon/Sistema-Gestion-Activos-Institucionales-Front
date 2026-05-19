@@ -68,7 +68,7 @@ const FORM_EMPTY = {
   num_inv: '',
   cantidad: 1,
   estatus_operativo: 'ACTIVO',
-  clave_inmueble_ref: '',
+  clave_unidad_ref: '',
   clave_modelo: '',
   id_usuario_resguardo: '',
   fecha_adquisicion: '',
@@ -1277,13 +1277,13 @@ export default function Inventario() {
                   </div>
                 )}
 
-                {/* Unidad (Inmueble Físico) */}
+                {/* Unidad Física */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad (Inmueble)</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Física</label>
                   <SearchableSelect
                     value={form.clave_unidad_ref || ''}
                     onChange={(val) => setForm((f) => ({ ...f, clave_unidad_ref: val }))}
-                    options={(catalogos?.inmuebles ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
+                    options={(catalogos?.unidades ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
                     placeholder="Sin unidad"
                   />
                 </div>

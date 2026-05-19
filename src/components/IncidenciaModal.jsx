@@ -135,8 +135,8 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     if (bienData) {
       setEquipoEncontrado(bienData);
       setErrors(prev => ({ ...prev, equipment: null }));
-      if (bienData.unidad?.id_unidad) {
-        setUnidadId(String(bienData.unidad.id_unidad));
+      if (bienData.unidad?.clave) {
+        setUnidadId(String(bienData.unidad.clave));
       }
     } else if (numSerie) {
       setEquipoEncontrado(null);
@@ -144,8 +144,8 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
   }, [bienData, numSerie]);
 
   const optsUnidades = useMemo(() => unidades.map(u => ({
-    value: u.id_unidad,
-    label: u.nombre || u.no_ref,
+    value: u.clave,
+    label: u.descripcion,
   })), [unidades]);
 
   // ── Limpiar al cerrar ──
@@ -214,7 +214,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
         id_bien: equipoEncontrado.id_bien,
         id_tipo_incidencia: parseInt(tipoIncidencia),
         descripcion_falla: descripcion,
-        id_unidad: unidadId ? parseInt(unidadId) : undefined,
+        id_unidad: unidadId || undefined,
         alias,
         requerimiento,
       });
@@ -302,7 +302,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
                   <div><p className="text-xs text-gray-400 mb-0.5">Num. Serie</p><p className="font-semibold text-gray-800">{equipoEncontrado.num_serie}</p></div>
                   <div><p className="text-xs text-gray-400 mb-0.5">Dispositivo</p><p className="font-semibold text-gray-800">{equipoEncontrado.modelo?.descrip_disp || equipoEncontrado.categoria?.nombre_categoria || 'Sin desc.'}</p></div>
                   <div><p className="text-xs text-gray-400 mb-0.5">Marca</p><p className="font-semibold text-gray-800">{equipoEncontrado.modelo?.marca?.marca || 'N/D'}</p></div>
-                  <div><p className="text-xs text-gray-400 mb-0.5">Unidad</p><p className="font-semibold text-blue-700">{equipoEncontrado.unidad?.nombre || 'Sin unidad'}</p></div>
+                  <div><p className="text-xs text-gray-400 mb-0.5">Unidad</p><p className="font-semibold text-blue-700">{equipoEncontrado.unidad?.descripcion || 'Sin unidad'}</p></div>
                   <div><p className="text-xs text-gray-400 mb-0.5">Responsable Resguardo</p><p className="font-semibold text-gray-800">{equipoEncontrado.usuarioResguardo?.nombre_completo || '—'}</p></div>
                   <div className="flex items-center gap-1.5 col-span-2 md:col-span-3 text-green-700">
                     <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />

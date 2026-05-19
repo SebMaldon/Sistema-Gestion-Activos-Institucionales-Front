@@ -41,7 +41,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
       setErrors({});
 
       // Resolver el id_unidad desde el objeto que viene del mapIncidenciaNode o _raw
-      const idU = incidencia._raw?.id_unidad || incidencia._raw?.bien?.unidad?.id_unidad;
+      const idU = incidencia._raw?.id_unidad || incidencia._raw?.bien?.unidad?.clave;
       setUnidadId(idU ? String(idU) : '');
     }
   }, [isOpen, incidencia]);
@@ -53,8 +53,8 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
   })), [usuarios]);
 
   const optsUnidades = useMemo(() => unidades.map(u => ({
-    id: u.id_unidad,
-    label: u.nombre || u.no_ref,
+    id: u.clave,
+    label: u.descripcion,
   })), [unidades]);
 
   const validate = () => {
@@ -76,7 +76,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
         id_incidencia: String(incidencia.id),
         id_tipo_incidencia: idTipo ? parseInt(idTipo) : undefined,
         descripcion_falla: descripcion,
-        id_unidad: unidadId ? parseInt(unidadId) : undefined,
+        id_unidad: unidadId || undefined,
         alias: alias,
         requerimiento: requerimiento,
       });

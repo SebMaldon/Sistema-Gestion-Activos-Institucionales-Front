@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { useAuthStore } from '../store/auth.store';
 import {
-  GET_UNIDADES_QUERY,
-  GET_UNIDAD_BY_ID_QUERY,
+  GET_UNIDADES_FISICAS_QUERY,
+  GET_UNIDAD_BY_CLAVE_QUERY,
   CREATE_UNIDAD_MUTATION,
   UPDATE_UNIDAD_MUTATION,
   DELETE_UNIDAD_MUTATION,
@@ -36,7 +36,7 @@ export function useUnidades(filtros = {}) {
     queryKey: ['unidades', filtros],
     queryFn: async () => {
       try {
-        const data = await gqlClient.request(GET_UNIDADES_QUERY, {
+        const data = await gqlClient.request(GET_UNIDADES_FISICAS_QUERY, {
           ...filtros,
           pagination: filtros.pagination || { first: 10 }
         });
@@ -47,26 +47,26 @@ export function useUnidades(filtros = {}) {
         throw error;
       }
     },
-    staleTime: 60_000 * 5, // 5 minutes
+    staleTime: 60_000 * 5,
   });
 }
 
-export function useUnidadById(id_unidad) {
+export function useUnidadByClave(clave) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useQuery({
-    queryKey: ['unidad', id_unidad],
+    queryKey: ['unidad', clave],
     queryFn: async () => {
       try {
-        const data = await gqlClient.request(GET_UNIDAD_BY_ID_QUERY, { id_unidad });
-        return data.unidadById;
+        const data = await gqlClient.request(GET_UNIDAD_BY_CLAVE_QUERY, { clave });
+        return data.unidad;
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
         if (code === 'UNAUTHENTICATED') clearAuth();
         throw error;
       }
     },
-    enabled: !!id_unidad,
+    enabled: !!clave,
   });
 }
 
@@ -86,8 +86,8 @@ export function useUpdateUnidad() {
     mutationFn: (vars) => gqlClient.request(UPDATE_UNIDAD_MUTATION, vars),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['unidades'] });
-      if (data?.updateUnidad?.id_unidad) {
-        qc.invalidateQueries({ queryKey: ['unidad', data.updateUnidad.id_unidad] });
+      if (data?.updateUnidad?.clave) {
+        qc.invalidateQueries({ queryKey: ['unidad', data.updateUnidad.clave] });
       }
     },
   });
@@ -102,3 +102,5 @@ export function useDeleteUnidad() {
     },
   });
 }
+
+

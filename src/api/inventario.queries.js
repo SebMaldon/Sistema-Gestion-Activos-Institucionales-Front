@@ -143,7 +143,7 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       nombre
       clave
     }
-    inmuebles: catInmuebles {
+    unidades: catUnidades {
       clave
       descripcion
       desc_corta

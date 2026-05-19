@@ -110,7 +110,7 @@ export default function Dashboard() {
         <div className="xl:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-base font-bold text-gray-900">Equipos por Jefatura / Inmueble</h2>
+              <h2 className="text-base font-bold text-gray-900">Equipos por Jefatura / Unidad Física</h2>
               <p className="text-xs text-gray-400 mt-0.5">Distribución actual del inventario</p>
             </div>
             <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ backgroundColor: '#dcfce7', color: '#006341' }}>

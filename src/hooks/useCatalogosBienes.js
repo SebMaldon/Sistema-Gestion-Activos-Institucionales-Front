@@ -17,8 +17,8 @@ export function useCatalogosBienes() {
         modelos:        data.catModelos ?? [],
         // Segmentos de red (antes "unidades") — id_segmento, nombre, clave
         segmentos:      data.segmentos ?? [],
-        // Unidades físicas / inmuebles — clave, descripcion, desc_corta
-        inmuebles:      data.inmuebles ?? [],
+        // Unidades físicas (clínicas/hospitales) — clave, descripcion, desc_corta
+        unidades:      data.unidades ?? [],
         // Usuarios activos para resguardo
         usuarios:       data.usuarios?.edges?.map((e) => e.node) ?? [],
       };

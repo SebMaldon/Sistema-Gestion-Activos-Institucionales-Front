@@ -37,7 +37,7 @@ export function mapIncidenciaNode(node) {
     falla: node.descripcion_falla,
     estatus: node.estatus_reparacion,   // 'Pendiente' | 'En proceso' | 'Resuelto'
     tipoIncidencia: node.tipoIncidencia?.nombre_tipo || 'Sin tipo',
-    unidad: node.unidad?.nombre || '',
+    unidad: node.unidad?.descripcion || node.bien?.unidad?.descripcion || '',
     alias: node.alias || '',
     requerimiento: node.requerimiento || '',
     fecha: (() => {

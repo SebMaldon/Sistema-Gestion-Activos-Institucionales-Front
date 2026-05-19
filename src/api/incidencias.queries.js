@@ -36,7 +36,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
   query GetIncidencias(
     $estatus_reparacion: String
     $id_tipo_incidencia: Int
-    $id_unidad: Int
+    $id_unidad: String
     $search: String
     $first: Int
     $after: String
@@ -66,8 +66,8 @@ export const GET_INCIDENCIAS_QUERY = gql`
             nombre_tipo
           }
           unidad {
-            id_unidad
-            nombre
+            clave
+            descripcion
           }
           bien {
             num_serie
@@ -80,18 +80,14 @@ export const GET_INCIDENCIAS_QUERY = gql`
               nombre_categoria
             }
             unidad {
-              id_unidad
-              nombre
+              clave
+              descripcion
             }
           }
           usuarioGeneraReporte {
             id_usuario
             nombre_completo
             matricula
-          }
-          usuarioResuelve {
-            id_usuario
-            nombre_completo
           }
         }
       }
@@ -217,21 +213,16 @@ export const RESOLVER_INCIDENCIA_MUTATION = gql`
     $id_incidencia: ID!
     $estatus_cierre: String!
     $resolucion_textual: String!
-    $id_usuario_resuelve: Int
   ) {
     resolverIncidencia(
       id_incidencia: $id_incidencia
       estatus_cierre: $estatus_cierre
       resolucion_textual: $resolucion_textual
-      id_usuario_resuelve: $id_usuario_resuelve
     ) {
       id_incidencia
       estatus_reparacion
       resolucion_textual
       fecha_resolucion
-      usuarioResuelve {
-        nombre_completo
-      }
     }
   }
 `;
@@ -273,11 +264,10 @@ export const DELETE_INCIDENCIA_MUTATION = gql`
 `;
 
 export const GET_UNIDADES_QUERY = gql`
-  query GetSegmentos {
-    catSegmentos {
-      id_segmento
-      nombre
-      no_ref
+  query GetCatUnidades {
+    catUnidades {
+      clave
+      descripcion
     }
   }
 `;

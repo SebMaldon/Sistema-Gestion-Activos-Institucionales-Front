@@ -1,26 +1,63 @@
 import { gql } from 'graphql-request';
 
-// ─── QUERIES — Segmentos (antes "Unidades" de red) ───────────────────────────
+// ─── QUERIES — Unidades Físicas (tabla: unidades — datos físicos de la unidad) ───────
 
-export const GET_SEGMENTOS_QUERY = gql`
-  query GetSegmentos($search: String, $pagination: PaginationInput) {
-    segmentos(search: $search, pagination: $pagination) {
+export const GET_UNIDADES_FISICAS_QUERY = gql`
+  query GetUnidades($search: String, $pagination: PaginationInput) {
+    unidades(search: $search, pagination: $pagination) {
       edges {
         node {
-          id_segmento
-          no_ref
-          nombre
-          ip
           clave
-          bits
-          ip_init
-          estatus
-          vlan
-          monitorear
-          proveedor
-          fecha_migracion
-          velocidad
-          tipo_enlace
+          descripcion
+          desc_corta
+          encargado
+          direccion
+          calle
+          numero
+          colonia
+          ciudad
+          municipio
+          cp
+          ppal
+          clave_zona
+          clave_a
+          zona_reporte
+          nivel
+          no_inmueble
+          regimen
+          tipo_unidad
+          tipoUnidadInfo {
+            tipo_unidad
+          }
+          unidadesACargo {
+            id_rol_empleado
+            id_usuario
+            usuario {
+              id_usuario
+              nombre_completo
+            }
+          }
+          contactos {
+            id_contacto
+            contacto
+            tipo_contacto
+          }
+          segmentos {
+            id_segmento
+            no_ref
+            nombre
+            ip
+            vlan
+            velocidad
+            bits
+            proveedor
+            tipo_enlace
+            fecha_migracion
+            estatus
+            monitorear
+            clave
+            ip_init
+          }
         }
         cursor
       }
@@ -35,112 +72,186 @@ export const GET_SEGMENTOS_QUERY = gql`
   }
 `;
 
-export const GET_SEGMENTO_BY_ID_QUERY = gql`
-  query GetSegmentoById($id_segmento: ID!) {
-    segmento(id_segmento: $id_segmento) {
-      id_segmento
-      no_ref
-      nombre
-      ip
+export const GET_UNIDAD_BY_CLAVE_QUERY = gql`
+  query GetUnidadByClave($clave: ID!) {
+    unidad(clave: $clave) {
       clave
-      bits
-      ip_init
-      estatus
-      vlan
-      monitorear
-      proveedor
-      fecha_migracion
-      velocidad
-      tipo_enlace
+      descripcion
+      desc_corta
+      encargado
+      direccion
+      calle
+      numero
+      colonia
+      ciudad
+      municipio
+      cp
+      ppal
+      clave_zona
+      clave_a
+      zona_reporte
+      nivel
+      no_inmueble
+      regimen
+      tipo_unidad
+      unidadesACargo {
+        id_rol_empleado
+        id_usuario
+        usuario {
+          id_usuario
+          nombre_completo
+        }
+      }
+      contactos {
+        id_contacto
+        contacto
+        tipo_contacto
+      }
+      segmentos {
+        id_segmento
+        no_ref
+        nombre
+        ip
+        vlan
+        velocidad
+        bits
+        proveedor
+        tipo_enlace
+        fecha_migracion
+        estatus
+        monitorear
+        clave
+        ip_init
+      }
     }
   }
 `;
 
 // ─── MUTATIONS ───────────────────────────────────────────────────────────────
 
-export const CREATE_SEGMENTO_MUTATION = gql`
-  mutation CreateSegmento(
-    $no_ref: String!
-    $nombre: String
-    $ip: String!
-    $clave: String
-    $bits: Int
-    $ip_init: Int
-    $estatus: Int
-    $vlan: Int
-    $monitorear: Int
-    $proveedor: String
-    $fecha_migracion: DateTime
-    $velocidad: String
-    $tipo_enlace: Int
+export const CREATE_UNIDAD_MUTATION = gql`
+  mutation CreateUnidad(
+    $clave: ID!
+    $descripcion: String
+    $desc_corta: String
+    $encargado: String
+    $direccion: String
+    $calle: String
+    $numero: String
+    $colonia: String
+    $ciudad: String
+    $municipio: String
+    $cp: String
+    $ppal: String
+    $clave_zona: String!
+    $clave_a: Int
+    $zona_reporte: String
+    $nivel: Int
+    $no_inmueble: Int
+    $regimen: Int
+    $tipo_unidad: Int
+    $unidadesACargo: [UnidadACargoInput!]
+    $contactos: [ContactoInput!]
+    $segmentos: [SegmentoInput!]
   ) {
-    createSegmento(
-      no_ref: $no_ref
-      nombre: $nombre
-      ip: $ip
+    createUnidad(
       clave: $clave
-      bits: $bits
-      ip_init: $ip_init
-      estatus: $estatus
-      vlan: $vlan
-      monitorear: $monitorear
-      proveedor: $proveedor
-      fecha_migracion: $fecha_migracion
-      velocidad: $velocidad
-      tipo_enlace: $tipo_enlace
+      descripcion: $descripcion
+      desc_corta: $desc_corta
+      encargado: $encargado
+      direccion: $direccion
+      calle: $calle
+      numero: $numero
+      colonia: $colonia
+      ciudad: $ciudad
+      municipio: $municipio
+      cp: $cp
+      ppal: $ppal
+      clave_zona: $clave_zona
+      clave_a: $clave_a
+      zona_reporte: $zona_reporte
+      nivel: $nivel
+      no_inmueble: $no_inmueble
+      regimen: $regimen
+      tipo_unidad: $tipo_unidad
+      unidadesACargo: $unidadesACargo
+      contactos: $contactos
+      segmentos: $segmentos
     ) {
-      id_segmento
-      no_ref
-      nombre
-      ip
+      clave
+      descripcion
     }
   }
 `;
 
-export const UPDATE_SEGMENTO_MUTATION = gql`
-  mutation UpdateSegmento(
-    $id_segmento: Int!
-    $no_ref: String
-    $nombre: String
-    $ip: String
-    $clave: String
-    $bits: Int
-    $ip_init: Int
-    $estatus: Int
-    $vlan: Int
-    $monitorear: Int
-    $proveedor: String
-    $fecha_migracion: DateTime
-    $velocidad: String
-    $tipo_enlace: Int
+export const UPDATE_UNIDAD_MUTATION = gql`
+  mutation UpdateUnidad(
+    $clave: ID!
+    $descripcion: String
+    $desc_corta: String
+    $encargado: String
+    $direccion: String
+    $calle: String
+    $numero: String
+    $colonia: String
+    $ciudad: String
+    $municipio: String
+    $cp: String
+    $ppal: String
+    $clave_zona: String
+    $clave_a: Int
+    $zona_reporte: String
+    $nivel: Int
+    $no_inmueble: Int
+    $regimen: Int
+    $tipo_unidad: Int
+    $unidadesACargo: [UnidadACargoInput!]
+    $contactos: [ContactoInput!]
+    $segmentos: [SegmentoInput!]
   ) {
-    updateSegmento(
-      id_segmento: $id_segmento
-      no_ref: $no_ref
-      nombre: $nombre
-      ip: $ip
+    updateUnidad(
       clave: $clave
-      bits: $bits
-      ip_init: $ip_init
-      estatus: $estatus
-      vlan: $vlan
-      monitorear: $monitorear
-      proveedor: $proveedor
-      fecha_migracion: $fecha_migracion
-      velocidad: $velocidad
-      tipo_enlace: $tipo_enlace
+      descripcion: $descripcion
+      desc_corta: $desc_corta
+      encargado: $encargado
+      direccion: $direccion
+      calle: $calle
+      numero: $numero
+      colonia: $colonia
+      ciudad: $ciudad
+      municipio: $municipio
+      cp: $cp
+      ppal: $ppal
+      clave_zona: $clave_zona
+      clave_a: $clave_a
+      zona_reporte: $zona_reporte
+      nivel: $nivel
+      no_inmueble: $no_inmueble
+      regimen: $regimen
+      tipo_unidad: $tipo_unidad
+      unidadesACargo: $unidadesACargo
+      contactos: $contactos
+      segmentos: $segmentos
     ) {
-      id_segmento
-      no_ref
-      nombre
-      ip
+      clave
+      descripcion
     }
   }
 `;
 
-export const DELETE_SEGMENTO_MUTATION = gql`
-  mutation DeleteSegmento($id_segmento: Int!) {
-    deleteSegmento(id_segmento: $id_segmento)
+export const DELETE_UNIDAD_MUTATION = gql`
+  mutation DeleteUnidad($clave: ID!) {
+    deleteUnidad(clave: $clave)
+  }
+`;
+
+export const GET_CAT_UNIDADES_QUERY = gql`
+  query GetCatUnidades {
+    catUnidades {
+      clave
+      descripcion
+      desc_corta
+    }
   }
 `;
 
@@ -152,15 +263,3 @@ export const GET_CAT_TIPO_UNIDADES = gql`
     }
   }
 `;
-
-// ─── Aliases para compatibilidad con código existente ────────────────────────
-/** @deprecated Usar GET_SEGMENTOS_QUERY */
-export const GET_UNIDADES_QUERY = GET_SEGMENTOS_QUERY;
-/** @deprecated Usar CREATE_SEGMENTO_MUTATION */
-export const CREATE_UNIDAD_MUTATION = CREATE_SEGMENTO_MUTATION;
-/** @deprecated Usar UPDATE_SEGMENTO_MUTATION */
-export const UPDATE_UNIDAD_MUTATION = UPDATE_SEGMENTO_MUTATION;
-/** @deprecated Usar DELETE_SEGMENTO_MUTATION */
-export const DELETE_UNIDAD_MUTATION = DELETE_SEGMENTO_MUTATION;
-/** @deprecated Usar GET_SEGMENTO_BY_ID_QUERY */
-export const GET_UNIDAD_BY_ID_QUERY = GET_SEGMENTO_BY_ID_QUERY;

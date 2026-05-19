@@ -104,7 +104,7 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
                         id_usuario: 'Usuario (ID)',
                         id_rol: 'Rol del Sistema',
                         id_unidad: 'Unidad Operativa (ID)',
-                        id_inmueble: 'Inmueble (ID)',
+                        id_inmueble: 'Unidad Física (ID)',
                         id_proveedor: 'Proveedor (ID)',
                         id_categoria: 'Categoría (ID)',
                         id_unidad_medida: 'Unidad de Medida (ID)',
@@ -153,7 +153,7 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
                             const u = catalogs.unidades?.find(u => String(u.id_unidad) === valStr);
                             if (u) return <span className="text-indigo-600 font-bold">{u.nombre} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
                           }
-                          if (field === 'id_inmueble' || field === 'clave_inmueble_ref') {
+                          if (field === 'id_inmueble' || field === 'clave_inmueble_ref' || field === 'clave_unidad_ref') {
                             const i = catalogs.inmuebles?.find(i => String(i.clave) === valStr);
                             if (i) return <span className="text-indigo-600 font-bold">{i.descripcion} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
                           }
@@ -348,7 +348,7 @@ export default function Auditoria() {
                 <option value="Usuarios">Usuarios</option>
                 <option value="Garantias">Garantías</option>
                 <option value="Unidades">Unidades</option>
-                <option value="Inmuebles">Inmuebles</option>
+                <option value="Inmuebles">Unidades Físicas</option>
               </select>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 <ChevronRight size={14} className="text-gray-300 rotate-90" />

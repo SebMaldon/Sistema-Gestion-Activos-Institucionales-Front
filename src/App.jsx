@@ -18,7 +18,6 @@ import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
 import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
-import Inmuebles from './pages/Inmuebles';
 import { useCurrentUser } from './hooks/useCurrentUser';
 
 
@@ -152,11 +151,6 @@ export default function App() {
           <Route path="/unidades" element={
             <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
               <AppLayout page="unidades"><Unidades /></AppLayout>
-            </RoleRoute>
-          } />
-          <Route path="/inmuebles" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
-              <AppLayout page="inmuebles"><Inmuebles /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/movimientos" element={
