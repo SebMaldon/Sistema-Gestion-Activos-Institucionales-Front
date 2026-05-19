@@ -5,6 +5,7 @@ import { useCatTipoUnidades } from '../hooks/useUnidades';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_USUARIOS } from '../api/usuarios.queries';
+import SearchableSelect from './SearchableSelect';
 
 export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, isLoading }) {
   const { showToast } = useApp();
@@ -44,12 +45,45 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
   const { data: tipoUnidades, isLoading: loadingTipos } = useCatTipoUnidades();
   
   const { data: usuariosData, isLoading: loadingUsuarios } = useQuery({
-    queryKey: ['usuariosList'],
-    queryFn: () => gqlClient.request(GET_USUARIOS, { pagination: { first: 500 } }),
+    queryKey: ['usuariosListAll'],
+    queryFn: () => gqlClient.request(GET_USUARIOS, { estatus: true, pagination: { first: 20000 } }),
     enabled: isOpen,
     staleTime: 5 * 60 * 1000
   });
   const usuarios = usuariosData?.usuarios?.edges?.map(e => e.node) || [];
+
+  const usuariosOptions = React.useMemo(() => {
+    const optionsMap = new Map();
+    
+    // 1. Add all active users fetched from the query
+    usuarios.forEach(u => {
+      if (u && u.id_usuario) {
+        optionsMap.set(String(u.id_usuario), {
+          value: String(u.id_usuario),
+          label: u.nombre_completo,
+          searchKey: `${u.matricula || ''} ${u.nombre_completo || ''}`.toLowerCase()
+        });
+      }
+    });
+
+    // 2. Add currently assigned users (even if inactive) so they display correctly in edit mode
+    if (unidadToEdit?.unidadesACargo) {
+      unidadToEdit.unidadesACargo.forEach(uac => {
+        if (uac.usuario && uac.usuario.id_usuario) {
+          const idStr = String(uac.usuario.id_usuario);
+          if (!optionsMap.has(idStr)) {
+            optionsMap.set(idStr, {
+              value: idStr,
+              label: uac.usuario.nombre_completo,
+              searchKey: uac.usuario.nombre_completo.toLowerCase()
+            });
+          }
+        }
+      });
+    }
+
+    return Array.from(optionsMap.values());
+  }, [usuarios, unidadToEdit]);
   
 
   useEffect(() => {
@@ -76,9 +110,9 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
         no_inmueble: unidadToEdit.no_inmueble ?? '',
         regimen: unidadToEdit.regimen ?? '',
         tipo_unidad: unidadToEdit.tipo_unidad ?? '',
-        encargado_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 1)?.id_usuario || '',
-        administrador_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 2)?.id_usuario || '',
-        informatica_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 3)?.id_usuario || '',
+        encargado_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 1)?.id_usuario ? String(unidadToEdit.unidadesACargo.find(u => u.id_rol_empleado === 1).id_usuario) : '',
+        administrador_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 2)?.id_usuario ? String(unidadToEdit.unidadesACargo.find(u => u.id_rol_empleado === 2).id_usuario) : '',
+        informatica_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 3)?.id_usuario ? String(unidadToEdit.unidadesACargo.find(u => u.id_rol_empleado === 3).id_usuario) : '',
         contacto_telefonico: tels?.length ? tels : [''],
         contacto_correo: cors?.length ? cors : [''],
         segmentos: unidadToEdit.segmentos ? unidadToEdit.segmentos.map(s => ({
@@ -491,6 +525,42 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
+
+                <div className="col-span-1 md:col-span-2 mt-4 border-t border-gray-100 pt-4">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 text-blue-700">Responsables de la Unidad</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Encargado de Unidad</label>
+                      <SearchableSelect
+                        value={formData.encargado_usuario}
+                        onChange={(val) => setFormData(prev => ({ ...prev, encargado_usuario: val }))}
+                        options={usuariosOptions}
+                        placeholder="-- Seleccionar --"
+                        disabled={loadingUsuarios}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Administrador</label>
+                      <SearchableSelect
+                        value={formData.administrador_usuario}
+                        onChange={(val) => setFormData(prev => ({ ...prev, administrador_usuario: val }))}
+                        options={usuariosOptions}
+                        placeholder="-- Seleccionar --"
+                        disabled={loadingUsuarios}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Encargado de Informática</label>
+                      <SearchableSelect
+                        value={formData.informatica_usuario}
+                        onChange={(val) => setFormData(prev => ({ ...prev, informatica_usuario: val }))}
+                        options={usuariosOptions}
+                        placeholder="-- Seleccionar --"
+                        disabled={loadingUsuarios}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -574,56 +644,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                   />
                 </div>
                 
-                <div className="col-span-1 md:col-span-3 mt-4 border-t border-gray-100 pt-4">
-                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 text-blue-700">Responsables de la Unidad</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Encargado de Unidad</label>
-                      <select
-                        name="encargado_usuario"
-                        value={formData.encargado_usuario}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        disabled={loadingUsuarios}
-                      >
-                        <option value="">-- Seleccionar --</option>
-                        {usuarios.map(u => (
-                          <option key={u.id_usuario} value={u.id_usuario}>{u.nombre_completo}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Administrador</label>
-                      <select
-                        name="administrador_usuario"
-                        value={formData.administrador_usuario}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        disabled={loadingUsuarios}
-                      >
-                        <option value="">-- Seleccionar --</option>
-                        {usuarios.map(u => (
-                          <option key={u.id_usuario} value={u.id_usuario}>{u.nombre_completo}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Encargado de Informática</label>
-                      <select
-                        name="informatica_usuario"
-                        value={formData.informatica_usuario}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        disabled={loadingUsuarios}
-                      >
-                        <option value="">-- Seleccionar --</option>
-                        {usuarios.map(u => (
-                          <option key={u.id_usuario} value={u.id_usuario}>{u.nombre_completo}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
+
 
                 <div className="col-span-1 md:col-span-3 mt-4 border-t border-gray-100 pt-4">
                   <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 text-green-700">Contactos</h4>

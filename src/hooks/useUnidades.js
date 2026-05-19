@@ -8,6 +8,7 @@ import {
   UPDATE_UNIDAD_MUTATION,
   DELETE_UNIDAD_MUTATION,
   GET_CAT_TIPO_UNIDADES,
+  GET_DISTINCT_FILTROS_QUERY,
 } from '../api/unidades.queries';
 
 export function useCatTipoUnidades() {
@@ -100,6 +101,25 @@ export function useDeleteUnidad() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unidades'] });
     },
+  });
+}
+
+export function useCatDistinctFiltros() {
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  return useQuery({
+    queryKey: ['distinctFiltros'],
+    queryFn: async () => {
+      try {
+        const data = await gqlClient.request(GET_DISTINCT_FILTROS_QUERY);
+        return data.catDistinctFiltros;
+      } catch (error) {
+        const code = error?.response?.errors?.[0]?.extensions?.code;
+        if (code === 'UNAUTHENTICATED') clearAuth();
+        throw error;
+      }
+    },
+    staleTime: 60_000 * 30, // 30 minutes cache since it is relatively static
   });
 }
 

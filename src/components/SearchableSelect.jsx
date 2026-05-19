@@ -18,14 +18,19 @@ export default function SearchableSelect({
   const [dropdownStyles, setDropdownStyles] = useState({});
 
   const selectedOption = useMemo(() => 
-    options.find(opt => opt.value === value),
+    (options || []).find(opt => opt && opt.value === value),
   [options, value]);
 
   const filteredOptions = useMemo(() => {
-    if (!query) return options.slice(0, 100);
-    return options.filter(opt => 
-      opt.label.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 100);
+    const safeOptions = options || [];
+    if (!query) return safeOptions.slice(0, 100);
+    const lowercaseQuery = query.toLowerCase();
+    return safeOptions.filter(opt => {
+      if (!opt) return false;
+      const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
+      const searchKeyStr = opt.searchKey ? String(opt.searchKey).toLowerCase() : '';
+      return labelStr.includes(lowercaseQuery) || searchKeyStr.includes(lowercaseQuery);
+    }).slice(0, 100);
   }, [options, query]);
 
   useEffect(() => {
@@ -155,8 +160,10 @@ export default function SearchableSelect({
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <span className="block truncate">{opt.label}</span>
-                  {opt.value === value && <Check size={14} className="flex-shrink-0 text-green-600" />}
+                  <span className={`block truncate min-w-0 flex-1 text-left ${opt.value === value ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>
+                    {opt.label}
+                  </span>
+                  {opt.value === value && <Check size={14} className="flex-shrink-0 text-green-600 ml-2" />}
                 </button>
               ))
             )}

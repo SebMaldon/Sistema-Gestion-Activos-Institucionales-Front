@@ -3,8 +3,32 @@ import { gql } from 'graphql-request';
 // ─── QUERIES — Unidades Físicas (tabla: unidades — datos físicos de la unidad) ───────
 
 export const GET_UNIDADES_FISICAS_QUERY = gql`
-  query GetUnidades($search: String, $pagination: PaginationInput) {
-    unidades(search: $search, pagination: $pagination) {
+  query GetUnidades(
+    $search: String
+    $clave_zona: [String!]
+    $tipo_unidad: [Int!]
+    $regimen: [Int!]
+    $nivel: [Int!]
+    $ciudad: [String!]
+    $municipio: [String!]
+    $segmento_velocidad: [String!]
+    $segmento_proveedor: [String!]
+    $segmento_monitorear: Int
+    $pagination: PaginationInput
+  ) {
+    unidades(
+      search: $search
+      clave_zona: $clave_zona
+      tipo_unidad: $tipo_unidad
+      regimen: $regimen
+      nivel: $nivel
+      ciudad: $ciudad
+      municipio: $municipio
+      segmento_velocidad: $segmento_velocidad
+      segmento_proveedor: $segmento_proveedor
+      segmento_monitorear: $segmento_monitorear
+      pagination: $pagination
+    ) {
       edges {
         node {
           clave
@@ -68,6 +92,19 @@ export const GET_UNIDADES_FISICAS_QUERY = gql`
         endCursor
         totalCount
       }
+    }
+  }
+`;
+
+export const GET_DISTINCT_FILTROS_QUERY = gql`
+  query GetDistinctFiltros {
+    catDistinctFiltros {
+      ciudades
+      municipios
+      regimenes
+      niveles
+      velocidades
+      proveedores
     }
   }
 `;
