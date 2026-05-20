@@ -369,8 +369,9 @@ export default function Auditoria() {
             <table className="w-full text-sm text-left table-fixed">
               <thead className="bg-gray-50 sticky top-0 z-10 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[18%]">Fecha / Hora</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[32%]">Usuario</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[15%]">Fecha / Hora</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[25%]">Usuario</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[10%]">Origen</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[18%]">Acción</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-[18%]">Módulo Afectado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-[14%]">Detalles</th>
@@ -388,6 +389,13 @@ export default function Auditoria() {
                       <td className="px-6 py-4 truncate">
                         <p className="font-bold text-gray-800 truncate" title={log.usuario.nombre_completo}>{log.usuario.nombre_completo}</p>
                         <p className="text-gray-400 font-mono text-[10px] mt-0.5">{log.usuario.matricula}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        {log.origen ? (
+                          <span className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">{log.origen}</span>
+                        ) : (
+                          <span className="text-[10px] font-black uppercase text-gray-400 italic">N/A</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -447,7 +455,10 @@ export default function Auditoria() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold truncate" style={{ color: conf.color }}>{conf.label}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold truncate" style={{ color: conf.color }}>{conf.label}</p>
+                        {log.origen && <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-sm border border-indigo-100">{log.origen}</span>}
+                      </div>
                       <span className="text-[10px] font-mono text-gray-400">{formatDateTime(log.fecha_movimiento)}</span>
                     </div>
                     <p className="text-xs text-gray-600 font-semibold mt-0.5 truncate">

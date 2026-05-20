@@ -10,6 +10,7 @@ export const gqlClient = new GraphQLClient(GQL_URL, {
     // Maintain original headers (like Content-Type) and append ours
     const headers = new Headers(request.headers);
     headers.set('apollo-require-preflight', 'true');
+    headers.set('x-origen', 'web');
 
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);

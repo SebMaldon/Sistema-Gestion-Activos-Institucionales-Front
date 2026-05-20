@@ -21,6 +21,7 @@ export const GET_BITACORA = gql`
           registro_afectado
           detalles_movimiento
           fecha_movimiento
+          origen
         }
       }
     }
