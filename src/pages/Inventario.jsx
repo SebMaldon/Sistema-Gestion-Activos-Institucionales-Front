@@ -23,6 +23,7 @@ import {
   CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
   GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION
 } from '../api/inventario.queries';
+import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA } from '../api/garantias.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
 import PrintLabelsTab from '../components/PrintLabelsTab';
@@ -546,6 +547,7 @@ export default function Inventario() {
   const [formErrors, setFormErrors] = useState({});
   const [pendingEavValues, setPendingEavValues] = useState({}); // {id_atributo: valor} para modo creación
   const [pendingMonitors, setPendingMonitors] = useState([]); // [{ monitor: object, id_monitor: string }] para modo creación
+  const [garantiaForm, setGarantiaForm] = useState({ show: false, id_garantia: null, fecha_inicio: '', fecha_fin: '', id_proveedor: '' });
 
   // ── Estado para Impresión ─────────────────────────────────────────────────
   const [printSelectedBienes, setPrintSelectedBienes] = useState([]);
@@ -568,6 +570,13 @@ export default function Inventario() {
   });
   const ubicacionesUnidad = ubicacionesData?.ubicacionesPorUnidad ?? [];
 
+  const { data: proveedoresData } = useQuery({
+    queryKey: ['proveedores'],
+    queryFn: () => gqlClient.request(GET_PROVEEDORES),
+    select: d => d.proveedores ?? [],
+  });
+  const proveedores = proveedoresData || [];
+
   const { mutate: createUbicacion, isPending: creatingUbicacion } = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_UBICACION, vars),
     onSuccess: (data) => {
@@ -585,7 +594,17 @@ export default function Inventario() {
     createUbicacion({ id_unidad: form.clave_unidad_ref, nombre_ubicacion: newUbicacionName.trim() });
   };
 
-  // ── Mutaciones ─────────────────────────────────────────────────────────────
+  const { mutate: createGarantia } = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
+    onSuccess: () => showToast('Garantía guardada', 'success'),
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al guardar garantía', 'error'),
+  });
+  const { mutate: updateGarantia } = useMutation({
+    mutationFn: (vars) => gqlClient.request(UPDATE_GARANTIA, vars),
+    onSuccess: () => showToast('Garantía actualizada', 'success'),
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar garantía', 'error'),
+  });
+
   const { mutate: createBien, isPending: creating } = useCreateBien({
     onSuccess: () => { closeForm(); showToast('Bien registrado correctamente.', 'success'); },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
@@ -594,6 +613,16 @@ export default function Inventario() {
     onSuccess: () => { closeForm(); showToast('Bien actualizado correctamente.', 'success'); },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar bien.', 'error'),
   });
+
+  const handleAutoCalcGarantia = (years) => {
+    if (!garantiaForm.fecha_inicio) {
+        showToast('Selecciona primero la Fecha de Inicio', 'warning');
+        return;
+    }
+    const d = new Date(garantiaForm.fecha_inicio);
+    d.setFullYear(d.getFullYear() + years);
+    setGarantiaForm(p => ({ ...p, fecha_fin: d.toISOString().split('T')[0] }));
+  };
   const { mutate: deleteBien, isPending: deleting } = useDeleteBien({
     onSuccess: () => { setModalConfirmDel(null); showToast('Bien eliminado.', 'success'); },
     onError: (e) => {
@@ -693,6 +722,21 @@ export default function Inventario() {
     setFormErrors({});
     setPendingEavValues({});
     setPendingMonitors([]);
+    
+    // Cargar Garantía si existe
+    const primeraGarantia = bien.garantias && bien.garantias.length > 0 ? bien.garantias[0] : null;
+    if (primeraGarantia) {
+      setGarantiaForm({
+        show: true,
+        id_garantia: primeraGarantia.id_garantia,
+        fecha_inicio: primeraGarantia.fecha_inicio ? new Date(primeraGarantia.fecha_inicio).toISOString().split('T')[0] : '',
+        fecha_fin: primeraGarantia.fecha_fin ? new Date(primeraGarantia.fecha_fin).toISOString().split('T')[0] : '',
+        id_proveedor: primeraGarantia.id_proveedor || '',
+      });
+    } else {
+      setGarantiaForm({ show: false, id_garantia: null, fecha_inicio: '', fecha_fin: '', id_proveedor: '' });
+    }
+
     setModalForm(bien);
   }, []);
 
@@ -703,6 +747,7 @@ export default function Inventario() {
     setFormErrors({});
     setPendingEavValues({});
     setPendingMonitors([]);
+    setGarantiaForm({ show: false, id_garantia: null, fecha_inicio: '', fecha_fin: '', id_proveedor: '' });
     setDeviceMode(null);
     setShowTI(false);
   }, []);
@@ -824,6 +869,17 @@ export default function Inventario() {
               asignarMonitor({ id_bien: bienCreado.id_bien, id_monitor: m.id_monitor });
             });
           }
+
+          // Crear Garantía si aplica
+          if (garantiaForm.show && garantiaForm.fecha_fin) {
+            createGarantia({
+              id_bien: bienCreado.id_bien,
+              fecha_inicio: garantiaForm.fecha_inicio || null,
+              fecha_fin: garantiaForm.fecha_fin,
+              id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
+              estado_garantia: 'VIGENTE'
+            });
+          }
         },
       });
     } else {
@@ -834,6 +890,25 @@ export default function Inventario() {
             const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
             if (hayDatosTI) {
               upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+            }
+          }
+          if (garantiaForm.show && garantiaForm.fecha_fin) {
+            if (garantiaForm.id_garantia) {
+              updateGarantia({
+                id_garantia: garantiaForm.id_garantia,
+                fecha_inicio: garantiaForm.fecha_inicio || null,
+                fecha_fin: garantiaForm.fecha_fin,
+                id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
+                estado_garantia: 'VIGENTE'
+              });
+            } else {
+              createGarantia({
+                id_bien: modalForm.id_bien,
+                fecha_inicio: garantiaForm.fecha_inicio || null,
+                fecha_fin: garantiaForm.fecha_fin,
+                id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
+                estado_garantia: 'VIGENTE'
+              });
             }
           }
         },
@@ -1208,6 +1283,31 @@ export default function Inventario() {
                 </div>
                 <div className="p-4 bg-white">
                   <BienAtributosPanel id_bien={modalFicha.id_bien} readOnly={true} />
+                </div>
+              </div>
+            )}
+
+            {/* Póliza de Garantía */}
+            {modalFicha.garantias && modalFicha.garantias.length > 0 && (
+              <div className="rounded-xl border border-green-200 overflow-hidden mt-4">
+                <div className="bg-green-50 px-4 py-2.5 flex items-center gap-2">
+                  <Shield size={15} className="text-green-600" />
+                  <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Póliza de Garantía</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-white">
+                  <InfoField icon={<Calendar size={13}/>} label="Fecha Inicio" value={formatDate(modalFicha.garantias[0].fecha_inicio)} />
+                  <InfoField icon={<Calendar size={13}/>} label="Fecha Fin" value={formatDate(modalFicha.garantias[0].fecha_fin)} />
+                  <InfoField icon={<User size={13}/>} label="Proveedor" value={modalFicha.garantias[0].proveedorObj?.nombre_proveedor || 'Sin proveedor'} />
+                  <div>
+                    <p className="text-xs text-gray-400 flex items-center gap-1 mb-0.5">Estado</p>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${
+                        modalFicha.garantias[0].estado_garantia === 'VIGENTE' ? 'bg-green-100 text-green-800' :
+                        modalFicha.garantias[0].estado_garantia === 'VENCIDA' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`}>
+                      {modalFicha.garantias[0].estado_garantia || 'VIGENTE'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1651,6 +1751,67 @@ export default function Inventario() {
                   </div>
                 </div>
               )}
+
+              {/* Sección de Garantía (Opcional) */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-2">
+                <div className="bg-gray-50 border-b border-gray-100 p-4 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-800 flex items-center">
+                    <Shield size={16} className="text-green-600 mr-2" />
+                    {garantiaForm.id_garantia ? 'Garantía Actual' : 'Asociar Garantía'}
+                  </h3>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={garantiaForm.show}
+                      onChange={(e) => setGarantiaForm(p => ({ ...p, show: e.target.checked }))}
+                      className="sr-only"
+                    />
+                    <div className={`relative w-10 h-5 transition-colors rounded-full ${garantiaForm.show ? 'bg-green-500' : 'bg-gray-300'}`}>
+                      <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${garantiaForm.show ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </label>
+                </div>
+                {garantiaForm.show && (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-green-50/20">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Inicio</label>
+                      <input
+                        type="date"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                        value={garantiaForm.fecha_inicio}
+                        onChange={e => setGarantiaForm(p => ({ ...p, fecha_inicio: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Fin *</label>
+                      <input
+                        type="date"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                        value={garantiaForm.fecha_fin}
+                        onChange={e => setGarantiaForm(p => ({ ...p, fecha_fin: e.target.value }))}
+                      />
+                      <div className="flex gap-1 mt-1.5">
+                        <button type="button" onClick={() => handleAutoCalcGarantia(1)} className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded hover:bg-green-200">+1 Año</button>
+                        <button type="button" onClick={() => handleAutoCalcGarantia(2)} className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded hover:bg-green-200">+2 Años</button>
+                        <button type="button" onClick={() => handleAutoCalcGarantia(3)} className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded hover:bg-green-200">+3 Años</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Proveedor</label>
+                      <select
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                        value={garantiaForm.id_proveedor}
+                        onChange={e => setGarantiaForm(p => ({ ...p, id_proveedor: e.target.value }))}
+                      >
+                        <option value="">-- Ninguno --</option>
+                        {proveedores.map(p => (
+                          <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={closeForm}

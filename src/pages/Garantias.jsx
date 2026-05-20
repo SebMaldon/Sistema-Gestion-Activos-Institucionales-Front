@@ -140,6 +140,16 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
     }
   };
 
+  const handleAutoCalc = (years) => {
+    if (!form.fecha_inicio) {
+        showToast('Selecciona primero la Fecha de Inicio', 'warning');
+        return;
+    }
+    const d = new Date(form.fecha_inicio);
+    d.setFullYear(d.getFullYear() + years);
+    setForm(p => ({ ...p, fecha_fin: d.toISOString().split('T')[0] }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.id_bien || !form.fecha_fin) {
@@ -152,7 +162,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
         fecha_inicio: form.fecha_inicio || null,
         fecha_fin: form.fecha_fin,
         id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
-        estado_garantia: form.estado_garantia,
+        estado_garantia: 'VIGENTE',
       });
     } else {
       createMut.mutate({
@@ -160,7 +170,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
         fecha_inicio: form.fecha_inicio || null,
         fecha_fin: form.fecha_fin,
         id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
-        estado_garantia: form.estado_garantia,
+        estado_garantia: 'VIGENTE',
       });
     }
   };
@@ -238,6 +248,13 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
             <div>
               <label className={labelCls}>Fecha Fin *</label>
               <input type="date" className={inputCls} value={form.fecha_fin} onChange={e => handleChange('fecha_fin', e.target.value)} required />
+              
+              {/* Atajos de cálculo automático */}
+              <div className="flex gap-2 mt-2">
+                 <button type="button" onClick={() => handleAutoCalc(1)} className="text-[10px] px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 transition-colors">+1 Año</button>
+                 <button type="button" onClick={() => handleAutoCalc(2)} className="text-[10px] px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 transition-colors">+2 Años</button>
+                 <button type="button" onClick={() => handleAutoCalc(3)} className="text-[10px] px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 transition-colors">+3 Años</button>
+              </div>
             </div>
           </div>
           <div>
@@ -293,14 +310,6 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
                 </button>
               </div>
             )}
-          </div>
-          <div>
-            <label className={labelCls}>Estado de la Garantía</label>
-            <select className={inputCls} value={form.estado_garantia} onChange={e => handleChange('estado_garantia', e.target.value)}>
-              <option value="VIGENTE">Vigente</option>
-              <option value="VENCIDA">Vencida</option>
-              <option value="ANULADA">Anulada</option>
-            </select>
           </div>
           
           <div className="flex gap-3 pt-4">
