@@ -20,7 +20,8 @@ import { gqlClient } from '../api/client';
 import {
   GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION,
   GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
-  CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION
+  CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
+  GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION
 } from '../api/inventario.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
@@ -34,7 +35,22 @@ const ROL_ADMIN    = 1;
 const ROL_MAESTRO  = 2;
 
 // Categorías TI (id_categoria = 1: Equipo de Cómputo, 3: Redes y Telecomunicaciones)
+// NOTA: Esta constante ya no se usa para mostrar/ocultar specs TI; el control ahora
+// es por tipo_disp del modelo. Se mantiene solo por compatibilidad con filtros existentes.
 const CATEGORIAS_TI = [1, 3];
+
+/**
+ * Detecta el modo del dispositivo basado en el nombre_tipo del tipo de dispositivo.
+ * Retorna: 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
+ */
+function getDeviceMode(nombreTipo) {
+  if (!nombreTipo) return null;
+  const n = nombreTipo.toLowerCase();
+  if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio')) return 'PC';
+  if (n.includes('laptop') || n.includes('port') || n.includes('notebook')) return 'LAPTOP';
+  if (n.includes('monitor')) return 'MONITOR';
+  return 'OTHER';
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(v) { return v || '—'; }
@@ -111,7 +127,7 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
     mutationFn: (vars) => gqlClient.request(CREATE_MARCA_MUTATION, vars),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['marcas-tipos'] });
-      qc.invalidateQueries({ queryKey: ['catalogosBienes'] });
+      qc.invalidateQueries({ queryKey: ['catalogos-bienes'] });
       setNuevaMarca('');
       showToast(`Marca "${data.createMarca.marca}" creada`, 'success');
     },
@@ -134,7 +150,7 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
     mutationFn: (vars) => gqlClient.request(CREATE_TIPO_DISPOSITIVO_MUTATION, vars),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['marcas-tipos'] });
-      qc.invalidateQueries({ queryKey: ['catalogosBienes'] });
+      qc.invalidateQueries({ queryKey: ['catalogos-bienes'] });
       setNuevoTipo('');
       showToast(`Tipo "${data.createTipoDispositivo.nombre_tipo}" creado`, 'success');
     },
@@ -154,11 +170,11 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   const mutModelo = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_CAT_MODELO_MUTATION, vars),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['catalogosBienes'] });
+      qc.invalidateQueries({ queryKey: ['catalogos-bienes'] });
       const m = data.createCatModelo;
       showToast(`Modelo "${m.descrip_disp || m.clave_modelo}" creado`, 'success');
       setNuevoModelo({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
-      onSelectModelo(m.clave_modelo);
+      onSelectModelo(m.clave_modelo, { tipo_disp: m.tipo_disp });
       onClose();
     },
     onError: (e) => {
@@ -168,7 +184,8 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
         const parts = msg.split(':');
         const clave = parts[1];
         showToast(`El modelo "${clave}" ya existe. Seleccionándolo.`, 'warning');
-        onSelectModelo(clave);
+        const dupModel = modelos.find(m => m.clave_modelo === clave);
+        onSelectModelo(clave, { tipo_disp: dupModel?.tipo_disp });
         onClose();
       } else {
         showToast(msg || 'Error al crear modelo', 'error');
@@ -211,7 +228,7 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
     const dup = modelos.find(m => m.clave_modelo?.toUpperCase() === clave);
     if (dup) {
       showToast(`El modelo "${clave}" ya existe. Seleccionándolo automáticamente.`, 'warning');
-      onSelectModelo(dup.clave_modelo);
+      onSelectModelo(dup.clave_modelo, { tipo_disp: dup.tipo_disp });
       onClose();
       return;
     }
@@ -270,7 +287,7 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
               {/* Lista */}
               <div className="space-y-1 max-h-52 overflow-y-auto">
                 {modelosFiltrados.map(m => (
-                  <button key={m.clave_modelo} onClick={() => { onSelectModelo(m.clave_modelo); onClose(); }}
+                  <button key={m.clave_modelo} onClick={() => { onSelectModelo(m.clave_modelo, { tipo_disp: m.tipo_disp }); onClose(); }}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
                       m.clave_modelo === modeloActual ? 'bg-green-50 text-green-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'
                     }`}>
@@ -395,7 +412,105 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   );
 }
 
+// ─── Componente para seleccionar monitores ────────────────────────────────────
+function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsignar, onDesasignar, asignando, desasignando }) {
+  const [showPicker, setShowPicker] = useState(false);
+  
+  // Buscar monitores disponibles
+  const { data: monitoresData, isLoading } = useQuery({
+    queryKey: ['bienes-monitores'],
+    queryFn: () => gqlClient.request(GET_BIENES_MONITOR),
+    enabled: showPicker,
+  });
+  
+  const monitoresDisponibles = (monitoresData?.bienesMonitor ?? []).filter(
+    // Excluir los que ya están asignados a este equipo
+    m => !asignados.some(a => a.id_monitor === m.id_bien)
+  );
+
+  return (
+    <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
+      <div className="px-4 py-3 bg-teal-50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Monitor size={14} className="text-teal-700" />
+          <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Monitores Asignados</span>
+        </div>
+        {!isCreateMode && (
+          <button 
+            type="button"
+            onClick={() => setShowPicker(!showPicker)}
+            className="text-xs flex items-center gap-1 text-teal-600 hover:text-teal-800 bg-teal-100 hover:bg-teal-200 px-2 py-1 rounded transition-colors"
+          >
+            {showPicker ? <X size={12} /> : <Plus size={12} />} {showPicker ? 'Cerrar' : 'Agregar Monitor'}
+          </button>
+        )}
+      </div>
+      
+      <div className="p-4 bg-white">
+        {isCreateMode ? (
+          <p className="text-xs text-gray-500 text-center py-2">
+            Guarda el equipo primero para poder asignarle monitores.
+          </p>
+        ) : (
+          <>
+            {asignados.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-2 italic">Sin monitores asignados</p>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {asignados.map(am => (
+                  <div key={am.id_bien_monitor} className="flex justify-between items-center p-2 rounded-lg border border-gray-100 bg-gray-50">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-gray-800">
+                        {am.monitor?.modelo?.descrip_disp || 'Monitor genérico'}
+                      </span>
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        S/N: {am.monitor?.num_serie || 'S/N'} | INV: {am.monitor?.num_inv || 'S/N'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onDesasignar(am.id_bien_monitor)}
+                      disabled={desasignando}
+                      className="text-red-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 disabled:opacity-50"
+                      title="Desasignar monitor"
+                    >
+                      {desasignando ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {showPicker && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Seleccionar Monitor Disponible</p>
+                {isLoading ? (
+                  <div className="flex justify-center p-4"><Loader2 size={16} className="animate-spin text-teal-500" /></div>
+                ) : (
+                  <SearchableSelect
+                    value=""
+                    onChange={(val) => {
+                      if(val) onAsignar({ id_bien: idBienEquipo, id_monitor: val });
+                      setShowPicker(false);
+                    }}
+                    options={monitoresDisponibles.map(m => ({
+                      value: m.id_bien,
+                      label: `${m.modelo?.descrip_disp || 'Monitor'} - ${m.num_serie || 'Sin Serie'}`
+                    }))}
+                    placeholder="Buscar por número de serie o modelo..."
+                  />
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
+
 export default function Inventario() {
   const { showToast } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
@@ -417,6 +532,7 @@ export default function Inventario() {
   const [modalForm, setModalForm]       = useState(null); // null | 'create' | bien
   const [modalConfirmDel, setModalConfirmDel] = useState(null);
   const [showTI, setShowTI]             = useState(false);
+  const [deviceMode, setDeviceMode]     = useState(null); // 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [showAtributosModal, setShowAtributosModal] = useState(false);
 
@@ -484,6 +600,24 @@ export default function Inventario() {
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al guardar TI.', 'error'),
   });
 
+  // ── Mutaciones de monitores ────────────────────────────────────────────────
+  const { mutate: asignarMonitor, isPending: asignando } = useMutation({
+    mutationFn: (vars) => gqlClient.request(ASIGNAR_MONITOR_MUTATION, vars),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      showToast('Monitor asignado.', 'success');
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al asignar monitor.', 'error'),
+  });
+  const { mutate: desasignarMonitor, isPending: desasignando } = useMutation({
+    mutationFn: (vars) => gqlClient.request(DESASIGNAR_MONITOR_MUTATION, vars),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      showToast('Monitor desasignado.', 'success');
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al desasignar monitor.', 'error'),
+  });
+
   // ── Filtrado local ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const tab = activeTab === 'Capitalizable';
@@ -542,7 +676,11 @@ export default function Inventario() {
       mac_address: bien.especificacionTI?.mac_address ?? '',
       modelo_so: bien.especificacionTI?.modelo_so ?? '',
     });
-    setShowTI(CATEGORIAS_TI.includes(Number(bien.idCategoria)));
+    // Detectar deviceMode por tipo de dispositivo del modelo
+    const nombreTipo = bien.modelo?.tipoDispositivo?.nombre_tipo ?? null;
+    const mode = getDeviceMode(nombreTipo);
+    setDeviceMode(mode);
+    setShowTI(mode === 'PC' || mode === 'LAPTOP');
     setFormErrors({});
     setModalForm(bien);
   }, []);
@@ -552,6 +690,8 @@ export default function Inventario() {
     setForm(FORM_EMPTY);
     setTiForm(TI_EMPTY);
     setFormErrors({});
+    setDeviceMode(null);
+    setShowTI(false);
   }, []);
 
   // ID de la unidad de medida "Pieza" en Cat_UnidadesMedida
@@ -569,20 +709,40 @@ export default function Inventario() {
   );
   const esSerie = categoriaSeleccionada?.maneja_serie_individual ?? false;
 
-  // ── Detectar categoría TI al cambiar en el formulario ─────────────────────
+  // ── Detectar tipo de dispositivo al cambiar modelo ────────────────────────
+  // La categoría ya NO controla el panel de especificaciones TI.
+  // Ahora es el tipo_disp del modelo el que determina qué panel mostrar.
+  // modelMeta: { tipo_disp } opcional, se usa cuando el modelo acaba de ser creado
+  // y aún no está en el caché de catalogos.modelos.
+  const handleModeloChange = useCallback((clave, modelMeta) => {
+    if (!clave) {
+      setDeviceMode(null);
+      setShowTI(false);
+      setForm(f => ({ ...f, clave_modelo: '' }));
+      return;
+    }
+    // Intentar obtener tipo_disp del caché o del meta pasado directamente
+    const modelo = (catalogos?.modelos ?? []).find(m => m.clave_modelo === clave);
+    const tipoDispRaw = modelMeta?.tipo_disp ?? modelo?.tipo_disp;
+    const tipoDispStr = String(tipoDispRaw ?? '');
+    const tipo = (catalogos?.tipos ?? []).find(t => String(t.tipo_disp) === tipoDispStr);
+    const mode = getDeviceMode(tipo?.nombre_tipo ?? null);
+    console.log('[handleModeloChange]', { clave, tipoDispStr, nombre_tipo: tipo?.nombre_tipo, mode });
+    setDeviceMode(mode);
+    setShowTI(mode === 'PC' || mode === 'LAPTOP');
+    setForm(f => ({ ...f, clave_modelo: clave }));
+  }, [catalogos?.modelos, catalogos?.tipos]);
+
+  // ── handleCatChange ya no activa specs TI ─────────────────────────────────
   const handleCatChange = (val) => {
-    const esTI = CATEGORIAS_TI.includes(Number(val));
     const catInfo = (catalogos?.categorias ?? []).find((c) => String(c.id_categoria) === String(val));
     const esSerieCat = catInfo?.maneja_serie_individual ?? false;
     setForm((f) => ({
       ...f,
       id_categoria: val,
-      // Si es TI forzar Pieza automáticamente
-      id_unidad_medida: esTI ? ID_UNIDAD_PIEZA : f.id_unidad_medida,
-      // Si maneja serie individual → cantidad siempre 1
       cantidad: esSerieCat ? 1 : f.cantidad,
     }));
-    setShowTI(esTI);
+    // showTI ya NO se activa por categoría — se activa por tipo de dispositivo del modelo
   };
 
   // ── Validación básica ──────────────────────────────────────────────────────
@@ -1152,7 +1312,7 @@ export default function Inventario() {
                     {form.clave_modelo && (
                       <button
                         type="button"
-                        onClick={() => setForm(f => ({ ...f, clave_modelo: '' }))}
+                        onClick={() => handleModeloChange('')}
                         className="w-9 h-9 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-400 transition-colors flex items-center justify-center flex-shrink-0"
                         title="Quitar modelo"
                       >
@@ -1349,9 +1509,22 @@ export default function Inventario() {
                 </div>
               )}
 
+              {/* — Sección Monitores (Solo PC y Laptop) — */}
+              {(deviceMode === 'PC' || deviceMode === 'LAPTOP') && (
+                <MonitoresSelector 
+                  idBienEquipo={modalForm?.id_bien} 
+                  isCreateMode={modalForm === 'create'} 
+                  asignados={modalForm?.monitores ?? []}
+                  onAsignar={(vars) => asignarMonitor(vars)}
+                  onDesasignar={(id_bien_monitor) => desasignarMonitor({ id_bien_monitor })}
+                  asignando={asignando}
+                  desasignando={desasignando}
+                />
+              )}
+
               {/* — Sección Atributos Técnicos — */}
-              {(modalForm !== 'create' || [ROL_ADMIN, ROL_MAESTRO].includes(idRol)) && (
-                <div className="rounded-xl border border-purple-200 overflow-hidden">
+              {deviceMode === 'OTHER' && (modalForm !== 'create' || [ROL_ADMIN, ROL_MAESTRO].includes(idRol)) && (
+                <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">
                   <div className="px-4 py-3 bg-purple-50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Tag size={14} className="text-purple-700" />
@@ -1444,7 +1617,7 @@ export default function Inventario() {
       {showCatalogModal && modalForm && (
         <ModeloCatalogModal
           onClose={() => setShowCatalogModal(false)}
-          onSelectModelo={(clave) => setForm(f => ({ ...f, clave_modelo: clave }))}
+          onSelectModelo={handleModeloChange}
           modeloActual={form.clave_modelo}
           catalogos={catalogos}
         />

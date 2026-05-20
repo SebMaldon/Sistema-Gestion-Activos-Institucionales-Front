@@ -30,6 +30,10 @@ const BIEN_FIELDS = gql`
       descrip_disp
       clave_marca
       tipo_disp
+      tipoDispositivo {
+        tipo_disp
+        nombre_tipo
+      }
     }
     unidadMedida {
       id_unidad_medida
@@ -64,6 +68,19 @@ const BIEN_FIELDS = gql`
       dir_mac
       mac_address
       modelo_so
+    }
+    monitores {
+      id_bien_monitor
+      id_monitor
+      monitor {
+        id_bien
+        num_serie
+        num_inv
+        modelo {
+          clave_modelo
+          descrip_disp
+        }
+      }
     }
     garantias {
       id_garantia
@@ -119,7 +136,6 @@ export const GET_BIEN_DETAIL_QUERY = gql`
   }
 `;
 
-/** Catálogos necesarios para poblar los selects del formulario */
 export const GET_CATALOGOS_BIENES_QUERY = gql`
   query GetCatalogosBienes {
     catCategoriasActivo {
@@ -137,6 +153,11 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       clave_modelo
       descrip_disp
       clave_marca
+      tipo_disp
+    }
+    tiposDispositivo {
+      tipo_disp
+      nombre_tipo
     }
     segmentos: catSegmentos {
       id_segmento
@@ -276,6 +297,48 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
     }
   }
 `;
+
+// ─── Monitores (relación muchos-a-muchos equipo ↔ monitor) ──────────────────
+
+/** Lista todos los bienes cuyo modelo tiene tipo_disp nombre 'Monitor' */
+export const GET_BIENES_MONITOR = gql`
+  query GetBienesMonitor {
+    bienesMonitor {
+      id_bien
+      num_serie
+      num_inv
+      modelo {
+        clave_modelo
+        descrip_disp
+      }
+    }
+  }
+`;
+
+/** Asigna un monitor (bien) a un equipo */
+export const ASIGNAR_MONITOR_MUTATION = gql`
+  mutation AsignarMonitor($id_bien: ID!, $id_monitor: ID!) {
+    asignarMonitor(id_bien: $id_bien, id_monitor: $id_monitor) {
+      id_bien_monitor
+      id_bien
+      id_monitor
+      monitor {
+        id_bien
+        num_serie
+        num_inv
+        modelo { clave_modelo descrip_disp }
+      }
+    }
+  }
+`;
+
+/** Desasigna (elimina la relación) un monitor de un equipo */
+export const DESASIGNAR_MONITOR_MUTATION = gql`
+  mutation DesasignarMonitor($id_bien_monitor: ID!) {
+    desasignarMonitor(id_bien_monitor: $id_bien_monitor)
+  }
+`;
+
 
 export const GET_UBICACIONES_POR_UNIDAD = gql`
   query GetUbicacionesPorUnidad($id_unidad: String!) {

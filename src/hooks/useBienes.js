@@ -36,8 +36,10 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           idCategoria: node.id_categoria,
           idUnidadMedida: node.id_unidad_medida,
           idUnidad: node.id_unidad,
+          idSegmento: node.id_segmento,
           id_ubicacion: node.id_ubicacion,
           idUsuarioResguardo: node.id_usuario_resguardo,
+          claveUnidadRef: node.clave_unidad_ref,
           fechaAdquisicion: node.fecha_adquisicion,
           fechaActualizacion: node.fecha_actualizacion,
 
@@ -63,6 +65,9 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
 
           // — Notas de observación
           notas: node.notas || [],
+
+          // — Monitores asignados (para equipos PC/Laptop)
+          monitores: node.monitores || [],
 
           // — Relaciones completas para el formulario
           modelo: node.modelo,
