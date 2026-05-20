@@ -1,8 +1,8 @@
 import { gql } from 'graphql-request';
 
 export const GET_BITACORA = gql`
-  query bitacora($first: Int, $after: String, $accion: String, $tabla_afectada: String, $id_usuario: Int) {
-    bitacora(pagination: { first: $first, after: $after }, accion: $accion, tabla_afectada: $tabla_afectada, id_usuario: $id_usuario) {
+  query bitacora($first: Int, $after: String, $accion: [String], $tabla_afectada: [String], $id_usuario: [Int], $origen: String, $fechaDesde: DateTime, $fechaHasta: DateTime) {
+    bitacora(pagination: { first: $first, after: $after }, accion: $accion, tabla_afectada: $tabla_afectada, id_usuario: $id_usuario, origen: $origen, fechaDesde: $fechaDesde, fechaHasta: $fechaHasta) {
       pageInfo {
         hasNextPage
         endCursor

@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_BITACORA } from '../api/bitacora.queries';
-import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Activity, X, Braces, Search, Filter } from 'lucide-react';
+import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Activity, X, Braces, Filter } from 'lucide-react';
 import { formatDateTime } from '../lib/utils';
 import { gql } from 'graphql-request';
+import MultiSelect from '../components/MultiSelect';
 
 const GET_BITACORA_LOOKUPS = gql`
   query GetBitacoraLookups {
-    unidades: catUnidades { id_unidad nombre }
-    inmuebles: catLegacyInmuebles { clave descripcion }
     usuarios(estatus: true) { edges { node { id_usuario nombre_completo } } }
     catCategoriasActivo { id_categoria nombre_categoria }
     catUnidadesMedida { id_unidad_medida nombre_unidad }
@@ -234,8 +233,16 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
 export default function Auditoria() {
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]);
-  const [filterAccion, setFilterAccion] = useState('');
-  const [filterModulo, setFilterModulo] = useState('');
+  
+  // Advanced filters state
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterAccion, setFilterAccion] = useState([]);
+  const [filterModulo, setFilterModulo] = useState([]);
+  const [filterOrigen, setFilterOrigen] = useState('');
+  const [filterUsuario, setFilterUsuario] = useState([]);
+  const [filterFechaDesde, setFilterFechaDesde] = useState('');
+  const [filterFechaHasta, setFilterFechaHasta] = useState('');
+
   const [modalLog, setModalLog] = useState(null);
   const PAGE_SIZE = 10;
 
@@ -247,10 +254,14 @@ export default function Auditoria() {
   });
 
   const { data: bitacoraData, isLoading, isError } = useQuery({
-    queryKey: ['bitacora', filterAccion, filterModulo, cursor],
+    queryKey: ['bitacora', filterAccion, filterModulo, filterOrigen, filterUsuario, filterFechaDesde, filterFechaHasta, cursor],
     queryFn: () => gqlClient.request(GET_BITACORA, {
-      accion: filterAccion || undefined,
-      tabla_afectada: filterModulo || undefined,
+      accion: filterAccion.length > 0 ? filterAccion : undefined,
+      tabla_afectada: filterModulo.length > 0 ? filterModulo : undefined,
+      origen: filterOrigen || undefined,
+      id_usuario: filterUsuario.length > 0 ? filterUsuario.map(Number) : undefined,
+      fechaDesde: filterFechaDesde ? new Date(filterFechaDesde).toISOString() : undefined,
+      fechaHasta: filterFechaHasta ? new Date(new Date(filterFechaHasta).setHours(23, 59, 59, 999)).toISOString() : undefined,
       first: PAGE_SIZE,
       after: cursor ?? undefined,
     }),
@@ -296,64 +307,153 @@ export default function Auditoria() {
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 gap-4">
-        {/* Filtros rápidos - Responsive Optimized */}
-        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
-          
-          {/* Badge de contador (compacto en móvil) */}
-          <div className="flex items-center justify-between lg:justify-start gap-3">
-            <div className="flex items-center gap-2.5 px-3.5 py-2 bg-indigo-50/50 rounded-xl text-xs sm:text-sm border border-indigo-100/50 font-bold text-indigo-700 shadow-sm">
-              <Activity size={16} className="text-indigo-500" />
-              <span className="whitespace-nowrap">Eventos: <span className="text-gray-900 ml-0.5">{totalCount}</span></span>
-            </div>
-            
-            {/* Divisor solo en mobile para separar del resto si fuera necesario, o indicador visual */}
-            <div className="h-8 w-px bg-gray-100 lg:hidden"></div>
-            
-            <p className="text-[10px] sm:text-xs text-gray-400 font-medium lg:hidden italic">Filtros de búsqueda</p>
-          </div>
-
-          <div className="hidden lg:block h-8 w-px bg-gray-200 mx-1"></div>
-
-          {/* Contenedor de Selects: 2 columnas en móvil, flex en desktop */}
-          <div className="grid grid-cols-2 lg:flex lg:flex-1 gap-2.5 sm:gap-3">
-            <div className="relative group flex-1 min-w-0">
-              <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-              <select 
-                value={filterAccion} 
-                onChange={e => { setFilterAccion(e.target.value); setCursor(null); setCursors([]); }}
-                className="w-full pl-10 pr-8 py-2.5 text-[11px] sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white cursor-pointer appearance-none font-bold text-gray-700 transition-all hover:bg-gray-50/50"
-              >
-                <option value="">Acciones</option>
-                <option value="CREACION">Creaciones</option>
-                <option value="EDICION">Ediciones</option>
-                <option value="ELIMINACION">Eliminaciones</option>
-                <option value="LOGIN">Sesiones</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <ChevronRight size={14} className="text-gray-300 rotate-90" />
+        {/* Panel principal de filtros estilo Unidades */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-shrink-0">
+          <div className="p-4 border-b border-gray-50 bg-gray-50/30">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5 px-3.5 py-2 bg-indigo-50/50 rounded-xl text-xs sm:text-sm border border-indigo-100/50 font-bold text-indigo-700 shadow-sm w-fit">
+                <Activity size={16} className="text-indigo-500" />
+                <span className="whitespace-nowrap">Eventos Totales: <span className="text-gray-900 ml-0.5">{totalCount}</span></span>
               </div>
+              
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all ${
+                  showFilters || filterAccion.length > 0 || filterModulo.length > 0 || filterOrigen || filterUsuario.length > 0 || filterFechaDesde || filterFechaHasta
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Filter size={16} />
+                <span>Filtros avanzados {
+                  (filterAccion.length > 0 || filterModulo.length > 0 || filterOrigen || filterUsuario.length > 0 || filterFechaDesde || filterFechaHasta)
+                    ? '(Activos)' : ''
+                }</span>
+              </button>
             </div>
 
-            <div className="relative group flex-1 min-w-0">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-              <select 
-                value={filterModulo} 
-                onChange={e => { setFilterModulo(e.target.value); setCursor(null); setCursors([]); }}
-                className="w-full pl-10 pr-8 py-2.5 text-[11px] sm:text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white cursor-pointer appearance-none font-bold text-gray-700 transition-all hover:bg-gray-50/50"
-              >
-                <option value="">Módulos</option>
-                <option value="Incidencias">Incidencias</option>
-                <option value="Notas">Notas</option>
-                <option value="Bienes">Activos</option>
-                <option value="Usuarios">Usuarios</option>
-                <option value="Garantias">Garantías</option>
-                <option value="Unidades">Unidades</option>
-                <option value="Inmuebles">Unidades Físicas</option>
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <ChevronRight size={14} className="text-gray-300 rotate-90" />
+            {showFilters && (
+              <div className="mt-4 p-5 bg-gray-50/50 border border-gray-200/80 rounded-2xl shadow-inner animate-in fade-in slide-in-from-top-1 duration-250">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Grupo 1: Operación */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider border-b border-indigo-100 pb-1">
+                      Detalles de la Operación
+                    </h3>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Acción Realizada</label>
+                      <MultiSelect
+                        selectedValues={filterAccion}
+                        onChange={(val) => { setFilterAccion(val); setCursor(null); setCursors([]); }}
+                        options={[
+                          { value: 'CREACION', label: 'Creación' },
+                          { value: 'EDICION', label: 'Edición' },
+                          { value: 'ELIMINACION', label: 'Eliminación' },
+                          { value: 'LOGIN', label: 'Inicio de Sesión' },
+                        ]}
+                        placeholder="Todas las acciones"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Módulo Afectado</label>
+                      <MultiSelect
+                        selectedValues={filterModulo}
+                        onChange={(val) => { setFilterModulo(val); setCursor(null); setCursors([]); }}
+                        options={[
+                          { value: 'Incidencias', label: 'Incidencias' },
+                          { value: 'Notas', label: 'Notas' },
+                          { value: 'Bienes', label: 'Activos' },
+                          { value: 'Usuarios', label: 'Usuarios' },
+                          { value: 'Garantias', label: 'Garantías' },
+                          { value: 'Unidades', label: 'Unidades' },
+                          { value: 'Inmuebles', label: 'Unidades Físicas' },
+                        ]}
+                        placeholder="Todos los módulos"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Grupo 2: Autor y Origen */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider border-b border-indigo-100 pb-1">
+                      Autoría y Procedencia
+                    </h3>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Usuario</label>
+                      <MultiSelect
+                        selectedValues={filterUsuario}
+                        onChange={(val) => { setFilterUsuario(val); setCursor(null); setCursors([]); }}
+                        options={catalogs?.usuarios?.edges?.map(u => ({
+                          value: String(u.node.id_usuario),
+                          label: u.node.nombre_completo
+                        })) || []}
+                        placeholder="Todos los usuarios"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Plataforma de Origen</label>
+                      <select 
+                        value={filterOrigen} 
+                        onChange={e => { setFilterOrigen(e.target.value); setCursor(null); setCursors([]); }}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      >
+                        <option value="">Cualquier origen</option>
+                        <option value="web">Web (Navegador)</option>
+                        <option value="win">Windows (Escritorio)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Grupo 3: Fechas */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider border-b border-indigo-100 pb-1">
+                      Rango de Fechas
+                    </h3>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Desde</label>
+                      <input 
+                        type="date"
+                        value={filterFechaDesde} 
+                        onChange={e => { setFilterFechaDesde(e.target.value); setCursor(null); setCursors([]); }}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-0.5">Hasta</label>
+                      <input 
+                        type="date"
+                        value={filterFechaHasta} 
+                        onChange={e => { setFilterFechaHasta(e.target.value); setCursor(null); setCursors([]); }}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón de limpiar filtros en la parte inferior */}
+                <div className="mt-4 pt-3 border-t border-gray-200/80 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    Filtros activos actualmente
+                  </span>
+                  <button
+                    onClick={() => {
+                      setFilterAccion([]);
+                      setFilterModulo([]);
+                      setFilterOrigen('');
+                      setFilterUsuario([]);
+                      setFilterFechaDesde('');
+                      setFilterFechaHasta('');
+                      setCursor(null);
+                      setCursors([]);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                  >
+                    <X size={14} className="text-gray-400" />
+                    Limpiar Filtros
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
