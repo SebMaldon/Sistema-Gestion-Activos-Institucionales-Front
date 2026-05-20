@@ -29,6 +29,7 @@ import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
 import BienAtributosPanel from '../components/BienAtributosPanel';
 import AtributosCatalogModal from '../components/AtributosCatalogModal';
+import { UPSERT_BIEN_ATRIBUTOS } from '../api/atributos.queries';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -435,25 +436,26 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
           <Monitor size={14} className="text-teal-700" />
           <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Monitores Asignados</span>
         </div>
-        {!isCreateMode && (
-          <button 
-            type="button"
-            onClick={() => setShowPicker(!showPicker)}
-            className="text-xs flex items-center gap-1 text-teal-600 hover:text-teal-800 bg-teal-100 hover:bg-teal-200 px-2 py-1 rounded transition-colors"
-          >
-            {showPicker ? <X size={12} /> : <Plus size={12} />} {showPicker ? 'Cerrar' : 'Agregar Monitor'}
-          </button>
-        )}
+        <button 
+          type="button"
+          onClick={() => setShowPicker(!showPicker)}
+          className="text-xs flex items-center gap-1 text-teal-600 hover:text-teal-800 bg-teal-100 hover:bg-teal-200 px-2 py-1 rounded transition-colors"
+        >
+          {showPicker ? <X size={12} /> : <Plus size={12} />} {showPicker ? 'Cerrar' : 'Agregar Monitor'}
+        </button>
       </div>
       
       <div className="p-4 bg-white">
-        {isCreateMode ? (
-          <p className="text-xs text-gray-500 text-center py-2">
-            Guarda el equipo primero para poder asignarle monitores.
-          </p>
-        ) : (
-          <>
-            {asignados.length === 0 ? (
+        {isCreateMode && (
+          <div className="flex items-center gap-2 py-2 px-3 mb-4 bg-teal-50 border border-teal-100 rounded-lg">
+            <Monitor size={14} className="text-teal-500 flex-shrink-0" />
+            <p className="text-xs text-teal-700">
+              Los monitores se asignarán automáticamente después de guardar el equipo.
+            </p>
+          </div>
+        )}
+        <>
+          {asignados.length === 0 ? (
               <p className="text-xs text-gray-500 text-center py-2 italic">Sin monitores asignados</p>
             ) : (
               <div className="space-y-2 mb-4">
@@ -490,7 +492,10 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
                   <SearchableSelect
                     value=""
                     onChange={(val) => {
-                      if(val) onAsignar({ id_bien: idBienEquipo, id_monitor: val });
+                      if(val) {
+                        const m = monitoresDisponibles.find(x => x.id_bien === val);
+                        onAsignar(isCreateMode ? { monitor: m } : { id_bien: idBienEquipo, id_monitor: val });
+                      }
                       setShowPicker(false);
                     }}
                     options={monitoresDisponibles.map(m => ({
@@ -503,7 +508,6 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
               </div>
             )}
           </>
-        )}
       </div>
     </div>
   );
@@ -540,6 +544,8 @@ export default function Inventario() {
   const [form, setForm]   = useState(FORM_EMPTY);
   const [tiForm, setTiForm] = useState(TI_EMPTY);
   const [formErrors, setFormErrors] = useState({});
+  const [pendingEavValues, setPendingEavValues] = useState({}); // {id_atributo: valor} para modo creación
+  const [pendingMonitors, setPendingMonitors] = useState([]); // [{ monitor: object, id_monitor: string }] para modo creación
 
   // ── Estado para Impresión ─────────────────────────────────────────────────
   const [printSelectedBienes, setPrintSelectedBienes] = useState([]);
@@ -556,16 +562,16 @@ export default function Inventario() {
   const [newUbicacionName, setNewUbicacionName] = useState('');
 
   const { data: ubicacionesData } = useQuery({
-    queryKey: ['ubicaciones', form.id_segmento],
-    queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: form.id_segmento }),
-    enabled: !!form.id_segmento,
+    queryKey: ['ubicaciones', form.clave_unidad_ref],
+    queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: form.clave_unidad_ref }),
+    enabled: !!form.clave_unidad_ref,
   });
   const ubicacionesUnidad = ubicacionesData?.ubicacionesPorUnidad ?? [];
 
   const { mutate: createUbicacion, isPending: creatingUbicacion } = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_UBICACION, vars),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['ubicaciones', form.id_unidad] });
+      qc.invalidateQueries({ queryKey: ['ubicaciones', form.clave_unidad_ref] });
       setForm(f => ({ ...f, id_ubicacion: data.createUbicacion.id_ubicacion }));
       setIsAddingUbicacion(false);
       setNewUbicacionName('');
@@ -575,8 +581,8 @@ export default function Inventario() {
   });
 
   const handleCreateUbicacion = () => {
-    if (!newUbicacionName.trim()) return;
-    createUbicacion({ id_unidad: form.id_segmento, nombre_ubicacion: newUbicacionName });
+    if (!newUbicacionName.trim() || !form.clave_unidad_ref) return;
+    createUbicacion({ id_unidad: form.clave_unidad_ref, nombre_ubicacion: newUbicacionName.trim() });
   };
 
   // ── Mutaciones ─────────────────────────────────────────────────────────────
@@ -647,7 +653,10 @@ export default function Inventario() {
     setForm(FORM_EMPTY);
     setTiForm(TI_EMPTY);
     setFormErrors({});
+    setPendingEavValues({});
+    setPendingMonitors([]);
     setShowTI(false);
+    setDeviceMode(null);
     setModalForm('create');
   }, []);
 
@@ -682,6 +691,8 @@ export default function Inventario() {
     setDeviceMode(mode);
     setShowTI(mode === 'PC' || mode === 'LAPTOP');
     setFormErrors({});
+    setPendingEavValues({});
+    setPendingMonitors([]);
     setModalForm(bien);
   }, []);
 
@@ -690,6 +701,8 @@ export default function Inventario() {
     setForm(FORM_EMPTY);
     setTiForm(TI_EMPTY);
     setFormErrors({});
+    setPendingEavValues({});
+    setPendingMonitors([]);
     setDeviceMode(null);
     setShowTI(false);
   }, []);
@@ -708,6 +721,9 @@ export default function Inventario() {
     [catalogos?.categorias, form.id_categoria]
   );
   const esSerie = categoriaSeleccionada?.maneja_serie_individual ?? false;
+
+  // Forzar a Pieza si es dispositivo de hardware (PC, LAPTOP, MONITOR)
+  const forcePieza = deviceMode === 'PC' || deviceMode === 'LAPTOP' || deviceMode === 'MONITOR';
 
   // ── Detectar tipo de dispositivo al cambiar modelo ────────────────────────
   // La categoría ya NO controla el panel de especificaciones TI.
@@ -749,7 +765,7 @@ export default function Inventario() {
   const validate = () => {
     const errs = {};
     if (!form.id_categoria)     errs.id_categoria     = 'Requerido';
-    if (!form.id_unidad_medida) errs.id_unidad_medida = 'Requerido';
+    if (!form.id_unidad_medida && !forcePieza) errs.id_unidad_medida = 'Requerido';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -759,7 +775,7 @@ export default function Inventario() {
     if (!validate()) return;
     const vars = {
       id_categoria:      Number(form.id_categoria),
-      id_unidad_medida:  Number(form.id_unidad_medida),
+      id_unidad_medida:  forcePieza ? Number(ID_UNIDAD_PIEZA) : Number(form.id_unidad_medida),
       id_segmento:       form.id_segmento ? Number(form.id_segmento) : null,
       id_ubicacion:      form.id_ubicacion ? Number(form.id_ubicacion) : null,
       num_serie:         form.num_serie || null,
@@ -779,13 +795,34 @@ export default function Inventario() {
       createBien(vars, {
         onSuccess: (data) => {
           const bienCreado = data?.createBien;
-          if (showTI && bienCreado?.id_bien) {
+          if (!bienCreado?.id_bien) return;
+
+          // Guardar Especificaciones TI si aplica
+          if (showTI) {
             const tiData = parseTI();
-            // Solo guardar si hay al menos un campo TI con valor
             const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
             if (hayDatosTI) {
               upsertTI({ id_bien: bienCreado.id_bien, ...tiData });
             }
+          }
+
+          // Guardar atributos EAV pendientes si aplica (deviceMode === 'OTHER')
+          const eavEntries = Object.entries(pendingEavValues).filter(([, val]) => val && String(val).trim());
+          if (eavEntries.length > 0) {
+            const atributos = eavEntries.map(([id, valor]) => ({
+              id_atributo: parseInt(id),
+              valor: String(valor).trim(),
+            }));
+            gqlClient.request(UPSERT_BIEN_ATRIBUTOS, { id_bien: bienCreado.id_bien, atributos })
+              .then(() => showToast('Atributos técnicos guardados', 'success'))
+              .catch((e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al guardar atributos', 'error'));
+          }
+
+          // Asignar Monitores pendientes si aplica
+          if (pendingMonitors.length > 0) {
+            pendingMonitors.forEach(m => {
+              asignarMonitor({ id_bien: bienCreado.id_bien, id_monitor: m.id_monitor });
+            });
           }
         },
       });
@@ -1091,7 +1128,9 @@ export default function Inventario() {
       {/* ════════════════════════════════════════════════════════════════════
           MODAL: FICHA TÉCNICA
       ═══════════════════════════════════════════════════════════════════════ */}
-      {modalFicha && (
+      {modalFicha && (() => {
+        const fichaMode = getDeviceMode(modalFicha.modelo?.tipoDispositivo?.nombre_tipo);
+        return (
         <Modal onClose={() => setModalFicha(null)} title="Ficha Técnica" wide>
           <div className="space-y-4 text-sm">
             {/* Encabezado del bien */}
@@ -1119,7 +1158,7 @@ export default function Inventario() {
             </div>
 
             {/* Especificaciones TI */}
-            {modalFicha.especificacionTI && CATEGORIAS_TI.includes(Number(modalFicha.idCategoria)) && (
+            {modalFicha.especificacionTI && (fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
               <div className="rounded-xl border border-blue-100 overflow-hidden">
                 <div className="bg-blue-50 px-4 py-2.5 flex items-center gap-2">
                   <Monitor size={15} className="text-blue-600" />
@@ -1132,6 +1171,43 @@ export default function Inventario() {
                   <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(modalFicha.especificacionTI.dir_ip)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(modalFicha.especificacionTI.mac_address)} mono />
                   <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(modalFicha.especificacionTI.modelo_so)} />
+                </div>
+              </div>
+            )}
+
+            {/* Monitores Asignados (Para PC / Laptop) */}
+            {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && modalFicha.monitores?.length > 0 && (
+              <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
+                <div className="bg-teal-50 px-4 py-2.5 flex items-center gap-2">
+                  <Monitor size={15} className="text-teal-600" />
+                  <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Monitores Asignados</span>
+                </div>
+                <div className="p-4 space-y-2 bg-white">
+                  {modalFicha.monitores.map((am) => (
+                    <div key={am.id_bien_monitor} className="flex justify-between items-center p-2 rounded-lg border border-gray-100 bg-gray-50">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-gray-800">
+                          {am.monitor?.modelo?.descrip_disp || 'Monitor genérico'}
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-mono">
+                          S/N: {am.monitor?.num_serie || 'S/N'} | INV: {am.monitor?.num_inv || 'S/N'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Atributos Técnicos (EAV) */}
+            {fichaMode === 'OTHER' && (
+              <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">
+                <div className="bg-purple-50 px-4 py-2.5 flex items-center gap-2">
+                  <Tag size={15} className="text-purple-600" />
+                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Atributos Técnicos</span>
+                </div>
+                <div className="p-4 bg-white">
+                  <BienAtributosPanel id_bien={modalFicha.id_bien} readOnly={true} />
                 </div>
               </div>
             )}
@@ -1158,7 +1234,8 @@ export default function Inventario() {
             )}
           </div>
         </Modal>
-      )}
+        );
+      })()}
 
       {/* ════════════════════════════════════════════════════════════════════
           MODAL: QR / CÓDIGO DE BARRAS
@@ -1234,26 +1311,26 @@ export default function Inventario() {
                   {formErrors.id_categoria && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_categoria}</p>}
                 </div>
 
-                {/* Unidad de Medida — bloqueada a Pieza si es categoría TI */}
+                {/* Unidad de Medida — bloqueada a Pieza si es hardware */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Unidad de Medida <span className="text-red-500">*</span>
-                    {showTI && <span className="ml-2 text-xs text-blue-500 font-normal">(forzado a Pieza)</span>}
+                    {forcePieza && <span className="ml-2 text-xs text-blue-500 font-normal">(forzado a Pieza)</span>}
                   </label>
                   <select
-                    value={form.id_unidad_medida}
-                    onChange={(e) => !showTI && setForm((f) => ({ ...f, id_unidad_medida: e.target.value }))}
-                    disabled={showTI}
+                    value={forcePieza ? ID_UNIDAD_PIEZA : form.id_unidad_medida}
+                    onChange={(e) => !forcePieza && setForm((f) => ({ ...f, id_unidad_medida: e.target.value }))}
+                    disabled={forcePieza}
                     className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
-                      showTI ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'
-                    } ${formErrors.id_unidad_medida ? 'border-red-400' : 'border-gray-200'}`}
+                      forcePieza ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'
+                    } ${formErrors.id_unidad_medida && !forcePieza ? 'border-red-400' : 'border-gray-200'}`}
                   >
                     <option value="">Seleccionar…</option>
                     {(catalogos?.unidadesMedida ?? []).map((u) => (
                       <option key={u.id_unidad_medida} value={u.id_unidad_medida}>{u.nombre_unidad} ({u.abreviatura})</option>
                     ))}
                   </select>
-                  {formErrors.id_unidad_medida && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_unidad_medida}</p>}
+                  {formErrors.id_unidad_medida && !forcePieza && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_unidad_medida}</p>}
                 </div>
 
                 {/* Número de Serie */}
@@ -1386,17 +1463,30 @@ export default function Inventario() {
                   <SearchableSelect
                     value={form.id_segmento ? String(form.id_segmento) : ''}
                     onChange={(val) => {
-                      setForm((f) => ({ ...f, id_segmento: val, id_ubicacion: '' }));
-                      setIsAddingUbicacion(false);
-                      setNewUbicacionName('');
+                      setForm((f) => ({ ...f, id_segmento: val }));
                     }}
                     options={(catalogos?.segmentos ?? []).map(u => ({ value: String(u.id_segmento), label: u.nombre || u.clave }))}
                     placeholder="Sin segmento"
                   />
                 </div>
 
-                {/* Ubicacion Física (Depende de Segmento) */}
-                {form.id_segmento && (
+                {/* Unidad Física */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Física</label>
+                  <SearchableSelect
+                    value={form.clave_unidad_ref || ''}
+                    onChange={(val) => {
+                      setForm((f) => ({ ...f, clave_unidad_ref: val, id_ubicacion: '' }));
+                      setIsAddingUbicacion(false);
+                      setNewUbicacionName('');
+                    }}
+                    options={(catalogos?.unidades ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
+                    placeholder="Sin unidad"
+                  />
+                </div>
+
+                {/* Ubicacion Física (Depende de Unidad Física) */}
+                {form.clave_unidad_ref && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Área / Ubicación Física</label>
                     {isAddingUbicacion ? (
@@ -1436,17 +1526,6 @@ export default function Inventario() {
                     )}
                   </div>
                 )}
-
-                {/* Unidad Física */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Física</label>
-                  <SearchableSelect
-                    value={form.clave_unidad_ref || ''}
-                    onChange={(val) => setForm((f) => ({ ...f, clave_unidad_ref: val }))}
-                    options={(catalogos?.unidades ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
-                    placeholder="Sin unidad"
-                  />
-                </div>
 
                 {/* Usuario Resguardo */}
                 <div>
@@ -1514,16 +1593,34 @@ export default function Inventario() {
                 <MonitoresSelector 
                   idBienEquipo={modalForm?.id_bien} 
                   isCreateMode={modalForm === 'create'} 
-                  asignados={modalForm?.monitores ?? []}
-                  onAsignar={(vars) => asignarMonitor(vars)}
-                  onDesasignar={(id_bien_monitor) => desasignarMonitor({ id_bien_monitor })}
+                  asignados={modalForm === 'create' ? pendingMonitors : (modalForm?.monitores ?? [])}
+                  onAsignar={(vars) => {
+                    if (modalForm === 'create') {
+                      if (!pendingMonitors.some(p => p.id_monitor === vars.monitor.id_bien)) {
+                        setPendingMonitors(prev => [...prev, {
+                          id_bien_monitor: `temp-${Date.now()}`,
+                          id_monitor: vars.monitor.id_bien,
+                          monitor: vars.monitor
+                        }]);
+                      }
+                    } else {
+                      asignarMonitor(vars);
+                    }
+                  }}
+                  onDesasignar={(id) => {
+                    if (modalForm === 'create') {
+                      setPendingMonitors(prev => prev.filter(p => p.id_bien_monitor !== id));
+                    } else {
+                      desasignarMonitor({ id_bien_monitor: id });
+                    }
+                  }}
                   asignando={asignando}
                   desasignando={desasignando}
                 />
               )}
 
               {/* — Sección Atributos Técnicos — */}
-              {deviceMode === 'OTHER' && (modalForm !== 'create' || [ROL_ADMIN, ROL_MAESTRO].includes(idRol)) && (
+              {deviceMode === 'OTHER' && (
                 <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">
                   <div className="px-4 py-3 bg-purple-50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1540,16 +1637,17 @@ export default function Inventario() {
                     )}
                   </div>
                   <div className="p-4 bg-white">
-                    {modalForm !== 'create' && modalForm?.id_bien ? (
-                      <BienAtributosPanel
-                        id_bien={modalForm.id_bien}
-                        tipo_disp={modalForm.modelo?.tipo_disp}
-                      />
-                    ) : (
-                      <p className="text-xs text-gray-500 text-center py-2">
-                        Los atributos técnicos se asignan después de registrar el bien por primera vez.
-                      </p>
-                    )}
+                    <BienAtributosPanel
+                      id_bien={modalForm !== 'create' ? modalForm?.id_bien : null}
+                      tipo_disp={(() => {
+                        // Obtener tipo_disp del modelo seleccionado
+                        if (modalForm !== 'create' && modalForm?.modelo?.tipo_disp) return modalForm.modelo.tipo_disp;
+                        // En modo creación, buscar por clave_modelo
+                        const mod = (catalogos?.modelos ?? []).find(m => m.clave_modelo === form.clave_modelo);
+                        return mod?.tipo_disp ?? null;
+                      })()}
+                      onValuesChange={modalForm === 'create' ? setPendingEavValues : undefined}
+                    />
                   </div>
                 </div>
               )}
