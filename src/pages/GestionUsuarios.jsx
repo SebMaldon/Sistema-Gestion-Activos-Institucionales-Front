@@ -191,7 +191,7 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
             <label className={labelCls}>Unidad</label>
             <select className={inputCls} value={form.id_unidad} onChange={e => handleChange('id_unidad', e.target.value)}>
               <option value="">— Ninguna —</option>
-              {unidades.map(u => <option key={u.id_unidad} value={u.id_unidad}>{u.nombre || u.no_ref}</option>)}
+              {unidades.map(u => <option key={u.id_segmento} value={u.id_segmento}>{u.nombre || u.no_ref}</option>)}
             </select>
           </div>
         </div>
@@ -491,7 +491,7 @@ export default function GestionUsuarios() {
     queryKey: ['unidades'],
     queryFn: async () => {
       const d = await gqlClient.request(GET_UNIDADES);
-      return d.catUnidades ?? [];
+      return d.catSegmentos ?? [];
     },
   });
 
@@ -583,7 +583,7 @@ export default function GestionUsuarios() {
               <select value={filterUnidad} onChange={e => { setFilterUnidad(e.target.value); setCursor(null); setCursors([]); }}
                 className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                 <option value="">Todas las unidades</option>
-                {unidades.map(u => <option key={u.id_unidad} value={u.id_unidad}>{u.nombre || u.no_ref}</option>)}
+                {unidades.map(u => <option key={u.id_segmento} value={u.id_segmento}>{u.nombre || u.no_ref}</option>)}
               </select>
               <button onClick={() => refetch()}
                 className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors" title="Refrescar">

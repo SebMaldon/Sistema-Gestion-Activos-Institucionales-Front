@@ -16,7 +16,7 @@ import {
   SlidersHorizontal, FilterX
 } from 'lucide-react';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import {
   GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION,
@@ -27,11 +27,12 @@ import {
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA } from '../api/garantias.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
+import MultiSearchableSelect from '../components/MultiSearchableSelect';
 import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
 import BienAtributosPanel from '../components/BienAtributosPanel';
 import AtributosCatalogModal from '../components/AtributosCatalogModal';
-import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS } from '../api/atributos.queries';
+import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO } from '../api/atributos.queries';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -654,7 +655,41 @@ export default function Inventario() {
     queryKey: ['cat-atributos', { soloActivos: true }],
     queryFn: () => gqlClient.request(GET_CAT_ATRIBUTOS, { soloActivos: true }),
   });
-  const eav_atributos = atributosData?.catAtributos ?? [];
+  
+  const selectedEAVTiposObj = useMemo(() => {
+    return (catalogos?.tipos ?? []).filter(t => advFilters.tipo_disp.includes(String(t.tipo_disp)));
+  }, [catalogos?.tipos, advFilters.tipo_disp]);
+
+  const eavQueries = useQueries({
+    queries: selectedEAVTiposObj
+      .filter(t => {
+        const mode = getDeviceMode(t.nombre_tipo);
+        return mode === 'OTHER' || mode === 'MONITOR';
+      })
+      .map(t => ({
+        queryKey: ['atributos-por-tipo', t.tipo_disp],
+        queryFn: () => gqlClient.request(GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO, { tipo_disp: Number(t.tipo_disp) }),
+        staleTime: 5 * 60 * 1000,
+      }))
+  });
+
+  const allowedAtributosIds = useMemo(() => {
+    const ids = new Set();
+    eavQueries.forEach(q => {
+      if (q.data?.atributosPorTipoDispositivo) {
+        q.data.atributosPorTipoDispositivo.forEach(mapping => {
+          ids.add(Number(mapping.id_atributo));
+        });
+      }
+    });
+    return ids;
+  }, [eavQueries]);
+
+  const eav_atributos = useMemo(() => {
+    const all = atributosData?.catAtributos ?? [];
+    if (advFilters.tipo_disp.length === 0) return all;
+    return all.filter(a => allowedAtributosIds.has(Number(a.id_atributo)));
+  }, [atributosData, allowedAtributosIds, advFilters.tipo_disp.length]);
 
   const qc = useQueryClient();
   const [isAddingUbicacion, setIsAddingUbicacion] = useState(false);
@@ -1197,50 +1232,60 @@ export default function Inventario() {
             )}
 
             {/* Panel de filtros avanzados desplegable */}
-            {showAdvancedFilters && (
-              <div className="mt-3 pt-3 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2">
-                {/* Sección: Ubicación */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><MapPin size={11}/> Ubicación</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {showAdvancedFilters && (() => {
+              const selectedTiposObj = (catalogos?.tipos ?? []).filter(t => advFilters.tipo_disp.includes(String(t.tipo_disp)));
+              const hasPCorLaptop = selectedTiposObj.some(t => {
+                const mode = getDeviceMode(t.nombre_tipo);
+                return mode === 'PC' || mode === 'LAPTOP';
+              });
+              const hasOtherDevice = selectedTiposObj.some(t => {
+                const mode = getDeviceMode(t.nombre_tipo);
+                return mode === 'OTHER' || mode === 'MONITOR';
+              });
+              const showTIFilter = advFilters.tipo_disp.length > 0 && hasPCorLaptop;
+              const showEAVFilter = advFilters.tipo_disp.length > 0 && hasOtherDevice;
+
+              return (
+                <div className="mt-3 pt-3 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2 overflow-y-auto max-h-[60vh] sm:max-h-[50vh] pr-2 custom-scrollbar">
+                  {/* Sección: Ubicación */}
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><MapPin size={11}/> Ubicación</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[10px] font-semibold text-gray-500 mb-1">Inmueble</label>
-                      <select
-                        multiple
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar inmuebles..."
                         value={advFilters.clave_unidad_ref}
-                        onChange={(e) => { setAdvFilters(p => ({...p, clave_unidad_ref: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
-                      >
-                        {(catalogos?.unidades ?? []).map(u => (
-                          <option key={u.clave} value={u.clave}>{u.desc_corta || u.descripcion || u.clave}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => { setAdvFilters(p => ({...p, clave_unidad_ref: val})); setPage(1); }}
+                        options={(catalogos?.unidades ?? []).map(u => ({
+                          value: u.clave,
+                          label: u.desc_corta || u.descripcion || u.clave
+                        }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-gray-500 mb-1">Segmento</label>
-                      <select
-                        multiple
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar segmentos..."
                         value={advFilters.id_segmento}
-                        onChange={(e) => { setAdvFilters(p => ({...p, id_segmento: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
-                      >
-                        {(catalogos?.segmentos ?? []).map(s => (
-                          <option key={s.id_segmento} value={s.id_segmento}>{s.nombre || s.clave || s.id_segmento}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => { setAdvFilters(p => ({...p, id_segmento: val.map(String)})); setPage(1); }}
+                        options={(catalogos?.segmentos ?? []).map(s => ({
+                          value: String(s.id_segmento),
+                          label: s.nombre || s.clave || s.id_segmento
+                        }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-gray-500 mb-1">Ubicación Física</label>
-                      <select
-                        multiple
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar ubicaciones..."
                         value={advFilters.id_ubicacion}
-                        onChange={(e) => { setAdvFilters(p => ({...p, id_ubicacion: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
-                      >
-                        {ubicaciones.map(u => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => { setAdvFilters(p => ({...p, id_ubicacion: val})); setPage(1); }}
+                        options={ubicaciones.map(u => ({
+                          value: u,
+                          label: u
+                        }))}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1248,113 +1293,112 @@ export default function Inventario() {
                 {/* Sección: Equipo / Dispositivo */}
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Cpu size={11}/> Equipo / Dispositivo</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tipo Dispositivo</label>
-                      <select
-                        multiple
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar tipos..."
                         value={advFilters.tipo_disp}
-                        onChange={(e) => { setAdvFilters(p => ({...p, tipo_disp: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
-                      >
-                        {(catalogos?.tipos ?? []).map(t => (
-                          <option key={t.tipo_disp} value={t.tipo_disp}>{t.nombre_tipo}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => { setAdvFilters(p => ({...p, tipo_disp: val.map(String)})); setPage(1); }}
+                        options={(catalogos?.tipos ?? []).map(t => ({
+                          value: String(t.tipo_disp),
+                          label: t.nombre_tipo
+                        }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-gray-500 mb-1">Marca</label>
-                      <select
-                        multiple
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar marcas..."
                         value={advFilters.clave_marca}
-                        onChange={(e) => { setAdvFilters(p => ({...p, clave_marca: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
-                      >
-                        {(catalogos?.marcas ?? []).map(m => (
-                          <option key={m.clave_marca} value={m.clave_marca}>{m.marca}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => { setAdvFilters(p => ({...p, clave_marca: val.map(String)})); setPage(1); }}
+                        options={(catalogos?.marcas ?? []).map(m => ({
+                          value: String(m.clave_marca),
+                          label: m.marca
+                        }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-gray-500 mb-1">Categoría</label>
-                      <select
-                        multiple
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar categorías..."
                         value={advFilters.id_categoria}
-                        onChange={(e) => { setAdvFilters(p => ({...p, id_categoria: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
-                      >
-                        {(catalogos?.categorias ?? []).map(c => (
-                          <option key={c.id_categoria} value={c.id_categoria}>{c.nombre_categoria}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => { setAdvFilters(p => ({...p, id_categoria: val.map(String)})); setPage(1); }}
+                        options={(catalogos?.categorias ?? []).map(c => ({
+                          value: String(c.id_categoria),
+                          label: c.nombre_categoria
+                        }))}
+                      />
                     </div>
                   </div>
                 </div>
 
                 {/* Sección: Especificaciones TI */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><HardDrive size={11}/> Especificaciones TI</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">RAM Mín. (GB)</label>
-                      <input type="number" min="0" placeholder="Ej. 4"
-                        value={advFilters.ram_min}
-                        onChange={e => { setAdvFilters(p => ({...p, ram_min: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
+                {showTIFilter && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><HardDrive size={11}/> Especificaciones TI</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">RAM Mín. (GB)</label>
+                        <input type="number" min="0" placeholder="Ej. 4"
+                          value={advFilters.ram_min}
+                          onChange={e => { setAdvFilters(p => ({...p, ram_min: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">RAM Máx. (GB)</label>
+                        <input type="number" min="0" placeholder="Ej. 32"
+                          value={advFilters.ram_max}
+                          onChange={e => { setAdvFilters(p => ({...p, ram_max: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Almac. Mín. (GB)</label>
+                        <input type="number" min="0" placeholder="Ej. 128"
+                          value={advFilters.almacenamiento_min}
+                          onChange={e => { setAdvFilters(p => ({...p, almacenamiento_min: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Almac. Máx. (GB)</label>
+                        <input type="number" min="0" placeholder="Ej. 1024"
+                          value={advFilters.almacenamiento_max}
+                          onChange={e => { setAdvFilters(p => ({...p, almacenamiento_max: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">RAM Máx. (GB)</label>
-                      <input type="number" min="0" placeholder="Ej. 32"
-                        value={advFilters.ram_max}
-                        onChange={e => { setAdvFilters(p => ({...p, ram_max: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Almac. Mín. (GB)</label>
-                      <input type="number" min="0" placeholder="Ej. 128"
-                        value={advFilters.almacenamiento_min}
-                        onChange={e => { setAdvFilters(p => ({...p, almacenamiento_min: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Almac. Máx. (GB)</label>
-                      <input type="number" min="0" placeholder="Ej. 1024"
-                        value={advFilters.almacenamiento_max}
-                        onChange={e => { setAdvFilters(p => ({...p, almacenamiento_max: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Sistema Operativo</label>
+                        <input type="text" placeholder='Ej. "Windows", "Linux"'
+                          value={advFilters.modelo_so}
+                          onChange={e => { setAdvFilters(p => ({...p, modelo_so: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">CPU</label>
+                        <input type="text" placeholder='Ej. "i7", "Ryzen"'
+                          value={advFilters.cpu_info}
+                          onChange={e => { setAdvFilters(p => ({...p, cpu_info: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Dirección IP</label>
+                        <input type="text" placeholder='Ej. "10.28"'
+                          value={advFilters.dir_ip}
+                          onChange={e => { setAdvFilters(p => ({...p, dir_ip: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Sistema Operativo</label>
-                      <input type="text" placeholder='Ej. "Windows", "Linux", "macOS"'
-                        value={advFilters.modelo_so}
-                        onChange={e => { setAdvFilters(p => ({...p, modelo_so: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">CPU</label>
-                      <input type="text" placeholder='Ej. "i7", "Ryzen"'
-                        value={advFilters.cpu_info}
-                        onChange={e => { setAdvFilters(p => ({...p, cpu_info: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Dirección IP</label>
-                      <input type="text" placeholder='Ej. "10.28"'
-                        value={advFilters.dir_ip}
-                        onChange={e => { setAdvFilters(p => ({...p, dir_ip: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* Sección: Garantía */}
                 <div>
@@ -1407,34 +1451,35 @@ export default function Inventario() {
                 </div>
 
                 {/* Sección: Atributos Técnicos (EAV) */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Tag size={11}/> Atributo Técnico (EAV)</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Atributo</label>
-                      <select
-                        value={advFilters.atributo_id}
-                        onChange={e => { setAdvFilters(p => ({...p, atributo_id: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white"
-                      >
-                        <option value="">-- Seleccionar --</option>
-                        {(catalogos?.tipos ?? []).length > 0 && eav_atributos.map(a => (
-                          <option key={a.id_atributo} value={a.id_atributo}>{a.nombre_atributo} {a.unidad_medida ? `(${a.unidad_medida})` : ''}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Valor (búsqueda parcial)</label>
-                      <input type="text" placeholder='Ej. "4000", "Samsung"'
-                        value={advFilters.atributo_valor}
-                        onChange={e => { setAdvFilters(p => ({...p, atributo_valor: e.target.value})); setPage(1); }}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
-                      />
+                {showEAVFilter && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Tag size={11}/> Atributo Técnico (EAV)</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Atributo</label>
+                        <SearchableSelect
+                          placeholder="-- Seleccionar Atributo --"
+                          value={advFilters.atributo_id ? Number(advFilters.atributo_id) : ''}
+                          onChange={(val) => { setAdvFilters(p => ({...p, atributo_id: val})); setPage(1); }}
+                          options={eav_atributos.map(a => ({
+                            value: a.id_atributo,
+                            label: `${a.nombre_atributo} ${a.unidad_medida ? `(${a.unidad_medida})` : ''}`
+                          }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Valor (búsqueda parcial)</label>
+                        <input type="text" placeholder='Ej. "4000", "Samsung"'
+                          value={advFilters.atributo_valor}
+                          onChange={e => { setAdvFilters(p => ({...p, atributo_valor: e.target.value})); setPage(1); }}
+                          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            )})}
 
             <p className="text-xs text-gray-400 mt-2">
               {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} encontrados

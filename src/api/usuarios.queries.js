@@ -44,7 +44,7 @@ export const GET_ROLES = gql`
 
 export const GET_UNIDADES = gql`
   query GetUnidades {
-    catUnidades { id_unidad nombre no_ref clave }
+    catSegmentos { id_segmento nombre no_ref clave }
   }
 `;
 
