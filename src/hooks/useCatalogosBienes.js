@@ -17,6 +17,8 @@ export function useCatalogosBienes() {
         modelos:        data.catModelos ?? [],
         // Tipos de dispositivo (PC, Laptop, Monitor, etc.) para lógica condicional del formulario
         tipos:          data.tiposDispositivo ?? [],
+        // Marcas de dispositivo
+        marcas:         data.marcas ?? [],
         // Segmentos de red (antes "unidades") — id_segmento, nombre, clave
         segmentos:      data.segmentos ?? [],
         // Unidades físicas (clínicas/hospitales) — clave, descripcion, desc_corta

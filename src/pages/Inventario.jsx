@@ -12,7 +12,8 @@ import {
   ChevronLeft, ChevronRight, X, AlertTriangle,
   Server, Monitor, Cpu, HardDrive, Wifi, Save,
   Package, Shield, Calendar, MapPin, User, Tag,
-  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings
+  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings,
+  SlidersHorizontal, FilterX
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -30,7 +31,7 @@ import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
 import BienAtributosPanel from '../components/BienAtributosPanel';
 import AtributosCatalogModal from '../components/AtributosCatalogModal';
-import { UPSERT_BIEN_ATRIBUTOS } from '../api/atributos.queries';
+import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS } from '../api/atributos.queries';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -523,13 +524,103 @@ export default function Inventario() {
   const canEdit   = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
   const canDelete = idRol === ROL_MAESTRO;
 
-  // ── Estado de UI ────────────────────────────────────────────────────────────
+  // ── Estado de UI ──────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('Capitalizable');
   const [search, setSearch]       = useState('');
   const [filterStatus, setFilterStatus]     = useState('');
   const [filterUbicacion, setFilterUbicacion] = useState('');
   const [page, setPage]           = useState(1);
   const PER_PAGE = 10;
+
+  // ── Filtros Avanzados ───────────────────────────────────────────────────
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advFilters, setAdvFilters] = useState({
+    // Ubicación
+    clave_unidad_ref: [], // Inmuebles seleccionados
+    id_segmento: [],      // Segmentos seleccionados
+    id_ubicacion: [],     // Ubicaciones seleccionadas
+    // Equipo
+    tipo_disp: [],        // Tipos de dispositivo
+    clave_marca: [],      // Marcas
+    id_categoria: [],     // Categorías
+    // Especificaciones TI
+    ram_min: '',
+    ram_max: '',
+    almacenamiento_min: '',
+    almacenamiento_max: '',
+    modelo_so: '',
+    cpu_info: '',
+    dir_ip: '',
+    // Garantía
+    tiene_garantia: '',   // '' | 'true' | 'false'
+    garantia_vigente: '', // '' | 'true'
+    garantia_fin_desde: '',
+    garantia_fin_hasta: '',
+    // EAV
+    atributo_id: '',
+    atributo_valor: '',
+  });
+
+  const EMPTY_ADV = {
+    clave_unidad_ref: [], id_segmento: [], id_ubicacion: [],
+    tipo_disp: [], clave_marca: [], id_categoria: [],
+    ram_min: '', ram_max: '', almacenamiento_min: '', almacenamiento_max: '',
+    modelo_so: '', cpu_info: '', dir_ip: '',
+    tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: '',
+    atributo_id: '', atributo_valor: '',
+  };
+
+  // Contar filtros activos
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (advFilters.clave_unidad_ref.length) count++;
+    if (advFilters.id_segmento.length) count++;
+    if (advFilters.id_ubicacion.length) count++;
+    if (advFilters.tipo_disp.length) count++;
+    if (advFilters.clave_marca.length) count++;
+    if (advFilters.id_categoria.length) count++;
+    if (advFilters.ram_min || advFilters.ram_max) count++;
+    if (advFilters.almacenamiento_min || advFilters.almacenamiento_max) count++;
+    if (advFilters.modelo_so) count++;
+    if (advFilters.cpu_info) count++;
+    if (advFilters.dir_ip) count++;
+    if (advFilters.tiene_garantia) count++;
+    if (advFilters.garantia_vigente) count++;
+    if (advFilters.garantia_fin_desde || advFilters.garantia_fin_hasta) count++;
+    if (advFilters.atributo_id && advFilters.atributo_valor) count++;
+    return count;
+  }, [advFilters]);
+
+  // Construir objeto de filtro para la API
+  const serverFilter = useMemo(() => {
+    const f = {};
+    if (search) f.search = search;
+    if (filterStatus) f.estatus_operativo = filterStatus;
+    // Avanzados
+    if (advFilters.clave_unidad_ref.length) f.clave_unidad_ref = advFilters.clave_unidad_ref;
+    if (advFilters.id_segmento.length) f.id_segmento = advFilters.id_segmento.map(Number);
+    if (advFilters.id_ubicacion.length) f.id_ubicacion = advFilters.id_ubicacion.map(Number);
+    if (advFilters.tipo_disp.length) f.tipo_disp = advFilters.tipo_disp.map(Number);
+    if (advFilters.clave_marca.length) f.clave_marca = advFilters.clave_marca.map(Number);
+    if (advFilters.id_categoria.length) f.id_categoria = advFilters.id_categoria.map(Number);
+    if (advFilters.ram_min) f.ram_min = parseInt(advFilters.ram_min);
+    if (advFilters.ram_max) f.ram_max = parseInt(advFilters.ram_max);
+    if (advFilters.almacenamiento_min) f.almacenamiento_min = parseInt(advFilters.almacenamiento_min);
+    if (advFilters.almacenamiento_max) f.almacenamiento_max = parseInt(advFilters.almacenamiento_max);
+    if (advFilters.modelo_so) f.modelo_so = advFilters.modelo_so;
+    if (advFilters.cpu_info) f.cpu_info = advFilters.cpu_info;
+    if (advFilters.dir_ip) f.dir_ip = advFilters.dir_ip;
+    if (advFilters.tiene_garantia === 'true') f.tiene_garantia = true;
+    if (advFilters.tiene_garantia === 'false') f.tiene_garantia = false;
+    if (advFilters.garantia_vigente === 'true') f.garantia_vigente = true;
+    if (advFilters.garantia_fin_desde) f.garantia_fin_desde = advFilters.garantia_fin_desde;
+    if (advFilters.garantia_fin_hasta) f.garantia_fin_hasta = advFilters.garantia_fin_hasta;
+    if (advFilters.atributo_id && advFilters.atributo_valor) {
+      f.atributo_id = parseInt(advFilters.atributo_id);
+      f.atributo_valor = advFilters.atributo_valor;
+    }
+    return f;
+  }, [search, filterStatus, advFilters]);
 
   // ── Modales ────────────────────────────────────────────────────────────────
   const [modalQR, setModalQR]           = useState(null);
@@ -554,11 +645,17 @@ export default function Inventario() {
   const [printStartOffset, setPrintStartOffset] = useState(0);
 
   // ── Datos ─────────────────────────────────────────────────────────────────
-  const { data: bienesData, isLoading, isError, refetch } = useBienes({}, { first: 200 });
+  const { data: bienesData, isLoading, isError, refetch } = useBienes(serverFilter, { first: 200 });
   const bienes = bienesData?.items ?? [];
 
   const { data: catalogos, isLoading: loadingCat } = useCatalogosBienes();
   
+  const { data: atributosData } = useQuery({
+    queryKey: ['cat-atributos', { soloActivos: true }],
+    queryFn: () => gqlClient.request(GET_CAT_ATRIBUTOS, { soloActivos: true }),
+  });
+  const eav_atributos = atributosData?.catAtributos ?? [];
+
   const qc = useQueryClient();
   const [isAddingUbicacion, setIsAddingUbicacion] = useState(false);
   const [newUbicacionName, setNewUbicacionName] = useState('');
@@ -1001,42 +1098,349 @@ export default function Inventario() {
       {activeTab !== 'Impresión de Etiquetas' ? (
         <>
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            {/* Barra principal de búsqueda */}
             <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por serie, modelo, resguardo o ubicación..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-            />
+              <div className="relative flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por serie, inventario, clave presupuestal..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                  className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                >
+                  <option value="">Todos los estatus</option>
+                  <option value="ACTIVO">Activo</option>
+                  <option value="EN_REPARACION">En Reparación</option>
+                  <option value="BAJA">Baja</option>
+                  <option value="INACTIVO">Inactivo</option>
+                </select>
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
+                    showAdvancedFilters || activeFilterCount > 0
+                      ? 'bg-green-50 border-green-300 text-green-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <SlidersHorizontal size={14} />
+                  Filtros
+                  {activeFilterCount > 0 && (
+                    <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-600 text-white font-bold">{activeFilterCount}</span>
+                  )}
+                </button>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => { setAdvFilters({...EMPTY_ADV}); setPage(1); }}
+                    className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                    title="Limpiar todos los filtros"
+                  >
+                    <FilterX size={13} /> Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Chips de filtros activos */}
+            {activeFilterCount > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                {advFilters.tipo_disp.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+                    <Cpu size={10} /> {advFilters.tipo_disp.length} tipo(s) disp.
+                    <button onClick={() => setAdvFilters(p => ({...p, tipo_disp: []}))} className="ml-0.5 hover:text-blue-900"><X size={10}/></button>
+                  </span>
+                )}
+                {advFilters.clave_marca.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-medium">
+                    <Tag size={10} /> {advFilters.clave_marca.length} marca(s)
+                    <button onClick={() => setAdvFilters(p => ({...p, clave_marca: []}))} className="ml-0.5 hover:text-purple-900"><X size={10}/></button>
+                  </span>
+                )}
+                {advFilters.clave_unidad_ref.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+                    <MapPin size={10} /> {advFilters.clave_unidad_ref.length} inmueble(s)
+                    <button onClick={() => setAdvFilters(p => ({...p, clave_unidad_ref: []}))} className="ml-0.5 hover:text-amber-900"><X size={10}/></button>
+                  </span>
+                )}
+                {(advFilters.ram_min || advFilters.ram_max) && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 font-medium">
+                    <Server size={10} /> RAM: {advFilters.ram_min || '0'}–{advFilters.ram_max || '∞'} GB
+                    <button onClick={() => setAdvFilters(p => ({...p, ram_min: '', ram_max: ''}))} className="ml-0.5 hover:text-cyan-900"><X size={10}/></button>
+                  </span>
+                )}
+                {advFilters.modelo_so && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+                    <Monitor size={10} /> SO: {advFilters.modelo_so}
+                    <button onClick={() => setAdvFilters(p => ({...p, modelo_so: ''}))} className="ml-0.5 hover:text-indigo-900"><X size={10}/></button>
+                  </span>
+                )}
+                {advFilters.tiene_garantia && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">
+                    <Shield size={10} /> {advFilters.tiene_garantia === 'true' ? 'Con Garantía' : 'Sin Garantía'}
+                    <button onClick={() => setAdvFilters(p => ({...p, tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: ''}))} className="ml-0.5 hover:text-green-900"><X size={10}/></button>
+                  </span>
+                )}
+                {(advFilters.atributo_id && advFilters.atributo_valor) && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 font-medium">
+                    <Tag size={10} /> Atributo EAV
+                    <button onClick={() => setAdvFilters(p => ({...p, atributo_id: '', atributo_valor: ''}))} className="ml-0.5 hover:text-pink-900"><X size={10}/></button>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Panel de filtros avanzados desplegable */}
+            {showAdvancedFilters && (
+              <div className="mt-3 pt-3 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2">
+                {/* Sección: Ubicación */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><MapPin size={11}/> Ubicación</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Inmueble</label>
+                      <select
+                        multiple
+                        value={advFilters.clave_unidad_ref}
+                        onChange={(e) => { setAdvFilters(p => ({...p, clave_unidad_ref: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
+                      >
+                        {(catalogos?.unidades ?? []).map(u => (
+                          <option key={u.clave} value={u.clave}>{u.desc_corta || u.descripcion || u.clave}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Segmento</label>
+                      <select
+                        multiple
+                        value={advFilters.id_segmento}
+                        onChange={(e) => { setAdvFilters(p => ({...p, id_segmento: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
+                      >
+                        {(catalogos?.segmentos ?? []).map(s => (
+                          <option key={s.id_segmento} value={s.id_segmento}>{s.nombre || s.clave || s.id_segmento}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Ubicación Física</label>
+                      <select
+                        multiple
+                        value={advFilters.id_ubicacion}
+                        onChange={(e) => { setAdvFilters(p => ({...p, id_ubicacion: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
+                      >
+                        {ubicaciones.map(u => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Equipo / Dispositivo */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Cpu size={11}/> Equipo / Dispositivo</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tipo Dispositivo</label>
+                      <select
+                        multiple
+                        value={advFilters.tipo_disp}
+                        onChange={(e) => { setAdvFilters(p => ({...p, tipo_disp: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
+                      >
+                        {(catalogos?.tipos ?? []).map(t => (
+                          <option key={t.tipo_disp} value={t.tipo_disp}>{t.nombre_tipo}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Marca</label>
+                      <select
+                        multiple
+                        value={advFilters.clave_marca}
+                        onChange={(e) => { setAdvFilters(p => ({...p, clave_marca: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
+                      >
+                        {(catalogos?.marcas ?? []).map(m => (
+                          <option key={m.clave_marca} value={m.clave_marca}>{m.marca}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Categoría</label>
+                      <select
+                        multiple
+                        value={advFilters.id_categoria}
+                        onChange={(e) => { setAdvFilters(p => ({...p, id_categoria: [...e.target.selectedOptions].map(o => o.value)})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white h-20"
+                      >
+                        {(catalogos?.categorias ?? []).map(c => (
+                          <option key={c.id_categoria} value={c.id_categoria}>{c.nombre_categoria}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Especificaciones TI */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><HardDrive size={11}/> Especificaciones TI</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">RAM Mín. (GB)</label>
+                      <input type="number" min="0" placeholder="Ej. 4"
+                        value={advFilters.ram_min}
+                        onChange={e => { setAdvFilters(p => ({...p, ram_min: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">RAM Máx. (GB)</label>
+                      <input type="number" min="0" placeholder="Ej. 32"
+                        value={advFilters.ram_max}
+                        onChange={e => { setAdvFilters(p => ({...p, ram_max: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Almac. Mín. (GB)</label>
+                      <input type="number" min="0" placeholder="Ej. 128"
+                        value={advFilters.almacenamiento_min}
+                        onChange={e => { setAdvFilters(p => ({...p, almacenamiento_min: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Almac. Máx. (GB)</label>
+                      <input type="number" min="0" placeholder="Ej. 1024"
+                        value={advFilters.almacenamiento_max}
+                        onChange={e => { setAdvFilters(p => ({...p, almacenamiento_max: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Sistema Operativo</label>
+                      <input type="text" placeholder='Ej. "Windows", "Linux", "macOS"'
+                        value={advFilters.modelo_so}
+                        onChange={e => { setAdvFilters(p => ({...p, modelo_so: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">CPU</label>
+                      <input type="text" placeholder='Ej. "i7", "Ryzen"'
+                        value={advFilters.cpu_info}
+                        onChange={e => { setAdvFilters(p => ({...p, cpu_info: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Dirección IP</label>
+                      <input type="text" placeholder='Ej. "10.28"'
+                        value={advFilters.dir_ip}
+                        onChange={e => { setAdvFilters(p => ({...p, dir_ip: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Garantía */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Shield size={11}/> Garantía</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Estado</label>
+                      <select
+                        value={advFilters.tiene_garantia}
+                        onChange={e => { setAdvFilters(p => ({...p, tiene_garantia: e.target.value, garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: ''})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white"
+                      >
+                        <option value="">Todos</option>
+                        <option value="true">Con Garantía</option>
+                        <option value="false">Sin Garantía</option>
+                      </select>
+                    </div>
+                    {advFilters.tiene_garantia === 'true' && (
+                      <>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Solo Vigentes</label>
+                          <select
+                            value={advFilters.garantia_vigente}
+                            onChange={e => { setAdvFilters(p => ({...p, garantia_vigente: e.target.value})); setPage(1); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white"
+                          >
+                            <option value="">Todas</option>
+                            <option value="true">Solo Vigentes</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Vence Desde</label>
+                          <input type="date"
+                            value={advFilters.garantia_fin_desde}
+                            onChange={e => { setAdvFilters(p => ({...p, garantia_fin_desde: e.target.value})); setPage(1); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Vence Hasta</label>
+                          <input type="date"
+                            value={advFilters.garantia_fin_hasta}
+                            onChange={e => { setAdvFilters(p => ({...p, garantia_fin_hasta: e.target.value})); setPage(1); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sección: Atributos Técnicos (EAV) */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Tag size={11}/> Atributo Técnico (EAV)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Atributo</label>
+                      <select
+                        value={advFilters.atributo_id}
+                        onChange={e => { setAdvFilters(p => ({...p, atributo_id: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500 bg-white"
+                      >
+                        <option value="">-- Seleccionar --</option>
+                        {(catalogos?.tipos ?? []).length > 0 && eav_atributos.map(a => (
+                          <option key={a.id_atributo} value={a.id_atributo}>{a.nombre_atributo} {a.unidad_medida ? `(${a.unidad_medida})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Valor (búsqueda parcial)</label>
+                      <input type="text" placeholder='Ej. "4000", "Samsung"'
+                        value={advFilters.atributo_valor}
+                        onChange={e => { setAdvFilters(p => ({...p, atributo_valor: e.target.value})); setPage(1); }}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 mt-2">
+              {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} encontrados
+              {activeFilterCount > 0 && <span className="text-green-600 font-semibold"> · {activeFilterCount} filtro(s) avanzado(s) activo(s)</span>}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-              className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-            >
-              <option value="">Todos los estatus</option>
-              <option value="ACTIVO">Activo</option>
-              <option value="EN_REPARACION">En Reparación</option>
-              <option value="BAJA">Baja</option>
-            </select>
-            <select
-              value={filterUbicacion}
-              onChange={(e) => { setFilterUbicacion(e.target.value); setPage(1); }}
-              className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-            >
-              <option value="">Todas las Ubicaciones</option>
-              {ubicaciones.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select>
-          </div>
-        </div>
-        <p className="text-xs text-gray-400 mt-2">
-          {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} encontrados
-        </p>
-      </div>
 
       {/* ── Contenedor con scroll — tabla desktop + tarjetas móvil ──────── */}
       <div className="flex-1 min-h-0 flex flex-col gap-3">
@@ -1374,6 +1778,23 @@ export default function Inventario() {
           onClose={closeForm}
           title={modalForm === 'create' ? 'Registrar Nuevo Bien' : 'Editar Bien'}
           wide
+          footer={
+            <div className="flex justify-end gap-3">
+              <button onClick={closeForm}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={creating || updating}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: 'linear-gradient(135deg,#006341,#004d32)' }}
+              >
+                {(creating || updating) ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                {modalForm === 'create' ? 'Registrar Bien' : 'Guardar Cambios'}
+              </button>
+            </div>
+          }
         >
           {loadingCat ? (
             <div className="flex justify-center py-10 text-gray-400 gap-3">
@@ -1812,22 +2233,6 @@ export default function Inventario() {
                   </div>
                 )}
               </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={closeForm}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={creating || updating}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
-                  style={{ background: 'linear-gradient(135deg,#006341,#004d32)' }}
-                >
-                  {(creating || updating) ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                  {modalForm === 'create' ? 'Registrar Bien' : 'Guardar Cambios'}
-                </button>
-              </div>
             </div>
           )}
         </Modal>
@@ -1895,7 +2300,7 @@ export default function Inventario() {
 // ─── Sub-componentes ───────────────────────────────────────────────────────────
 
 
-function Modal({ onClose, title, children, wide = false, small = false }) {
+function Modal({ onClose, title, children, footer, wide = false, small = false }) {
   return ReactDOM.createPortal(
     <div 
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" 
@@ -1919,6 +2324,12 @@ function Modal({ onClose, title, children, wide = false, small = false }) {
         <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
           {children}
         </div>
+        {/* Footer sticky (opcional) */}
+        {footer && (
+          <div className="px-5 sm:px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body

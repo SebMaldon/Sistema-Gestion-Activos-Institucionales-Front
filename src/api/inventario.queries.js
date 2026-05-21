@@ -159,6 +159,10 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       tipo_disp
       nombre_tipo
     }
+    marcas {
+      clave_marca
+      marca
+    }
     segmentos: catSegmentos {
       id_segmento
       nombre
