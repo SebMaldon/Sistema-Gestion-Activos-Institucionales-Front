@@ -94,7 +94,8 @@ const FORM_EMPTY = {
   fecha_adquisicion: '',
 };
 const TI_EMPTY = {
-  cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: ''
+  cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '',
+  puerto_red: '', switch_red: '', cuenta_windows: '', correo: '', last_scan: '', tipo_user: '', nombre_host: '', windows_serial: ''
 };
 // ─── Mini-CRUD: Modal de Catálogos (Marcas / Tipos / Modelos) ────────────────
 function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }) {
@@ -120,10 +121,10 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
 
   const modelosFiltrados = useMemo(() => {
     const q = searchModelo.toLowerCase();
-    if (!q) return modelos.slice(0, 80);
+    if (!q) return modelos;
     return modelos.filter(m =>
       (m.descrip_disp || m.clave_modelo).toLowerCase().includes(q)
-    ).slice(0, 80);
+    );
   }, [modelos, searchModelo]);
 
   // Mutations
@@ -523,7 +524,7 @@ export default function Inventario() {
   const usuario = useAuthStore((s) => s.usuario);
   const idRol = usuario?.id_rol ?? 3;
   const canEdit   = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
-  const canDelete = idRol === ROL_MAESTRO;
+  const canDelete = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
 
   // ── Estado de UI ──────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('Capitalizable');
@@ -1132,7 +1133,7 @@ export default function Inventario() {
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
       {activeTab !== 'Impresión de Etiquetas' ? (
         <>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20">
             {/* Barra principal de búsqueda */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
@@ -1246,7 +1247,7 @@ export default function Inventario() {
               const showEAVFilter = advFilters.tipo_disp.length > 0 && hasOtherDevice;
 
               return (
-                <div className="mt-3 pt-3 border-t border-gray-100 space-y-4 animate-in slide-in-from-top-2 overflow-y-auto max-h-[60vh] sm:max-h-[50vh] pr-2 custom-scrollbar">
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 overflow-y-auto max-h-[70vh] custom-scrollbar">
                   {/* Sección: Ubicación */}
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><MapPin size={11}/> Ubicación</p>
@@ -1479,7 +1480,7 @@ export default function Inventario() {
                   </div>
                 )}
               </div>
-            )})}
+            )})()}
 
             <p className="text-xs text-gray-400 mt-2">
               {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} encontrados
@@ -1694,7 +1695,16 @@ export default function Inventario() {
                   <InfoField icon={<HardDrive size={13}/>} label="Almacenamiento" value={modalFicha.especificacionTI.almacenamiento_gb ? `${modalFicha.especificacionTI.almacenamiento_gb} GB` : '—'} />
                   <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(modalFicha.especificacionTI.dir_ip)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(modalFicha.especificacionTI.mac_address)} mono />
+                  <InfoField icon={<Wifi size={13}/>}      label="Dir. MAC Alt"   value={fmt(modalFicha.especificacionTI.dir_mac)} mono />
                   <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(modalFicha.especificacionTI.modelo_so)} />
+                  <InfoField icon={<User size={13}/>}      label="Cuenta Win."    value={fmt(modalFicha.especificacionTI.cuenta_windows)} />
+                  <InfoField icon={<User size={13}/>}      label="Correo"         value={fmt(modalFicha.especificacionTI.correo)} />
+                  <InfoField icon={<User size={13}/>}      label="Tipo Usuario"   value={fmt(modalFicha.especificacionTI.tipo_user)} />
+                  <InfoField icon={<Calendar size={13}/>}  label="Último Escaneo" value={formatDateTime(modalFicha.especificacionTI.last_scan)} />
+                  <InfoField icon={<Monitor size={13}/>}   label="Host Name"      value={fmt(modalFicha.especificacionTI.nombre_host)} />
+                  <InfoField icon={<Tag size={13}/>}       label="Win Serial"     value={fmt(modalFicha.especificacionTI.windows_serial)} mono />
+                  <InfoField icon={<Wifi size={13}/>}      label="Pto. Red"       value={fmt(modalFicha.especificacionTI.puerto_red)} />
+                  <InfoField icon={<Wifi size={13}/>}      label="Switch Red"     value={fmt(modalFicha.especificacionTI.switch_red)} />
                 </div>
               </div>
             )}
@@ -2133,10 +2143,18 @@ export default function Inventario() {
                         { key: 'cpu_info',           label: 'CPU',                  placeholder: 'Intel Core i5-12400' },
                         { key: 'ram_gb',             label: 'RAM (GB)',              placeholder: '8', type: 'number' },
                         { key: 'almacenamiento_gb',  label: 'Almacenamiento (GB)',   placeholder: '256', type: 'number' },
+                        { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro' },
+                        { key: 'cuenta_windows',     label: 'Cuenta de Windows',     placeholder: 'usuario.local' },
+                        { key: 'correo',             label: 'Correo Electrónico',    placeholder: 'usuario@imss.gob.mx', type: 'email' },
+                        { key: 'last_scan',          label: 'Último Escaneo',        placeholder: '', type: 'datetime-local' },
+                        { key: 'tipo_user',          label: 'Tipo de Usuario',       placeholder: 'Estándar' },
+                        { key: 'nombre_host',        label: 'Nombre de Host',        placeholder: 'PC-ADMIN' },
+                        { key: 'windows_serial',     label: 'Serial de Windows',     placeholder: 'XXXXX-XXXXX-XXXXX' },
                         { key: 'dir_ip',             label: 'Dirección IP',          placeholder: '192.168.1.100' },
                         { key: 'mac_address',        label: 'MAC Address',           placeholder: 'AA:BB:CC:DD:EE:FF' },
                         { key: 'dir_mac',            label: 'Dir. MAC Alt.',         placeholder: '—' },
-                        { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro' },
+                        { key: 'puerto_red',         label: 'Puerto de Red',         placeholder: 'Pto. 12' },
+                        { key: 'switch_red',         label: 'Switch (IP/Nombre)',    placeholder: '10.28.X.X' },
                       ].map(({ key, label, placeholder, type = 'text' }) => (
                         <div key={key}>
                           <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>
