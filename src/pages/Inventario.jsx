@@ -1507,24 +1507,18 @@ export default function Inventario() {
         {/* TABLA desktop */}
         {!isLoading && !isError && (
           <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Cabecera fija */}
-            <div className="flex-shrink-0 bg-gray-50 border-b border-gray-100">
-              <table className="w-full text-sm">
-                <thead>
+            <div className="flex-1 overflow-y-auto relative">
+              <table className="w-full text-sm text-left">
+                <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
                   <tr>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / Serie</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Modelo / Categoría</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ubicación</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Resguardo</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / Serie</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Modelo / Categoría</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ubicación</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Resguardo</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
                   </tr>
                 </thead>
-              </table>
-            </div>
-            {/* Cuerpo scrollable */}
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full text-sm">
                 <tbody className="divide-y divide-gray-50">
                   {paginated.length === 0 ? (
                     <tr><td colSpan={6} className="text-center py-14 text-gray-400 text-sm">

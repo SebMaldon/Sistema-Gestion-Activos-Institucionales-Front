@@ -594,31 +594,18 @@ export default function GestionUsuarios() {
 
           {/* Tabla desktop */}
           <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Cabecera fija de la tabla */}
-            <div className="flex-shrink-0 bg-gray-50 border-b border-gray-100">
-              <table className="w-full text-sm">
-                <thead>
+            <div className="flex-1 overflow-y-auto relative">
+              <table className="w-full text-sm text-left">
+                <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
                   <tr>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Unidad</th>
-                    <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
-                    {isAdmin && <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>}
+                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unidad</th>
+                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
+                    {isAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>}
                   </tr>
                 </thead>
-              </table>
-            </div>
-            {/* Cuerpo scrollable */}
-            <div className="flex-1 overflow-y-auto">
-              {isLoading ? (
-                <div className="py-16 text-center text-sm text-gray-400">Cargando usuarios...</div>
-              ) : isError ? (
-                <div className="py-16 text-center text-sm text-red-400">Error al cargar usuarios</div>
-              ) : usuarios.length === 0 ? (
-                <div className="py-16 text-center text-sm text-gray-400">Sin resultados</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50">
                     {usuarios.map(u => {
                       const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
                       return (
