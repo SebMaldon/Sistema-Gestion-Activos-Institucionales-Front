@@ -360,13 +360,22 @@ export default function Auditoria() {
                         selectedValues={filterModulo}
                         onChange={(val) => { setFilterModulo(val); setCursor(null); setCursors([]); }}
                         options={[
+                          { value: 'Bienes', label: 'Bienes / Activos' },
+                          { value: 'Especificaciones_TI', label: 'Especificaciones TI' },
+                          { value: 'solicitudes_cambio', label: 'Aprobaciones de Cambio' },
+                          { value: 'Movimientos_Inventario', label: 'Movimientos de Inventario' },
                           { value: 'Incidencias', label: 'Incidencias' },
                           { value: 'Notas', label: 'Notas' },
-                          { value: 'Bienes', label: 'Activos' },
-                          { value: 'Usuarios', label: 'Usuarios' },
                           { value: 'Garantias', label: 'Garantías' },
-                          { value: 'Unidades', label: 'Unidades' },
-                          { value: 'Inmuebles', label: 'Unidades Físicas' },
+                          { value: 'Usuarios', label: 'Usuarios' },
+                          { value: 'Unidad_A_Cargo', label: 'Unidades Organizacionales' },
+                          { value: 'unidades', label: 'Inmuebles / U. Físicas' },
+                          { value: 'Proveedores', label: 'Proveedores' },
+                          { value: 'marcas', label: 'Marcas' },
+                          { value: 'Cat_Modelos', label: 'Modelos' },
+                          { value: 'Cat_CategoriasActivo', label: 'Categorías de Activo' },
+                          { value: 'Cat_UnidadesMedida', label: 'Unidades de Medida' },
+                          { value: 'tipo_dispositivos', label: 'Tipos de Dispositivo' },
                         ]}
                         placeholder="Todos los módulos"
                       />
