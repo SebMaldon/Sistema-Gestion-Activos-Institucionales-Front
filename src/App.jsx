@@ -18,6 +18,7 @@ import Auditoria from './pages/Auditoria';
 import Configuracion from './pages/Configuracion';
 import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
+import Aprobaciones from './pages/Aprobaciones';
 import { useCurrentUser } from './hooks/useCurrentUser';
 
 
@@ -163,6 +164,11 @@ export default function App() {
           <Route path="/usuarios" element={
             <RoleRoute allowedRoles={[ROL_MAESTRO]}>
               <AppLayout page="usuarios"><GestionUsuarios /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/aprobaciones" element={
+            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
+              <AppLayout page="aprobaciones"><Aprobaciones /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/auditoria" element={

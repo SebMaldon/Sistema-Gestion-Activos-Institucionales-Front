@@ -18,6 +18,7 @@ const NAV_BY_ROL = {
     { path: '/movimientos', label: 'Traspasos y Salidas', icon: ArrowLeftRight, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
+    { path: '/aprobaciones', label: 'Aprobaciones', icon: ClipboardList, group: 'Sistema' },
     { path: '/usuarios', label: 'Gestión de Usuarios', icon: Users, group: 'Sistema' },
     { path: '/auditoria', label: 'Bitácora de Auditoría', icon: ShieldCheck, group: 'Sistema' },
     { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },
