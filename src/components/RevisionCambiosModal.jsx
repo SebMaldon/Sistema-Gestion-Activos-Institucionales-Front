@@ -24,7 +24,12 @@ const FIELD_LABELS = {
   puerto_red: 'Puerto de Red',
   switch_red: 'Switch',
   modelo_so: 'Sistema Operativo',
-  nom_pc: 'Nombre de Host',
+  nombre_host: 'Nombre de Host',
+  cuenta_windows: 'Cuenta de Windows',
+  correo: 'Correo Electrónico',
+  last_scan: 'Último Escaneo',
+  tipo_user: 'Tipo de Usuario',
+  windows_serial: 'Serial de Windows',
 };
 
 // Campos a ignorar en la comparación
