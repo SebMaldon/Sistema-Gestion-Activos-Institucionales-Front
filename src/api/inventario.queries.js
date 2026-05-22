@@ -277,6 +277,12 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
     $puerto_red: String
     $switch_red: String
     $modelo_so: String
+    $cuenta_windows: String
+    $correo: String
+    $last_scan: String
+    $tipo_user: String
+    $nombre_host: String
+    $windows_serial: String
   ) {
     upsertEspecificacionTI(
       id_bien: $id_bien
@@ -289,6 +295,12 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
       puerto_red: $puerto_red
       switch_red: $switch_red
       modelo_so: $modelo_so
+      cuenta_windows: $cuenta_windows
+      correo: $correo
+      last_scan: $last_scan
+      tipo_user: $tipo_user
+      nombre_host: $nombre_host
+      windows_serial: $windows_serial
     ) {
       id_bien
       cpu_info
@@ -298,6 +310,15 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
       dir_mac
       mac_address
       modelo_so
+      puerto_red
+      switch_red
+      modelo_so
+      cuenta_windows
+      correo
+      last_scan
+      tipo_user
+      nombre_host
+      windows_serial
     }
   }
 `;
