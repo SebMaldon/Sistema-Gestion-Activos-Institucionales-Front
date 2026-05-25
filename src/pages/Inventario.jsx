@@ -1774,6 +1774,26 @@ export default function Inventario() {
               </div>
             )}
 
+            {/* Equipo Asignado (Para Monitores) */}
+            {modalFicha.equipoAsignado && (
+              <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
+                <div className="bg-teal-50 px-4 py-2.5 flex items-center gap-2">
+                  <Monitor size={15} className="text-teal-600" />
+                  <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Equipo Asignado</span>
+                </div>
+                <div className="p-4 bg-white">
+                  <div className="flex flex-col p-2 rounded-lg border border-gray-100 bg-gray-50">
+                    <span className="text-xs font-semibold text-gray-800">
+                      {modalFicha.equipoAsignado.equipo?.modelo?.descrip_disp || 'Equipo genérico'}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      S/N: {modalFicha.equipoAsignado.equipo?.num_serie || 'S/N'} | INV: {modalFicha.equipoAsignado.equipo?.num_inv || 'S/N'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Atributos Técnicos (EAV) */}
             {fichaMode === 'OTHER' && (
               <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">

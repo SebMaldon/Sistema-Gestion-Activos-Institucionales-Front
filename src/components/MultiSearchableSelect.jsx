@@ -18,14 +18,25 @@ export default function MultiSearchableSelect({
   const [dropdownStyles, setDropdownStyles] = useState({});
 
   const filteredOptions = useMemo(() => {
-    if (!query) return options;
-    const lowercaseQuery = query.toLowerCase();
-    return options.filter(opt => {
-      if (!opt) return false;
-      const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
-      return labelStr.includes(lowercaseQuery);
+    let opts = options;
+    if (query) {
+      const lowercaseQuery = query.toLowerCase();
+      opts = options.filter(opt => {
+        if (!opt) return false;
+        const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
+        return labelStr.includes(lowercaseQuery);
+      });
+    }
+    
+    // Sort selected options to the top
+    return [...opts].sort((a, b) => {
+      const aSelected = value.includes(a.value);
+      const bSelected = value.includes(b.value);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
     });
-  }, [options, query]);
+  }, [options, query, value]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

@@ -90,6 +90,18 @@ const BIEN_FIELDS = gql`
         }
       }
     }
+    equipoAsignado {
+      id_bien_monitor
+      id_bien
+      equipo {
+        id_bien
+        num_serie
+        num_inv
+        modelo {
+          descrip_disp
+        }
+      }
+    }
     garantias {
       id_garantia
       fecha_inicio
