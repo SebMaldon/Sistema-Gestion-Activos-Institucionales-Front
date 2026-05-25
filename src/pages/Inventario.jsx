@@ -1549,7 +1549,7 @@ export default function Inventario() {
                   <tr>
                     <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / Serie</th>
                     <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Modelo / Categoría</th>
-                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ubicación / Unidad</th>
+                    <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unidad / Ubicación</th>
                     <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Resguardo</th>
                     <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
                     <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
@@ -1576,8 +1576,8 @@ export default function Inventario() {
                         <p className="text-xs text-gray-400">{bien.categoria?.nombre_categoria}</p>
                       </td>
                       <td className="px-4 py-3.5 text-xs max-w-[160px] truncate">
-                        <p className="font-semibold text-gray-900 text-[13px]">{fmt(bien.ubicacion)}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{fmt(bien.unidadFisica)}</p>
+                        <p className="font-semibold text-gray-900 text-[13px]">{fmt(bien.unidadFisica)}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{fmt(bien.ubicacion)}</p>
                       </td>
                       <td className="px-4 py-3.5 text-xs text-gray-600 max-w-[140px] truncate">{fmt(bien.resguardo)}</td>
                       <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
