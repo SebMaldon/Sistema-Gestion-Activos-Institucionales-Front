@@ -641,7 +641,14 @@ export default function Inventario() {
 
   // ── Modales ────────────────────────────────────────────────────────────────
   const [modalQR, setModalQR]           = useState(null);
-  const [modalFicha, setModalFicha]     = useState(null);
+  const [modalFichaState, setModalFichaState] = useState(null);
+  const modalFicha = modalFichaState;
+  const setModalFicha = (bien) => {
+    if (bien) {
+      console.log("=== BIEN FICHA TECNICA ===", JSON.parse(JSON.stringify(bien)));
+    }
+    setModalFichaState(bien);
+  };
   const [modalForm, setModalForm]       = useState(null); // null | 'create' | bien
   const [modalConfirmDel, setModalConfirmDel] = useState(null);
   const [showTI, setShowTI]             = useState(false);
