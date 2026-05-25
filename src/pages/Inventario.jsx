@@ -858,6 +858,14 @@ export default function Inventario() {
       dir_mac: bien.especificacionTI?.dir_mac ?? '',
       mac_address: bien.especificacionTI?.mac_address ?? '',
       modelo_so: bien.especificacionTI?.modelo_so ?? '',
+      puerto_red: bien.especificacionTI?.puerto_red ?? '',
+      switch_red: bien.especificacionTI?.switch_red ?? '',
+      cuenta_windows: bien.especificacionTI?.cuenta_windows ?? '',
+      correo: bien.especificacionTI?.correo ?? '',
+      last_scan: bien.especificacionTI?.last_scan ?? '',
+      tipo_user: bien.especificacionTI?.tipo_user ?? '',
+      nombre_host: bien.especificacionTI?.nombre_host ?? '',
+      windows_serial: bien.especificacionTI?.windows_serial ?? '',
     });
     // Detectar deviceMode por tipo de dispositivo del modelo
     const nombreTipo = bien.modelo?.tipoDispositivo?.nombre_tipo ?? null;
@@ -1069,6 +1077,14 @@ export default function Inventario() {
     dir_mac:           tiForm.dir_mac || null,
     mac_address:       tiForm.mac_address || null,
     modelo_so:         tiForm.modelo_so || null,
+    puerto_red:        tiForm.puerto_red || null,
+    switch_red:        tiForm.switch_red || null,
+    cuenta_windows:    tiForm.cuenta_windows || null,
+    correo:            tiForm.correo || null,
+    last_scan:         tiForm.last_scan || null,
+    tipo_user:         tiForm.tipo_user || null,
+    nombre_host:       tiForm.nombre_host || null,
+    windows_serial:    tiForm.windows_serial || null,
   });
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
