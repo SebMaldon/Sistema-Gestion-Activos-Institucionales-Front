@@ -1295,18 +1295,6 @@ export default function Inventario() {
                         }))}
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Ubicación Física</label>
-                      <MultiSearchableSelect
-                        placeholder="Seleccionar ubicaciones..."
-                        value={advFilters.id_ubicacion}
-                        onChange={(val) => { setAdvFilters(p => ({...p, id_ubicacion: val})); setCursor(null); setCursors([]); }}
-                        options={ubicaciones.map(u => ({
-                          value: u,
-                          label: u
-                        }))}
-                      />
-                    </div>
                   </div>
                 </div>
 
