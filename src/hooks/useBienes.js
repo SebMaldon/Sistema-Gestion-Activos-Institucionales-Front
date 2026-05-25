@@ -46,7 +46,8 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           // — Relaciones resueltas
           equipo: node.modelo?.descrip_disp || node.categoria?.nombre_categoria || 'Sin modelo',
           resguardo: node.usuarioResguardo?.nombre_completo || 'Sin resguardo',
-          ubicacion: node.ubicacion?.nombre_ubicacion || node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
+          ubicacion: node.ubicacion?.nombre_ubicacion || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
+          unidadFisica: node.unidad?.desc_corta || node.unidad?.descripcion || 'Sin Unidad',
 
           // — Categoría + regla de capitalización
           //   Un bien es Capitalizable si:
