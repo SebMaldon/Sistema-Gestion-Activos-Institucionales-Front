@@ -99,6 +99,7 @@ export const GET_UNIDADES_FISICAS_QUERY = gql`
 export const GET_DISTINCT_FILTROS_QUERY = gql`
   query GetDistinctFiltros {
     catDistinctFiltros {
+      zonas
       ciudades
       municipios
       regimenes

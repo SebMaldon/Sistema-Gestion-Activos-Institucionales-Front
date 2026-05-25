@@ -316,10 +316,10 @@ export default function Unidades() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-r border-gray-200/60">Unidad / Clave</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-r border-gray-200/60">Ubicación</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-r border-gray-200/60">Encargado</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-r border-gray-200/60">Clasificación</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Unidad / Clave</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Encargado</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Clasificación</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
@@ -341,20 +341,20 @@ export default function Unidades() {
               ) : (
                 edges.map(({ node }) => (
                   <tr key={node.clave} className="hover:bg-blue-50/30 transition-colors group">
-                    <td className="px-6 py-4 border-r border-gray-100">
+                    <td className="px-6 py-4">
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-gray-800 break-words" title={node.descripcion}>{node.descripcion || 'Sin descripción'}</p>
                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{node.clave}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 max-w-[200px] border-r border-gray-100">
+                    <td className="px-6 py-4 max-w-[200px]">
                       <div className="flex items-center gap-2 text-gray-600 font-medium">
                         <MapPin size={14} className="text-red-400 flex-shrink-0" />
                         <span className="text-sm break-words">{node.ciudad ? `${node.ciudad}, ${node.municipio || ''}` : 'No definida'}</span>
                       </div>
                       <p className="text-[10px] text-gray-400 mt-0.5 break-words line-clamp-2">{node.direccion}</p>
                     </td>
-                    <td className="px-6 py-4 max-w-[220px] border-r border-gray-100">
+                    <td className="px-6 py-4 max-w-[220px]">
                       <div className="flex items-center gap-2 text-gray-700 min-w-0">
                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                           <User size={12} className="text-blue-600" />
@@ -364,7 +364,7 @@ export default function Unidades() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 border-r border-gray-100">
+                    <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-black text-gray-500 rounded-md w-fit uppercase line-clamp-1">
                           Tipo: {node.tipoUnidadInfo?.tipo_unidad || catTipos?.find(t => t.id_tipo === node.tipo_unidad)?.tipo_unidad || node.tipo_unidad || 'SIN TIPO'}
