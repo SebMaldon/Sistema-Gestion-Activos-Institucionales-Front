@@ -23,6 +23,7 @@ export function useCatalogosBienes() {
         segmentos:      data.segmentos ?? [],
         // Unidades físicas (clínicas/hospitales) — clave, descripcion, desc_corta
         unidades:      data.unidades ?? [],
+        ubicaciones:   data.ubicaciones ?? [],
         // Usuarios activos para resguardo
         usuarios:       data.usuarios?.edges?.map((e) => e.node) ?? [],
       };

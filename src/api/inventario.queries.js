@@ -181,6 +181,11 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
       descripcion
       desc_corta
     }
+    ubicaciones {
+      id_ubicacion
+      id_unidad
+      nombre_ubicacion
+    }
     usuarios(pagination: { first: 20000 }) {
       edges {
         node {

@@ -683,17 +683,13 @@ export default function Inventario() {
   const { data: catalogos, isLoading: loadingCat } = useCatalogosBienes();
   
   const todasLasUbicaciones = useMemo(() => {
-    if (!catalogos?.unidades) return [];
-    const ubs = [];
+    if (!catalogos?.ubicaciones) return [];
     const filterUnidades = advFilters.clave_unidad_ref || [];
-    catalogos.unidades.forEach(uni => {
-      if (filterUnidades.length > 0 && !filterUnidades.includes(String(uni.clave))) return;
-      if (uni.ubicaciones) {
-        uni.ubicaciones.forEach(ub => ubs.push(ub));
-      }
+    return catalogos.ubicaciones.filter(ub => {
+      if (filterUnidades.length > 0 && !filterUnidades.includes(String(ub.id_unidad))) return false;
+      return true;
     });
-    return ubs;
-  }, [catalogos?.unidades, advFilters.clave_unidad_ref]);
+  }, [catalogos?.ubicaciones, advFilters.clave_unidad_ref]);
 
   const { data: atributosData } = useQuery({
     queryKey: ['cat-atributos', { soloActivos: true }],
