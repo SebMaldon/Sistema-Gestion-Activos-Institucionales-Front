@@ -70,6 +70,9 @@ export function useBienes(filter = {}, pagination = { first: 100 }) {
           // — Monitores asignados (para equipos PC/Laptop)
           monitores: node.monitores || [],
 
+          // — Equipo asignado (para monitores)
+          equipoAsignado: node.equipoAsignado || null,
+
           // — Relaciones completas para el formulario
           modelo: node.modelo,
           unidad: node.unidad,
