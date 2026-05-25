@@ -4,6 +4,7 @@ import { gql } from 'graphql-request';
 const BIEN_FIELDS = gql`
   fragment BienFields on Bien {
     id_bien
+    # CACHE BUSTER 3
     num_serie
     num_inv
     qr_hash
