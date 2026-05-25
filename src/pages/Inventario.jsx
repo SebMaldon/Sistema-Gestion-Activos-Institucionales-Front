@@ -531,17 +531,6 @@ export default function Inventario() {
   const [search, setSearch]       = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
-  const filterPanelRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (filterPanelRef.current && !filterPanelRef.current.contains(event.target)) {
-        setShowAdvancedFilters(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
   const [filterStatus, setFilterStatus]     = useState('');
   const [filterUbicacion, setFilterUbicacion] = useState('');
   
@@ -1177,7 +1166,7 @@ export default function Inventario() {
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
       {activeTab !== 'Impresión de Etiquetas' ? (
         <>
-          <div ref={filterPanelRef} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20">
             {/* Barra principal de búsqueda */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
