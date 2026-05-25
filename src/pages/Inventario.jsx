@@ -1786,6 +1786,9 @@ export default function Inventario() {
                     <span className="text-xs font-semibold text-gray-800">
                       {modalFicha.equipoAsignado.equipo?.modelo?.descrip_disp || 'Equipo genérico'}
                     </span>
+                    <span className="text-[10px] text-gray-500 font-mono mt-1">
+                      ID: {modalFicha.equipoAsignado.equipo?.id_bien || 'N/A'}
+                    </span>
                     <span className="text-[10px] text-gray-500 font-mono">
                       S/N: {modalFicha.equipoAsignado.equipo?.num_serie || 'S/N'} | INV: {modalFicha.equipoAsignado.equipo?.num_inv || 'S/N'}
                     </span>
