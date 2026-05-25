@@ -133,21 +133,34 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
           ) : (
             <div className="space-y-1">
               {/* Header de columnas */}
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-3 px-4 py-2 mb-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {esCreacion ? '' : 'Valor Actual'}
-                </p>
-                <div className="w-6" />
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {esCreacion ? 'Valor Propuesto' : 'Valor Propuesto'}
-                </p>
-              </div>
+              {!esCreacion && (
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 px-4 py-2 mb-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Valor Actual
+                  </p>
+                  <div className="w-6" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Valor Propuesto
+                  </p>
+                </div>
+              )}
 
               {camposComparar.map((campo) => {
                 const valorActual = esCreacion ? '—' : getValorActual(campo);
                 const valorNuevo = String(datosNuevos[campo] ?? '');
                 const hayCambio = valorActual !== valorNuevo;
                 const label = FIELD_LABELS[campo] || campo;
+
+                if (esCreacion) {
+                  return (
+                    <div key={campo} className="px-4 py-3 rounded-xl bg-gray-50/50 border-b border-gray-100 last:border-0">
+                      <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
+                      <p className="text-sm font-semibold text-green-600">
+                        {valorNuevo || '—'}
+                      </p>
+                    </div>
+                  );
+                }
 
                 return (
                   <div

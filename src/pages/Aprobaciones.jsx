@@ -166,10 +166,10 @@ export default function Aprobaciones() {
                         <Monitor className="w-4 h-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium text-gray-700">
-                            {sol.bien?.num_serie || sol.bien_id?.substring(0, 8) + '...'}
+                            {sol.bien?.num_inv || sol.bien?.num_serie || datosP.num_serie || sol.bien_id?.substring(0, 8) + '...'}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {sol.bien?.modelo?.descrip_disp || 'Sin modelo'}
+                            {sol.bien?.modelo?.descrip_disp || datosP.clave_modelo || 'Sin modelo'}
                           </p>
                         </div>
                       </div>
