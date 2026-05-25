@@ -108,7 +108,7 @@ export function useCatDistinctFiltros() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   return useQuery({
-    queryKey: ['distinctFiltros'],
+    queryKey: ['distinctFiltros', 'v2'],
     queryFn: async () => {
       try {
         const data = await gqlClient.request(GET_DISTINCT_FILTROS_QUERY);

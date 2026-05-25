@@ -216,18 +216,7 @@ export default function Unidades() {
                     <MultiSelect
                       selectedValues={selectedZona}
                       onChange={handleZonaChange}
-                      options={[
-                        { value: "1", label: "Zona 1" },
-                        { value: "2", label: "Zona 2" },
-                        { value: "3", label: "Zona 3" },
-                        { value: "4", label: "Zona 4" },
-                        { value: "5", label: "Zona 5" },
-                        { value: "6", label: "Zona 6" },
-                        { value: "7", label: "Zona 7" },
-                        { value: "8", label: "Zona 8" },
-                        { value: "9", label: "Zona 9" },
-                        { value: "-1", label: "Zona -1" }
-                      ]}
+                      options={distinctFiltros?.zonas?.map(z => ({ value: z, label: `Zona ${z}` })) || []}
                       placeholder="Todas las Zonas"
                     />
                   </div>
