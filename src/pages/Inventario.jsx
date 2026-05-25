@@ -681,6 +681,17 @@ export default function Inventario() {
 
   const { data: catalogos, isLoading: loadingCat } = useCatalogosBienes();
   
+  const todasLasUbicaciones = useMemo(() => {
+    if (!catalogos?.unidades) return [];
+    const ubs = [];
+    catalogos.unidades.forEach(uni => {
+      if (uni.ubicaciones) {
+        uni.ubicaciones.forEach(ub => ubs.push(ub));
+      }
+    });
+    return ubs;
+  }, [catalogos?.unidades]);
+
   const { data: atributosData } = useQuery({
     queryKey: ['cat-atributos', { soloActivos: true }],
     queryFn: () => gqlClient.request(GET_CAT_ATRIBUTOS, { soloActivos: true }),
@@ -1295,6 +1306,18 @@ export default function Inventario() {
                         }))}
                       />
                     </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Ubicación Física</label>
+                      <MultiSearchableSelect
+                        placeholder="Seleccionar ubicaciones..."
+                        value={advFilters.id_ubicacion}
+                        onChange={(val) => { setAdvFilters(p => ({...p, id_ubicacion: val})); setCursor(null); setCursors([]); }}
+                        options={todasLasUbicaciones.map(u => ({
+                          value: String(u.id_ubicacion),
+                          label: u.nombre_ubicacion
+                        }))}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1637,21 +1660,23 @@ export default function Inventario() {
 
       {/* Paginación - conectada al servidor */}
       {!isLoading && !isError && (pageInfo?.hasNextPage || cursors.length > 0) && (
-        <div className="flex-shrink-0 flex items-center justify-between py-1">
-          <button onClick={handlePrevPage} disabled={cursors.length === 0}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-            <ChevronLeft size={15} /> Anterior
-          </button>
-          
-          <div className="text-sm font-medium text-gray-500">
-            Página {cursors.length + 1}
-            {pageInfo.totalCount > 0 && ` de ${Math.ceil(pageInfo.totalCount / PAGE_SIZE)}`}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{pageInfo.totalCount || 0}</span> bienes registrados.</p>
+            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+              Página {cursors.length + 1} {pageInfo.totalCount > 0 && ` de ${Math.ceil(pageInfo.totalCount / PAGE_SIZE)}`}
+            </p>
           </div>
-
-          <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
-            className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:hover:bg-green-600 transition-colors">
-            Siguiente <ChevronRight size={15} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={handlePrevPage} disabled={cursors.length === 0} 
+              className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+              Anterior
+            </button>
+            <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage} 
+              className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+              Siguiente
+            </button>
+          </div>
         </div>
       )}
         </>

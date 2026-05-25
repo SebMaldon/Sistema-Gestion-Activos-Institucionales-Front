@@ -723,18 +723,23 @@ export default function GestionUsuarios() {
 
           {/* Paginación — estática */}
           {(pageInfo?.hasNextPage || cursors.length > 0) && (
-            <div className="flex-shrink-0 flex items-center justify-between py-1">
-              <button onClick={handlePrevPage} disabled={cursors.length === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                <ChevronLeft size={15} /> Anterior
-              </button>
-              <span className="text-xs text-gray-500">
-                {totalCount > 0 && `${totalCount} usuarios en total`}
-              </span>
-              <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                Siguiente <ChevronRight size={15} />
-              </button>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{totalCount || 0}</span> usuarios registrados.</p>
+                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                  Página {cursors.length + 1} {totalCount > 0 && ` de ${Math.ceil(totalCount / PAGE_SIZE)}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={handlePrevPage} disabled={cursors.length === 0} 
+                  className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+                  Anterior
+                </button>
+                <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage} 
+                  className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+                  Siguiente
+                </button>
+              </div>
             </div>
           )}
         </div>
