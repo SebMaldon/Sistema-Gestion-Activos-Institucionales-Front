@@ -1502,7 +1502,7 @@ export default function Inventario() {
             )})()}
 
             <p className="text-xs text-gray-400 mt-2">
-              {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} encontrados
+              {pageInfo?.totalCount ?? 0} {(pageInfo?.totalCount ?? 0) === 1 ? 'registro' : 'registros'} encontrados
               {activeFilterCount > 0 && <span className="text-green-600 font-semibold"> · {activeFilterCount} filtro(s) avanzado(s) activo(s)</span>}
             </p>
           </div>
