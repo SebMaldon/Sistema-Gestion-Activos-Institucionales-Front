@@ -668,7 +668,6 @@ export default function GestionUsuarios() {
                     })}
                   </tbody>
                 </table>
-              )}
             </div>
           </div>
 

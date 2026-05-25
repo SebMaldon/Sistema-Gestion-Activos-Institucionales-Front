@@ -68,6 +68,14 @@ const BIEN_FIELDS = gql`
       dir_mac
       mac_address
       modelo_so
+      puerto_red
+      switch_red
+      cuenta_windows
+      correo
+      last_scan
+      tipo_user
+      nombre_host
+      windows_serial
     }
     monitores {
       id_bien_monitor
