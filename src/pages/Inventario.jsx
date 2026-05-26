@@ -32,6 +32,7 @@ import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
 import BienAtributosPanel from '../components/BienAtributosPanel';
 import AtributosCatalogModal from '../components/AtributosCatalogModal';
+import CargaMasivaPanel from '../components/CargaMasivaPanel';
 import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO } from '../api/atributos.queries';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
@@ -612,7 +613,14 @@ export default function Inventario() {
     const f = {};
     if (search) f.search = search;
     if (filterStatus) f.estatus_operativo = filterStatus;
-    f.es_capitalizable = activeTab === 'Capitalizable';
+    
+    if (activeTab === 'Capitalizable') {
+      f.es_capitalizable = true;
+    } else if (activeTab === 'No Capitalizable') {
+      f.es_capitalizable = false;
+    }
+    // En 'Impresión de Etiquetas', no filtramos por es_capitalizable para mostrar todo
+
     // Avanzados
     if (advFilters.clave_unidad_ref.length) f.clave_unidad_ref = advFilters.clave_unidad_ref;
     if (advFilters.id_segmento.length) f.id_segmento = advFilters.id_segmento.map(Number);
@@ -1143,6 +1151,7 @@ export default function Inventario() {
           {[
             { key: 'Capitalizable',    label: 'Bienes Capitalizables' },
           { key: 'No Capitalizable', label: 'Bienes No Capitalizables' },
+          { key: 'Carga Masiva', label: 'Carga Masiva' },
           { key: 'Impresión de Etiquetas', label: 'Impresión de Etiquetas QR' },
         ].map((tab) => (
           <button
@@ -1166,8 +1175,10 @@ export default function Inventario() {
         )}
       </div>
 
-      {/* ── Filtros ──────────────────────────────────────────────────────── */}
-      {activeTab !== 'Impresión de Etiquetas' ? (
+      {/* ── Filtros y Contenido ──────────────────────────────────────────────────────── */}
+      {activeTab === 'Carga Masiva' ? (
+        <CargaMasivaPanel />
+      ) : (
         <>
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20">
             {/* Barra principal de búsqueda */}
@@ -1518,10 +1529,12 @@ export default function Inventario() {
               </div>
             )})()}
 
-            <p className="text-xs text-gray-400 mt-2">
-              {pageInfo?.totalCount ?? 0} {(pageInfo?.totalCount ?? 0) === 1 ? 'registro' : 'registros'} encontrados
-              {activeFilterCount > 0 && <span className="text-green-600 font-semibold"> · {activeFilterCount} filtro(s) avanzado(s) activo(s)</span>}
-            </p>
+            {activeTab !== 'Impresión de Etiquetas' && (
+              <p className="text-xs text-gray-400 mt-2">
+                {pageInfo?.totalCount ?? 0} {(pageInfo?.totalCount ?? 0) === 1 ? 'registro' : 'registros'} encontrados
+                {activeFilterCount > 0 && <span className="text-green-600 font-semibold"> · {activeFilterCount} filtro(s) avanzado(s) activo(s)</span>}
+              </p>
+            )}
           </div>
 
       {/* ── Contenedor con scroll — tabla desktop + tarjetas móvil ──────── */}
@@ -1540,8 +1553,15 @@ export default function Inventario() {
           </div>
         )}
 
-        {/* TABLA desktop */}
-        {!isLoading && !isError && (
+        {/* TABLA desktop o Impresión */}
+        {!isLoading && !isError && activeTab === 'Impresión de Etiquetas' ? (
+          <PrintLabelsTab 
+            bienes={bienes} 
+            categorias={catalogos?.categorias ?? []}
+            onUpdateSelection={setPrintSelectedBienes} 
+            onUpdateOffset={setPrintStartOffset} 
+          />
+        ) : !isLoading && !isError && (
           <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="flex-1 overflow-y-auto relative">
               <table className="w-full text-sm text-left">
@@ -1614,7 +1634,7 @@ export default function Inventario() {
         )}
 
         {/* TARJETAS mobile */}
-        {!isLoading && !isError && (
+        {!isLoading && !isError && activeTab !== 'Impresión de Etiquetas' && (
           <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 pb-2">
             {bienes.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm text-center py-12 text-gray-400 text-sm">
@@ -1668,7 +1688,7 @@ export default function Inventario() {
       </div>{/* fin contenedor scroll */}
 
       {/* Paginación - conectada al servidor */}
-      {!isLoading && !isError && (pageInfo?.hasNextPage || cursors.length > 0) && (
+      {!isLoading && !isError && activeTab !== 'Impresión de Etiquetas' && (pageInfo?.hasNextPage || cursors.length > 0) && (
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{pageInfo.totalCount || 0}</span> bienes registrados.</p>
@@ -1689,13 +1709,6 @@ export default function Inventario() {
         </div>
       )}
         </>
-      ) : (
-        <PrintLabelsTab 
-          bienes={bienes} 
-          categorias={catalogos?.categorias ?? []}
-          onUpdateSelection={setPrintSelectedBienes} 
-          onUpdateOffset={setPrintStartOffset} 
-        />
       )}
 
       {/* ════════════════════════════════════════════════════════════════════
