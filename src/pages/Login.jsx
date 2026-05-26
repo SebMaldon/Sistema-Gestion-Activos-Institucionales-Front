@@ -45,7 +45,7 @@ export default function Login() {
           <div className="flex items-center gap-4 mb-8">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
               style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
-              <Building2 size={28} className="text-white" />
+              <img src="/IMSS_logo_blanco.png" alt="IMSS" className="w-8 h-8 object-contain" />
             </div>
             <div>
               <p className="text-2xl font-bold tracking-tight">IMSS</p>
@@ -96,7 +96,7 @@ export default function Login() {
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
-              <Building2 size={20} className="text-white" />
+              <img src="/IMSS_logo_blanco.png" alt="IMSS" className="w-6 h-6 object-contain" />
             </div>
             <div>
               <p className="text-white font-bold text-base">IMSS — Gestión de Activos</p>
@@ -107,13 +107,13 @@ export default function Login() {
           {/* Card */}
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
             {/* Cabecera */}
-            <div className="px-8 pt-8 pb-6">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+            <div className="px-8 pt-8 pb-6 text-center">
+              <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-5 shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
-                <Shield size={22} className="text-white" />
+                <img src="/IMSS_logo_blanco.png" alt="IMSS" className="w-10 h-10 object-contain" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
-              <p className="text-gray-400 text-sm mt-1">
+              <h2 className="text-2xl font-bold text-gray-900 text-left">Iniciar Sesión</h2>
+              <p className="text-gray-400 text-sm mt-1 text-left">
                 Accede con tus credenciales institucionales IMSS
               </p>
             </div>
