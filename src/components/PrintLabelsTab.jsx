@@ -16,8 +16,11 @@ export default function PrintLabelsTab({
   const [selectedBienes, setSelectedBienes] = useState([]);
   const [startOffset, setStartOffset] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const [isConfigOpen, setIsConfigOpen] = useState(true);
+  // 'config' = Configuración de Hoja expandida, 'queue' = Cola expandida
+  const [activePanel, setActivePanel] = useState('config');
   const [isFetchingAll, setIsFetchingAll] = useState(false);
+  const isConfigOpen = activePanel === 'config';
+  const isQueueOpen = activePanel === 'queue';
 
   React.useEffect(() => {
     if (onUpdateSelection) onUpdateSelection(selectedBienes);
@@ -237,7 +240,7 @@ export default function PrintLabelsTab({
         {/* Configuración colapsable */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm shrink-0">
           <button
-            onClick={() => setIsConfigOpen(v => !v)}
+            onClick={() => setActivePanel(isConfigOpen ? 'queue' : 'config')}
             className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
           >
             <span>Configuración de Hoja</span>
@@ -278,59 +281,75 @@ export default function PrintLabelsTab({
 
         {/* Cola de impresión — toma el espacio restante */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col flex-1 min-h-0">
-          <div className="p-4 border-b border-gray-100 shrink-0 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-900">Cola de Impresión</h2>
+          {/* Header siempre visible — toggle */}
+          <button
+            onClick={() => setActivePanel(isQueueOpen ? 'config' : 'queue')}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold text-gray-900 hover:bg-gray-50 rounded-t-2xl transition-colors shrink-0"
+          >
             <div className="flex items-center gap-2">
-              {selectedBienes.length > 0 && (
-                <button onClick={handleClearAll}
-                  className="text-[10px] text-red-400 hover:text-red-600 font-semibold underline transition-colors"
-                  title="Limpiar toda la cola">
-                  Limpiar todo
-                </button>
-              )}
+              <span>Cola de Impresión</span>
               <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">
                 {selectedBienes.length}
               </span>
             </div>
-          </div>
+            {isQueueOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          </button>
 
-          <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
-            {selectedBienes.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-8">
-                <Printer size={32} className="mb-2 opacity-20" />
-                <p className="text-xs text-center px-4">Agrega bienes desde la lista izquierda.</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {selectedBienes.map((bien, i) => (
-                  <div key={`${bien.id_bien}-${i}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, i)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, i)}
-                    className={`flex items-center justify-between p-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing transition-colors ${
-                      draggedIndex === i ? 'border-green-400 bg-green-50' : 'border-gray-100 hover:border-gray-300'
-                    }`}>
-                    <div className="min-w-0 flex-1 pr-2 flex items-center gap-2">
-                      <div className="cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
-                        <GripVertical size={16} />
-                      </div>
-                      <p className="text-xs font-semibold text-gray-800 truncate">
-                        <span className="text-gray-400 mr-1">{startOffset + i + 1}.</span>
-                        {bien.equipo}
-                      </p>
-                    </div>
-                    <button onClick={() => removeBien(i)}
-                      className="w-6 h-6 rounded text-red-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0">
-                      <Trash2 size={13} />
-                    </button>
+          {/* Contenido colapsable */}
+          {isQueueOpen && (
+            <>
+              {/* Sub-toolbar */}
+              {selectedBienes.length > 0 && (
+                <div className="border-t border-gray-100 shrink-0 px-4 py-2 flex items-center justify-end">
+                  <button onClick={handleClearAll}
+                    className="text-[10px] text-red-400 hover:text-red-600 font-semibold underline transition-colors"
+                    title="Limpiar toda la cola">
+                    Limpiar todo
+                  </button>
+                </div>
+              )}
+
+              {/* Lista */}
+              <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
+                {selectedBienes.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 py-8">
+                    <Printer size={32} className="mb-2 opacity-20" />
+                    <p className="text-xs text-center px-4">Agrega bienes desde la lista izquierda.</p>
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-1">
+                    {selectedBienes.map((bien, i) => (
+                      <div key={`${bien.id_bien}-${i}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, i)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, i)}
+                        className={`flex items-center justify-between p-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing transition-colors ${
+                          draggedIndex === i ? 'border-green-400 bg-green-50' : 'border-gray-100 hover:border-gray-300'
+                        }`}>
+                        <div className="min-w-0 flex-1 pr-2 flex items-center gap-2">
+                          <div className="cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
+                            <GripVertical size={16} />
+                          </div>
+                          <p className="text-xs font-semibold text-gray-800 truncate">
+                            <span className="text-gray-400 mr-1">{startOffset + i + 1}.</span>
+                            {bien.equipo}
+                          </p>
+                        </div>
+                        <button onClick={() => removeBien(i)}
+                          className="w-6 h-6 rounded text-red-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
 
+          {/* Botón imprimir — siempre visible */}
           <div className="p-4 shrink-0 border-t border-gray-100 bg-white rounded-b-2xl">
             <button onClick={handlePrint} disabled={selectedBienes.length === 0}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
