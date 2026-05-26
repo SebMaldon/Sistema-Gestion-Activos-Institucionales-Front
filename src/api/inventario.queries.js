@@ -441,3 +441,9 @@ export const CREATE_CAT_MODELO_MUTATION = gql`
     }
   }
 `;
+
+export const CREATE_BIENES_BULK_MUTATION = gql`
+  mutation CreateBienesBulk($bienes: [BienBulkInput!]!) {
+    createBienesBulk(bienes: $bienes)
+  }
+`;
