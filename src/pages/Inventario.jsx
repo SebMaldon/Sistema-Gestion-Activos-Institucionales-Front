@@ -109,6 +109,7 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   const [nuevoTipo, setNuevoTipo] = useState('');
   const [nuevoModelo, setNuevoModelo] = useState({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
   const [searchModelo, setSearchModelo] = useState('');
+  const [selectedTipoFilter, setSelectedTipoFilter] = useState('');
 
   // Query: marcas y tipos (ligero)
   const { data: catAux, refetch: refetchAux } = useQuery({
@@ -121,12 +122,16 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   const modelos = catalogos?.modelos ?? [];
 
   const modelosFiltrados = useMemo(() => {
+    let res = modelos;
+    if (selectedTipoFilter) {
+      res = res.filter(m => String(m.tipo_disp) === selectedTipoFilter);
+    }
     const q = searchModelo.toLowerCase();
-    if (!q) return modelos;
-    return modelos.filter(m =>
+    if (!q) return res;
+    return res.filter(m =>
       (m.descrip_disp || m.clave_modelo).toLowerCase().includes(q)
     );
-  }, [modelos, searchModelo]);
+  }, [modelos, searchModelo, selectedTipoFilter]);
 
   // Mutations
   const mutMarca = useMutation({
@@ -283,25 +288,50 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
           {/* ── TAB MODELOS ── */}
           {tab === 'modelos' && (
             <div className="space-y-4 fade-in">
-              {/* Buscador */}
-              <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="text" placeholder="Buscar modelo..." value={searchModelo}
-                  onChange={e => setSearchModelo(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+              {/* Buscador y Filtro por Tipo */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" placeholder="Buscar por clave o descripción..." value={searchModelo}
+                    onChange={e => setSearchModelo(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+                </div>
+                <select
+                  value={selectedTipoFilter}
+                  onChange={e => setSelectedTipoFilter(e.target.value)}
+                  className="px-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white text-gray-700 font-semibold shrink-0"
+                >
+                  <option value="">Todos los tipos</option>
+                  {tipos.map(t => (
+                    <option key={t.tipo_disp} value={String(t.tipo_disp)}>
+                      {t.nombre_tipo}
+                    </option>
+                  ))}
+                </select>
               </div>
               {/* Lista */}
               <div className="space-y-1 max-h-52 overflow-y-auto">
-                {modelosFiltrados.map(m => (
-                  <button key={m.clave_modelo} onClick={() => { onSelectModelo(m.clave_modelo, { tipo_disp: m.tipo_disp }); onClose(); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                      m.clave_modelo === modeloActual ? 'bg-green-50 text-green-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'
-                    }`}>
-                    {m.clave_modelo === modeloActual && <Check size={13} className="flex-shrink-0" />}
-                    <span className="font-mono text-xs text-gray-400 shrink-0">{m.clave_modelo}</span>
-                    <span className="truncate">{m.descrip_disp || '—'}</span>
-                  </button>
-                ))}
+                {modelosFiltrados.map(m => {
+                  const tipoObj = tipos.find(t => t.tipo_disp === m.tipo_disp);
+                  const tipoLabel = tipoObj ? tipoObj.nombre_tipo : '';
+                  return (
+                    <button key={m.clave_modelo} onClick={() => { onSelectModelo(m.clave_modelo, { tipo_disp: m.tipo_disp }); onClose(); }}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
+                        m.clave_modelo === modeloActual ? 'bg-green-50 text-green-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'
+                      }`}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {m.clave_modelo === modeloActual && <Check size={13} className="flex-shrink-0" />}
+                        <span className="font-mono text-xs text-gray-400 shrink-0">{m.clave_modelo}</span>
+                        <span className="truncate">{m.descrip_disp || '—'}</span>
+                      </div>
+                      {tipoLabel && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
+                          {tipoLabel}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
                 {modelosFiltrados.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin resultados</p>}
               </div>
               {/* Crear nuevo modelo */}
