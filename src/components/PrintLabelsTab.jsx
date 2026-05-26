@@ -155,7 +155,7 @@ export default function PrintLabelsTab({
                   className="flex-1 min-w-[120px] text-xs font-semibold py-1.5 px-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-60 flex items-center justify-center gap-1">
                   {isFetchingAll
                     ? <><Loader2 size={12} className="animate-spin" /> Cargando...</>
-                    : `★ Todas (hasta 200/${totalCount})`
+                    : `★ Todas (hasta 180/${totalCount})`
                   }
                 </button>
               )}

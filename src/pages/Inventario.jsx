@@ -537,7 +537,7 @@ export default function Inventario() {
   
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]); // historial para retroceder
-  const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 50 : 15;
+  const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 60 : 15;
 
   // Debounce búsqueda simple
   useEffect(() => {
@@ -695,12 +695,12 @@ export default function Inventario() {
     setCursor(prevCursor);
   };
 
-  // Fetch all bienes with current filter (max 200 per backend limit)
+  // Fetch all bienes with current filter (max 180 per backend limit, multiple of 30 for sheets)
   const handleFetchAllForPrint = async () => {
     try {
       const data = await gqlClient.request(
         (await import('../api/inventario.queries')).GET_BIENES_QUERY,
-        { filter: serverFilter, pagination: { first: 200 } }
+        { filter: serverFilter, pagination: { first: 180 } }
       );
       const edges = data.bienes.edges ?? [];
       return edges.map(({ node }) => mapBienNode(node));
