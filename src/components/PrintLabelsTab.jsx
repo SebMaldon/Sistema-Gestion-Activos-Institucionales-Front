@@ -1,13 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Printer, AlertTriangle, Check, Filter, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Printer, AlertTriangle, GripVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelection, onUpdateOffset }) {
+export default function PrintLabelsTab({
+  bienes,
+  categorias = [],
+  onUpdateSelection,
+  onUpdateOffset,
+  pageInfo = {},
+  cursors = [],
+  onNextPage,
+  onPrevPage,
+  pageSize = 50,
+}) {
   const [selectedBienes, setSelectedBienes] = useState([]);
   const [startOffset, setStartOffset] = useState(0); // 0 to 29
   const [draggedIndex, setDraggedIndex] = useState(null);
 
-  // Para poder mandar el estado al componente padre (Inventario)
-  // que es quien realmente pasará estos datos al PrintStickerSheet oculto
   React.useEffect(() => {
     if (onUpdateSelection) onUpdateSelection(selectedBienes);
   }, [selectedBienes, onUpdateSelection]);
@@ -17,9 +25,8 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
   }, [startOffset, onUpdateOffset]);
 
   const filteredBienes = useMemo(() => {
-    // Usar directamente los bienes paginados/filtrados del servidor
-    return (bienes || []).slice(0, 100);
-  }, [bienes]);
+    return (bienes || []).slice(0, pageSize);
+  }, [bienes, pageSize]);
 
   const addBien = (bien) => {
     setSelectedBienes(prev => [...prev, bien]);
@@ -37,12 +44,26 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
     setSelectedBienes(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleAddAllPage = () => {
+    const newItems = filteredBienes.filter(
+      b => !selectedBienes.some(sb => sb.id_bien === b.id_bien)
+    );
+    setSelectedBienes(prev => [...prev, ...newItems]);
+  };
+
+  const handleRemoveAll = () => {
+    const ids = new Set(filteredBienes.map(b => b.id_bien));
+    setSelectedBienes(prev => prev.filter(sb => !ids.has(sb.id_bien)));
+  };
+
+  const handleClearAll = () => {
+    setSelectedBienes([]);
+  };
+
   const handleDragStart = (e, index) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => {
-      e.target.style.opacity = '0.5';
-    }, 0);
+    setTimeout(() => { e.target.style.opacity = '0.5'; }, 0);
   };
 
   const handleDragEnd = (e) => {
@@ -58,7 +79,6 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
   const handleDrop = (e, targetIndex) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === targetIndex) return;
-
     setSelectedBienes(prev => {
       const newArr = [...prev];
       const draggedItem = newArr[draggedIndex];
@@ -71,10 +91,7 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
 
   const handlePrint = () => {
     if (selectedBienes.length === 0) return;
-    // Forzamos un pequeño delay para asegurar que React haya renderizado el PrintStickerSheet con los datos correctos
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    setTimeout(() => { window.print(); }, 100);
   };
 
   // Render visual grid 3x10
@@ -84,26 +101,20 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
     for (let i = 0; i < totalCells; i++) {
       let isOffset = i < startOffset;
       let isItem = i >= startOffset && i < startOffset + selectedBienes.length;
-      
       let className = "w-full pt-[38%] border rounded-sm transition-colors ";
       if (isOffset) {
-        className += "bg-gray-200 border-gray-300"; // Espacio gastado
+        className += "bg-gray-200 border-gray-300";
       } else if (isItem) {
-        className += "bg-green-500 border-green-600 shadow-sm"; // Etiqueta a imprimir
+        className += "bg-green-500 border-green-600 shadow-sm";
       } else {
-        className += "bg-white border-gray-200"; // Espacio disponible
+        className += "bg-white border-gray-200";
       }
-
       cells.push(
-        <div 
-          key={i} 
-          className={className} 
+        <div
+          key={i}
+          className={className}
           title={`Posición ${i + 1}`}
-          onClick={() => {
-            if (i <= 29) {
-               setStartOffset(i);
-            }
-          }}
+          onClick={() => { if (i <= 29) setStartOffset(i); }}
           style={{ cursor: 'pointer' }}
         />
       );
@@ -115,40 +126,43 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
     );
   };
 
+  const currentPage = cursors.length + 1;
+  const totalPages = pageInfo?.totalCount > 0 ? Math.ceil(pageInfo.totalCount / pageSize) : 1;
+  const hasPrev = cursors.length > 0;
+  const hasNext = pageInfo?.hasNextPage;
+
   return (
     <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 overflow-y-auto md:overflow-y-visible pb-4 md:pb-0">
-      {/* ── LADO IZQUIERDO: RESULTADOS DE BÚSQUEDA DEL SERVIDOR ── */}
+
+      {/* ── LADO IZQUIERDO: LISTA + PAGINACIÓN INTERNA ── */}
       <div className="flex-none md:flex-1 h-[400px] md:h-auto bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-0">
+
+        {/* Cabecera */}
         <div className="p-4 border-b border-gray-100 shrink-0 space-y-2">
           <h2 className="text-base font-bold text-gray-900">Seleccionar Bienes para Imprimir</h2>
-          <p className="text-xs text-gray-500">Utiliza los filtros principales para buscar y listar los bienes. Los resultados aparecerán aquí abajo.</p>
+          <p className="text-xs text-gray-500">
+            Usa los filtros de arriba para buscar. Navega por páginas y agrega bienes a la cola.
+          </p>
+          {/* Botones seleccionar */}
           {filteredBienes.length > 0 && (
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => {
-                  // Agregar todos los que no están ya en la cola
-                  const newItems = filteredBienes.filter(
-                    b => !selectedBienes.some(sb => sb.id_bien === b.id_bien)
-                  );
-                  setSelectedBienes(prev => [...prev, ...newItems]);
-                }}
+                onClick={handleAddAllPage}
                 className="flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
               >
-                + Agregar todos ({filteredBienes.length})
+                + Esta página ({filteredBienes.length})
               </button>
               <button
-                onClick={() => {
-                  // Quitar de la cola todos los que son de esta página
-                  const ids = new Set(filteredBienes.map(b => b.id_bien));
-                  setSelectedBienes(prev => prev.filter(sb => !ids.has(sb.id_bien)));
-                }}
+                onClick={handleRemoveAll}
                 className="flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
               >
-                − Quitar todos
+                − Quitar página
               </button>
             </div>
           )}
         </div>
+
+        {/* Lista de bienes */}
         <div className="flex-1 overflow-y-auto p-2">
           {filteredBienes.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-10">No se encontraron resultados.</p>
@@ -158,8 +172,8 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
                 const count = selectedBienes.filter(sb => sb.id_bien === bien.id_bien).length;
                 const isSelected = count > 0;
                 return (
-                  <div 
-                    key={bien.id_bien} 
+                  <div
+                    key={bien.id_bien}
                     className={`flex items-center justify-between p-2 rounded-lg group transition-colors ${
                       isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50 border border-transparent'
                     }`}
@@ -174,26 +188,20 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
                     </div>
                     {isSelected ? (
                       <div className="flex items-center gap-1 bg-blue-100 rounded-lg p-1 shrink-0">
-                        <button 
+                        <button
                           onClick={() => removeOneBien(bien)}
                           className="w-6 h-6 rounded bg-white text-blue-600 hover:bg-blue-50 flex items-center justify-center font-bold transition-colors"
                           title="Quitar uno"
-                        >
-                          -
-                        </button>
-                        <span className="text-xs font-bold text-blue-800 w-4 text-center">
-                          {count}
-                        </span>
-                        <button 
+                        >-</button>
+                        <span className="text-xs font-bold text-blue-800 w-4 text-center">{count}</span>
+                        <button
                           onClick={() => addBien(bien)}
                           className="w-6 h-6 rounded bg-white text-blue-600 hover:bg-blue-50 flex items-center justify-center font-bold transition-colors"
                           title="Añadir otro"
-                        >
-                          +
-                        </button>
+                        >+</button>
                       </div>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => addBien(bien)}
                         className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-green-100 shrink-0"
                         title="Añadir a lista de impresión"
@@ -207,21 +215,46 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
             </div>
           )}
         </div>
+
+        {/* Paginación interna — dentro del panel izquierdo */}
+        {(hasNext || hasPrev) && (
+          <div className="shrink-0 border-t border-gray-100 bg-gray-50 px-4 py-2.5 rounded-b-2xl flex items-center justify-between gap-2">
+            <div className="text-xs text-gray-500 font-medium leading-tight">
+              <span className="font-bold text-gray-800">{pageInfo?.totalCount ?? 0}</span> bienes
+              <span className="text-gray-400 ml-1">· Pág. {currentPage} de {totalPages}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={onPrevPage}
+                disabled={!hasPrev}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors shadow-sm"
+              >
+                <ChevronLeft size={13} /> Anterior
+              </button>
+              <button
+                onClick={onNextPage}
+                disabled={!hasNext}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors shadow-sm"
+              >
+                Siguiente <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── LADO DERECHO: CONFIGURACIÓN E IMPRESIÓN ── */}
       <div className="w-full md:w-80 lg:w-96 flex-none md:flex-1 lg:flex-none flex flex-col gap-4 min-h-0">
-        
+
         {/* Panel de Configuración */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 shrink-0">
           <h2 className="text-base font-bold text-gray-900 mb-4">Configuración de Hoja</h2>
-          
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-xs font-semibold text-gray-700 mb-1">Posición Inicial (1-30)</label>
-              <input 
-                type="number" 
-                min="1" 
+              <input
+                type="number"
+                min="1"
                 max="30"
                 value={startOffset + 1}
                 onChange={e => {
@@ -237,11 +270,8 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
                 (Haz click en la cuadrícula para seleccionar)
               </p>
             </div>
-            <div className="shrink-0">
-              {renderVisualGrid()}
-            </div>
+            <div className="shrink-0">{renderVisualGrid()}</div>
           </div>
-
           <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100 flex gap-2 items-start">
             <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-800 leading-relaxed">
@@ -250,15 +280,26 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
           </div>
         </div>
 
-        {/* Panel de Lista a Imprimir */}
+        {/* Panel de Cola a Imprimir */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[300px] md:min-h-0 flex-1">
           <div className="p-4 border-b border-gray-100 shrink-0 flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-900">Cola de Impresión</h2>
-            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">
-              {selectedBienes.length}
-            </span>
+            <div className="flex items-center gap-2">
+              {selectedBienes.length > 0 && (
+                <button
+                  onClick={handleClearAll}
+                  className="text-[10px] text-red-400 hover:text-red-600 font-semibold underline transition-colors"
+                  title="Limpiar toda la cola"
+                >
+                  Limpiar todo
+                </button>
+              )}
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">
+                {selectedBienes.length}
+              </span>
+            </div>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">
             {selectedBienes.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-400">
@@ -268,8 +309,8 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
             ) : (
               <div className="space-y-1">
                 {selectedBienes.map((bien, i) => (
-                  <div 
-                    key={`${bien.id_bien}-${i}`} 
+                  <div
+                    key={`${bien.id_bien}-${i}`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, i)}
                     onDragEnd={handleDragEnd}
@@ -284,11 +325,11 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
                         <GripVertical size={16} />
                       </div>
                       <p className="text-xs font-semibold text-gray-800 truncate">
-                        <span className="text-gray-400 mr-1">{startOffset + i + 1}.</span> 
+                        <span className="text-gray-400 mr-1">{startOffset + i + 1}.</span>
                         {bien.equipo}
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => removeBien(i)}
                       className="w-6 h-6 rounded text-red-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors shrink-0"
                     >
@@ -301,7 +342,7 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
           </div>
 
           <div className="p-4 shrink-0 border-t border-gray-100 bg-white rounded-b-2xl">
-            <button 
+            <button
               onClick={handlePrint}
               disabled={selectedBienes.length === 0}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -312,7 +353,6 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );

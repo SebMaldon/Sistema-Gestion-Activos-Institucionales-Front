@@ -537,7 +537,7 @@ export default function Inventario() {
   
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]); // historial para retroceder
-  const PAGE_SIZE = 15;
+  const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 50 : 15;
 
   // Debounce búsqueda simple
   useEffect(() => {
@@ -1557,7 +1557,12 @@ export default function Inventario() {
             bienes={bienes} 
             categorias={catalogos?.categorias ?? []}
             onUpdateSelection={setPrintSelectedBienes} 
-            onUpdateOffset={setPrintStartOffset} 
+            onUpdateOffset={setPrintStartOffset}
+            pageInfo={pageInfo}
+            cursors={cursors}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            pageSize={PAGE_SIZE}
           />
         ) : !isLoading && !isError && (
           <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -1686,7 +1691,7 @@ export default function Inventario() {
       </div>{/* fin contenedor scroll */}
 
       {/* Paginación - conectada al servidor */}
-      {!isLoading && !isError && (pageInfo?.hasNextPage || cursors.length > 0) && (
+      {!isLoading && !isError && activeTab !== 'Impresión de Etiquetas' && (pageInfo?.hasNextPage || cursors.length > 0) && (
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{pageInfo.totalCount || 0}</span> bienes registrados.</p>
