@@ -4,31 +4,23 @@ import { Plus, Trash2, Printer, AlertTriangle, GripVertical, ChevronLeft, Chevro
 export default function PrintLabelsTab({
   bienes,
   categorias = [],
-  onUpdateSelection,
-  onUpdateOffset,
   pageInfo = {},
   cursors = [],
   onNextPage,
   onPrevPage,
   pageSize = 50,
   onFetchAll,
+  selectedBienes = [],
+  setSelectedBienes,
+  startOffset = 0,
+  setStartOffset,
 }) {
-  const [selectedBienes, setSelectedBienes] = useState([]);
-  const [startOffset, setStartOffset] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState(null);
   // 'config' = Configuración de Hoja expandida, 'queue' = Cola expandida
   const [activePanel, setActivePanel] = useState('config');
   const [isFetchingAll, setIsFetchingAll] = useState(false);
   const isConfigOpen = activePanel === 'config';
   const isQueueOpen = activePanel === 'queue';
-
-  React.useEffect(() => {
-    if (onUpdateSelection) onUpdateSelection(selectedBienes);
-  }, [selectedBienes, onUpdateSelection]);
-
-  React.useEffect(() => {
-    if (onUpdateOffset) onUpdateOffset(startOffset);
-  }, [startOffset, onUpdateOffset]);
 
   const filteredBienes = useMemo(() => {
     return (bienes || []).slice(0, pageSize);

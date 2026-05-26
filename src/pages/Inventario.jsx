@@ -1570,8 +1570,10 @@ export default function Inventario() {
           <PrintLabelsTab 
             bienes={bienes} 
             categorias={catalogos?.categorias ?? []}
-            onUpdateSelection={setPrintSelectedBienes} 
-            onUpdateOffset={setPrintStartOffset}
+            selectedBienes={printSelectedBienes}
+            setSelectedBienes={setPrintSelectedBienes}
+            startOffset={printStartOffset}
+            setStartOffset={setPrintStartOffset}
             pageInfo={pageInfo}
             cursors={cursors}
             onNextPage={handleNextPage}
