@@ -30,6 +30,7 @@ const FIELD_LABELS = {
   last_scan: 'Último Escaneo',
   tipo_user: 'Tipo de Usuario',
   windows_serial: 'Serial de Windows',
+  monitores: 'Monitores Detectados',
 };
 
 // Campos a ignorar en la comparación
@@ -56,13 +57,25 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
   const bienActual = solicitud.bien || {};
   const specActual = bienActual.especificacionTI || {};
 
+  // Helper for formatting values
+  const formatValue = (campo, valor) => {
+    if (valor === undefined || valor === null || valor === '') return '—';
+    if (campo === 'monitores' && Array.isArray(valor)) {
+      return valor.length > 0 
+        ? valor.map(m => `${m.marca || ''} ${m.modelo || ''} (Serie: ${m.num_serie || 'S/N'})`.trim()).join(' | ')
+        : 'Sin monitores';
+    }
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
+  };
+
   // Obtener valor actual de un campo
   const getValorActual = (campo) => {
     if (bienActual[campo] !== undefined && bienActual[campo] !== null) {
-      return String(bienActual[campo]);
+      return formatValue(campo, bienActual[campo]);
     }
     if (specActual[campo] !== undefined && specActual[campo] !== null) {
-      return String(specActual[campo]);
+      return formatValue(campo, specActual[campo]);
     }
     return '—';
   };
@@ -147,7 +160,7 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
 
               {camposComparar.map((campo) => {
                 const valorActual = esCreacion ? '—' : getValorActual(campo);
-                const valorNuevo = String(datosNuevos[campo] ?? '');
+                const valorNuevo = formatValue(campo, datosNuevos[campo]);
                 const hayCambio = valorActual !== valorNuevo;
                 const label = FIELD_LABELS[campo] || campo;
 
