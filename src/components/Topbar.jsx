@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import { Bell, User, Shield, UserCog, Menu } from 'lucide-react';
+import { gqlClient } from '../api/client';
+import {
+  OBTENER_MIS_NOTIFICACIONES,
+  NOTIFICACIONES_NO_LEIDAS_QUERY,
+  MARCAR_LEIDA_MUTATION,
+  OCULTAR_NOTIFICACION_MUTATION,
+  MARCAR_TODAS_LEIDAS_MUTATION
+} from '../api/notificaciones.queries';
 
 // Roles reales de BD: 1=Maestro, 2=Administrador, 3=Usuario Estándar, 4=Sin Acceso
 const ROL_CONFIG = {
@@ -12,13 +21,87 @@ const ROL_CONFIG = {
 };
 
 export default function Topbar() {
+  const navigate = useNavigate();
   const { sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const [showNotif, setShowNotif] = useState(false);
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [noLeidas, setNoLeidas] = useState(0);
 
   const idRol  = usuario?.id_rol ?? 3;
   const rolConf = ROL_CONFIG[idRol] ?? ROL_CONFIG[3];
   const RoleIcon = rolConf.icon;
+
+  const cargarNotificaciones = async () => {
+    try {
+      const res = await gqlClient.request(OBTENER_MIS_NOTIFICACIONES, { mostrarOcultas: false });
+      setNotificaciones(res.misNotificaciones || []);
+      const countRes = await gqlClient.request(NOTIFICACIONES_NO_LEIDAS_QUERY);
+      setNoLeidas(countRes.notificacionesNoLeidas ?? 0);
+    } catch (err) {
+      console.error('Error cargando notificaciones:', err);
+    }
+  };
+
+  useEffect(() => {
+    cargarNotificaciones();
+    const interval = setInterval(cargarNotificaciones, 15000); // Polling cada 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarcarLeida = async (idNotif) => {
+    try {
+      await gqlClient.request(MARCAR_LEIDA_MUTATION, { idNotificacion: parseInt(idNotif, 10) });
+      cargarNotificaciones();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    await handleMarcarLeida(n.id_notificacion);
+    setShowNotif(false);
+    
+    const titulo = (n.titulo || '').toLowerCase();
+    const mensaje = (n.mensaje || '').toLowerCase();
+
+    if (titulo.includes('solicitud') || titulo.includes('cambio') || mensaje.includes('solicitud') || mensaje.includes('cambio')) {
+      navigate('/aprobaciones');
+    } else if (titulo.includes('incidencia') || mensaje.includes('incidencia')) {
+      navigate('/incidencias');
+    } else if (titulo.includes('garantía') || mensaje.includes('garantía') || titulo.includes('garantia') || mensaje.includes('garantia')) {
+      navigate('/garantias');
+    }
+  };
+
+  const handleOcultar = async (e, idNotif) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await gqlClient.request(OCULTAR_NOTIFICACION_MUTATION, { idNotificacion: parseInt(idNotif, 10) });
+      cargarNotificaciones();
+    } catch (err) {
+      console.error('Error al ocultar notificacion:', err);
+    }
+  };
+
+  const handleMarcarTodasLeidas = async () => {
+    try {
+      await gqlClient.request(MARCAR_TODAS_LEIDAS_MUTATION);
+      cargarNotificaciones();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const formatTime = (dateStr) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
 
   // Iniciales del nombre completo para el avatar
   const initials = usuario?.nombre_completo
@@ -81,29 +164,62 @@ export default function Topbar() {
             className="relative w-9 h-9 flex items-center justify-center rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
           >
             <Bell size={17} className="text-gray-600" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+            {noLeidas > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white shadow-sm">
+                {noLeidas}
+              </span>
+            )}
           </button>
 
           {showNotif && (
             <div className="absolute right-0 top-12 w-[calc(100vw-1.5rem)] sm:w-80 max-w-sm bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden fade-in">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Notificaciones</p>
-                <span className="text-xs text-white bg-red-500 rounded-full px-2 py-0.5">3</span>
-              </div>
-              {[
-                { title: 'Garantía por vencer',         desc: 'ACT-002 vence en 6 meses',                t: 'hace 2h',  color: '#f59e0b' },
-                { title: 'Nueva incidencia reportada',  desc: 'INC-004: Falla de batería en ACT-001',    t: 'hace 5h',  color: '#ef4444' },
-                { title: 'Transferencia pendiente',     desc: 'Traspaso ACT-004 requiere aprobación',    t: 'Ayer',     color: '#3b82f6' },
-              ].map((n, i) => (
-                <div key={i} className="px-4 py-3 hover:bg-gray-50 flex gap-3 border-b border-gray-50 transition-colors cursor-pointer">
-                  <div className="w-2 h-2 mt-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: n.color }} />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{n.title}</p>
-                    <p className="text-xs text-gray-500">{n.desc}</p>
-                    <p className="text-xs text-gray-400 mt-1">{n.t}</p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  {noLeidas > 0 && (
+                    <>
+                      <button 
+                        onClick={handleMarcarTodasLeidas} 
+                        className="text-[10px] text-green-700 hover:text-green-800 font-bold"
+                      >
+                        Marcar todo leído
+                      </button>
+                      <span className="text-xs text-white bg-red-500 rounded-full px-2 py-0.5">{noLeidas}</span>
+                    </>
+                  )}
                 </div>
-              ))}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notificaciones.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-gray-400 italic">
+                    Sin notificaciones
+                  </div>
+                ) : (
+                  notificaciones.map((n) => (
+                    <div 
+                      key={n.id_notificacion} 
+                      onClick={() => handleNotificationClick(n)}
+                      className={`px-4 py-3 hover:bg-gray-50 flex text-left gap-3 border-b border-gray-50 transition-colors cursor-pointer relative ${!n.leida ? 'bg-green-50/40' : ''}`}
+                    >
+                      <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!n.leida ? 'bg-green-600 animate-pulse' : 'bg-gray-300'}`} />
+                      <div className="flex-1 pr-6">
+                        <p className={`text-xs sm:text-sm ${!n.leida ? 'font-bold text-gray-800' : 'text-gray-600'}`}>{n.titulo}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.mensaje}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">{formatTime(n.fecha_creacion)}</p>
+                      </div>
+                       <button
+                        onClick={(e) => handleOcultar(e, n.id_notificacion)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-red-500 hover:bg-gray-100 p-1.5 rounded-lg transition-colors z-20 pointer-events-auto flex items-center justify-center"
+                        title="Ocultar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>
