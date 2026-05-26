@@ -11,12 +11,12 @@ import {
   DELETE_GARANTIA,
   GET_BIEN_BY_SERIE,
   GET_BIEN_BY_INV,
-  CREATE_PROVEEDOR,
 } from '../api/garantias.queries';
 import {
   ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
+import ProveedorModal from '../components/ProveedorModal';
 
 // ─── Componentes reusables de vista ──────────────────────────────────────────
 
@@ -63,8 +63,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   const [searchValue, setSearchValue] = useState('');
   const [selectedBien, setSelectedBien] = useState(garantia?.bien ?? null);
   const [isSearching, setIsSearching] = useState(false);
-  const [isAddingProveedor, setIsAddingProveedor] = useState(false);
-  const [newProveedorName, setNewProveedorName] = useState('');
+  const [showAddProveedorModal, setShowAddProveedorModal] = useState(false);
 
   const createMut = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
@@ -87,26 +86,6 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   });
 
   const isLoading = createMut.isPending || updateMut.isPending;
-
-  const createProveedorMut = useMutation({
-    mutationFn: (vars) => gqlClient.request(CREATE_PROVEEDOR, vars),
-    onSuccess: (data) => {
-      const nuevo = data.createProveedor;
-      qc.invalidateQueries({ queryKey: ['proveedores'] });
-      setForm(p => ({ ...p, id_proveedor: nuevo.id_proveedor }));
-      setIsAddingProveedor(false);
-      setNewProveedorName('');
-      showToast(`Proveedor "${nuevo.nombre_proveedor}" creado`, 'success');
-    },
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear proveedor', 'error'),
-  });
-
-  const handleCreateProveedor = () => {
-    if (!newProveedorName.trim()) return;
-    createProveedorMut.mutate({
-      nombre_proveedor: newProveedorName.trim(),
-    });
-  };
 
   const handleChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -259,56 +238,31 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
           </div>
           <div>
             <label className={labelCls}>Proveedor</label>
-            {isAddingProveedor ? (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newProveedorName}
-                    onChange={e => setNewProveedorName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateProveedor(); } }}
-                    placeholder="Nombre del proveedor *"
-                    className="flex-1 border border-green-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCreateProveedor}
-                    disabled={createProveedorMut.isPending || !newProveedorName.trim()}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setIsAddingProveedor(false); setNewProveedorName(''); }}
-                    className="px-3 py-2 border border-gray-200 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <select
-                  className={`${inputCls} flex-1`}
-                  value={form.id_proveedor}
-                  onChange={e => handleChange('id_proveedor', e.target.value)}
-                >
-                  <option value="">-- Sin proveedor --</option>
-                  {proveedores.map(p => (
-                    <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setIsAddingProveedor(true)}
-                  title="Agregar nuevo proveedor"
-                  className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
-                >
-                  <Plus size={15} />
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <select
+                className={`${inputCls} flex-1`}
+                value={form.id_proveedor}
+                onChange={e => handleChange('id_proveedor', e.target.value)}
+              >
+                <option value="">-- Sin proveedor --</option>
+                {proveedores.map(p => (
+                  <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowAddProveedorModal(true)}
+                title="Agregar nuevo proveedor"
+                className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0 bg-white"
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+            {showAddProveedorModal && (
+              <ProveedorModal
+                onClose={() => setShowAddProveedorModal(false)}
+                onSuccess={(newId) => handleChange('id_proveedor', newId)}
+              />
             )}
           </div>
           

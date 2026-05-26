@@ -124,8 +124,8 @@ export const DELETE_GARANTIA = gql`
 `;
 
 export const CREATE_PROVEEDOR = gql`
-  mutation CreateProveedor($nombre_proveedor: String!) {
-    createProveedor(nombre_proveedor: $nombre_proveedor) {
+  mutation CreateProveedor($nombre_proveedor: String!, $contactos: [ContactoInput!]) {
+    createProveedor(nombre_proveedor: $nombre_proveedor, contactos: $contactos) {
       id_proveedor
       nombre_proveedor
     }

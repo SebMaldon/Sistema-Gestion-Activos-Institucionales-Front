@@ -30,6 +30,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import MultiSearchableSelect from '../components/MultiSearchableSelect';
 import PrintLabelsTab from '../components/PrintLabelsTab';
 import PrintStickerSheet from '../components/PrintStickerSheet';
+import ProveedorModal from '../components/ProveedorModal';
 import BienAtributosPanel from '../components/BienAtributosPanel';
 import AtributosCatalogModal from '../components/AtributosCatalogModal';
 import CargaMasivaPanel from '../components/CargaMasivaPanel';
@@ -793,8 +794,7 @@ export default function Inventario() {
   const qc = useQueryClient();
   const [isAddingUbicacion, setIsAddingUbicacion] = useState(false);
   const [newUbicacionName, setNewUbicacionName] = useState('');
-  const [isAddingProveedor, setIsAddingProveedor] = useState(false);
-  const [newProveedorName, setNewProveedorName] = useState('');
+  const [showAddProveedorModal, setShowAddProveedorModal] = useState(false);
 
   const { data: ubicacionesData } = useQuery({
     queryKey: ['ubicaciones', form.clave_unidad_ref],
@@ -837,24 +837,6 @@ export default function Inventario() {
     onSuccess: () => showToast('Garantía actualizada', 'success'),
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar garantía', 'error'),
   });
-
-  const { mutate: createProveedor, isPending: creatingProveedor } = useMutation({
-    mutationFn: (vars) => gqlClient.request(CREATE_PROVEEDOR, vars),
-    onSuccess: (data) => {
-      const nuevo = data.createProveedor;
-      qc.invalidateQueries({ queryKey: ['proveedores'] });
-      setGarantiaForm(p => ({ ...p, id_proveedor: String(nuevo.id_proveedor) }));
-      setIsAddingProveedor(false);
-      setNewProveedorName('');
-      showToast(`Proveedor "${nuevo.nombre_proveedor}" creado`, 'success');
-    },
-    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear proveedor', 'error'),
-  });
-
-  const handleCreateProveedor = () => {
-    if (!newProveedorName.trim()) return;
-    createProveedor({ nombre_proveedor: newProveedorName.trim() });
-  };
 
   const { mutate: createBien, isPending: creating } = useCreateBien({
     onSuccess: () => { closeForm(); showToast('Bien registrado correctamente.', 'success'); },
@@ -2436,56 +2418,31 @@ export default function Inventario() {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">Proveedor</label>
-                      {isAddingProveedor ? (
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={newProveedorName}
-                              onChange={e => setNewProveedorName(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateProveedor(); } }}
-                              placeholder="Nombre del proveedor *"
-                              className="flex-1 border border-green-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              onClick={handleCreateProveedor}
-                              disabled={creatingProveedor || !newProveedorName.trim()}
-                              className="px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setIsAddingProveedor(false); setNewProveedorName(''); }}
-                              className="px-3 py-2 border border-gray-200 text-gray-500 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors"
-                            >
-                              <X size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <select
-                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                            value={garantiaForm.id_proveedor}
-                            onChange={e => setGarantiaForm(p => ({ ...p, id_proveedor: e.target.value }))}
-                          >
-                            <option value="">-- Ninguno --</option>
-                            {proveedores.map(p => (
-                              <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingProveedor(true)}
-                            title="Agregar nuevo proveedor"
-                            className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
+                      <div className="flex gap-2">
+                        <select
+                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                          value={garantiaForm.id_proveedor}
+                          onChange={e => setGarantiaForm(p => ({ ...p, id_proveedor: e.target.value }))}
+                        >
+                          <option value="">-- Ninguno --</option>
+                          {proveedores.map(p => (
+                            <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddProveedorModal(true)}
+                          title="Agregar nuevo proveedor"
+                          className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0 bg-white"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      {showAddProveedorModal && (
+                        <ProveedorModal
+                          onClose={() => setShowAddProveedorModal(false)}
+                          onSuccess={(newId) => setGarantiaForm(p => ({ ...p, id_proveedor: String(newId) }))}
+                        />
                       )}
                     </div>
                   </div>
