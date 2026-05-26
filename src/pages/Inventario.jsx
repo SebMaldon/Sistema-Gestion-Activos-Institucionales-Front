@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
-import { useBienes } from '../hooks/useBienes';
+import { useBienes, mapBienNode } from '../hooks/useBienes';
 import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
 import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI } from '../hooks/useBienMutations';
 import { useAuthStore } from '../store/auth.store';
@@ -693,6 +693,20 @@ export default function Inventario() {
     const prevCursor = prev.pop() ?? null;
     setCursors(prev);
     setCursor(prevCursor);
+  };
+
+  // Fetch all bienes with current filter (max 200 per backend limit)
+  const handleFetchAllForPrint = async () => {
+    try {
+      const data = await gqlClient.request(
+        (await import('../api/inventario.queries')).GET_BIENES_QUERY,
+        { filter: serverFilter, pagination: { first: 200 } }
+      );
+      const edges = data.bienes.edges ?? [];
+      return edges.map(({ node }) => mapBienNode(node));
+    } catch {
+      return [];
+    }
   };
 
   const { data: catalogos, isLoading: loadingCat } = useCatalogosBienes();
@@ -1563,6 +1577,7 @@ export default function Inventario() {
             onNextPage={handleNextPage}
             onPrevPage={handlePrevPage}
             pageSize={PAGE_SIZE}
+            onFetchAll={handleFetchAllForPrint}
           />
         ) : !isLoading && !isError && (
           <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
