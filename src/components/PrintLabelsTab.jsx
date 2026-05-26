@@ -2,10 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Search, Plus, Trash2, Printer, AlertTriangle, Check, Filter, GripVertical } from 'lucide-react';
 
 export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelection, onUpdateOffset }) {
-  const [search, setSearch] = useState('');
   const [selectedBienes, setSelectedBienes] = useState([]);
   const [startOffset, setStartOffset] = useState(0); // 0 to 29
-  const [categoryFilter, setCategoryFilter] = useState('1'); // Default to Equipo de Cómputo
   const [draggedIndex, setDraggedIndex] = useState(null);
 
   // Para poder mandar el estado al componente padre (Inventario)
@@ -19,26 +17,9 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
   }, [startOffset, onUpdateOffset]);
 
   const filteredBienes = useMemo(() => {
-    let list = bienes;
-    
-    if (categoryFilter) {
-      list = list.filter(b => 
-        String(b.idCategoria) === categoryFilter || 
-        String(b.categoria?.id_categoria) === categoryFilter
-      );
-    }
-    
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(b => 
-        (b.equipo || '').toLowerCase().includes(q) ||
-        (b.numSerie || '').toLowerCase().includes(q) ||
-        (b.numInv || '').toLowerCase().includes(q)
-      );
-    }
-    
-    return list.slice(0, 100);
-  }, [bienes, search, categoryFilter]);
+    // Usar directamente los bienes paginados/filtrados del servidor
+    return (bienes || []).slice(0, 100);
+  }, [bienes]);
 
   const addBien = (bien) => {
     setSelectedBienes(prev => [...prev, bien]);
@@ -136,39 +117,37 @@ export default function PrintLabelsTab({ bienes, categorias = [], onUpdateSelect
 
   return (
     <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 overflow-y-auto md:overflow-y-visible pb-4 md:pb-0">
-      {/* ── LADO IZQUIERDO: BUSCADOR ── */}
+      {/* ── LADO IZQUIERDO: RESULTADOS DE BÚSQUEDA DEL SERVIDOR ── */}
       <div className="flex-none md:flex-1 h-[400px] md:h-auto bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-0">
-        <div className="p-4 border-b border-gray-100 shrink-0 space-y-3">
-          <h2 className="text-base font-bold text-gray-900">Seleccionar Bienes</h2>
-          
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Buscar por equipo, serie o inventario..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-              />
-            </div>
-            
-            <div className="relative w-full sm:w-40 shrink-0">
-              <select
-                value={categoryFilter}
-                onChange={e => setCategoryFilter(e.target.value)}
-                className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none appearance-none bg-white"
+        <div className="p-4 border-b border-gray-100 shrink-0 space-y-2">
+          <h2 className="text-base font-bold text-gray-900">Seleccionar Bienes para Imprimir</h2>
+          <p className="text-xs text-gray-500">Utiliza los filtros principales para buscar y listar los bienes. Los resultados aparecerán aquí abajo.</p>
+          {filteredBienes.length > 0 && (
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => {
+                  // Agregar todos los que no están ya en la cola
+                  const newItems = filteredBienes.filter(
+                    b => !selectedBienes.some(sb => sb.id_bien === b.id_bien)
+                  );
+                  setSelectedBienes(prev => [...prev, ...newItems]);
+                }}
+                className="flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
               >
-                <option value="">Todas</option>
-                {categorias.map(c => (
-                  <option key={c.id_categoria} value={String(c.id_categoria)}>
-                    {c.nombre_categoria}
-                  </option>
-                ))}
-              </select>
-              <Filter size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                + Agregar todos ({filteredBienes.length})
+              </button>
+              <button
+                onClick={() => {
+                  // Quitar de la cola todos los que son de esta página
+                  const ids = new Set(filteredBienes.map(b => b.id_bien));
+                  setSelectedBienes(prev => prev.filter(sb => !ids.has(sb.id_bien)));
+                }}
+                className="flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors"
+              >
+                − Quitar todos
+              </button>
             </div>
-          </div>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           {filteredBienes.length === 0 ? (

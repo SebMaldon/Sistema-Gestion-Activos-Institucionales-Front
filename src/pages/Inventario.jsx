@@ -1529,12 +1529,10 @@ export default function Inventario() {
               </div>
             )})()}
 
-            {activeTab !== 'Impresión de Etiquetas' && (
-              <p className="text-xs text-gray-400 mt-2">
-                {pageInfo?.totalCount ?? 0} {(pageInfo?.totalCount ?? 0) === 1 ? 'registro' : 'registros'} encontrados
-                {activeFilterCount > 0 && <span className="text-green-600 font-semibold"> · {activeFilterCount} filtro(s) avanzado(s) activo(s)</span>}
-              </p>
-            )}
+            <p className="text-xs text-gray-400 mt-2">
+              {pageInfo?.totalCount ?? 0} {(pageInfo?.totalCount ?? 0) === 1 ? 'registro' : 'registros'} encontrados
+              {activeFilterCount > 0 && <span className="text-green-600 font-semibold"> · {activeFilterCount} filtro(s) avanzado(s) activo(s)</span>}
+            </p>
           </div>
 
       {/* ── Contenedor con scroll — tabla desktop + tarjetas móvil ──────── */}
@@ -1688,7 +1686,7 @@ export default function Inventario() {
       </div>{/* fin contenedor scroll */}
 
       {/* Paginación - conectada al servidor */}
-      {!isLoading && !isError && activeTab !== 'Impresión de Etiquetas' && (pageInfo?.hasNextPage || cursors.length > 0) && (
+      {!isLoading && !isError && (pageInfo?.hasNextPage || cursors.length > 0) && (
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
           <div className="flex flex-col gap-0.5">
             <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{pageInfo.totalCount || 0}</span> bienes registrados.</p>
