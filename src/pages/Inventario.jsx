@@ -452,6 +452,8 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
 // ─── Componente para seleccionar monitores ────────────────────────────────────
 function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsignar, onDesasignar, asignando, desasignando }) {
   const [showPicker, setShowPicker] = useState(false);
+  // Estado para el diálogo de confirmación de reasignación forzada
+  const [conflictInfo, setConflictInfo] = useState(null); // { monitorId, monitorLabel, equipoNombre, vars }
   
   // Buscar monitores disponibles
   const { data: monitoresData, isLoading } = useQuery({
@@ -465,8 +467,82 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
     m => !asignados.some(a => a.id_monitor === m.id_bien)
   );
 
+  const handleSelectMonitor = (val) => {
+    if (!val) return;
+    const m = monitoresDisponibles.find(x => x.id_bien === val);
+    if (!m) return;
+
+    // Verificar si el monitor ya está ocupado en otro equipo
+    const eqAsig = m.equipoAsignado;
+    if (eqAsig && eqAsig.id_bien !== idBienEquipo) {
+      const eq = eqAsig.equipo;
+      const nombre = [
+        eq?.num_inv  ? `INV: ${eq.num_inv}`  : null,
+        eq?.num_serie ? `S/N: ${eq.num_serie}` : null,
+        eq?.modelo?.descrip_disp ? `(${eq.modelo.descrip_disp})` : null,
+      ].filter(Boolean).join(' ') || 'otro equipo';
+      setConflictInfo({
+        monitorId: m.id_bien,
+        monitorLabel: m.modelo?.descrip_disp || `Monitor S/N: ${m.num_serie}`,
+        equipoNombre: nombre,
+        vars: isCreateMode ? { monitor: m } : { id_bien: idBienEquipo, id_monitor: val },
+      });
+      setShowPicker(false);
+      return;
+    }
+
+    // Sin conflicto, asignar directamente
+    onAsignar(isCreateMode ? { monitor: m } : { id_bien: idBienEquipo, id_monitor: val });
+    setShowPicker(false);
+  };
+
   return (
     <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
+      {/* Modal de conflicto */}
+      {conflictInfo && (
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-gray-900/60 p-4" onClick={() => setConflictInfo(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-sm">Monitor en uso</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Este monitor ya está asignado a:</p>
+                <p className="text-xs font-semibold text-amber-700 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                  {conflictInfo.equipoNombre}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 mb-5">
+              ¿Deseas <strong>forzar la reasignación</strong>? Esto desvinculará el monitor de su equipo actual y lo asignará a este equipo.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConflictInfo(null)}
+                className="flex-1 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Pasar forzar=true para que el back desvincule primero
+                  const vars = { ...conflictInfo.vars, forzar: true };
+                  onAsignar(vars);
+                  setConflictInfo(null);
+                }}
+                className="flex-1 py-2 text-sm font-semibold text-white rounded-xl transition-colors"
+                style={{ background: 'linear-gradient(135deg,#b45309,#92400e)' }}
+              >
+                Forzar Reasignación
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-3 bg-teal-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Monitor size={14} className="text-teal-700" />
@@ -527,23 +603,19 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
                 ) : (
                   <SearchableSelect
                     value=""
-                    onChange={(val) => {
-                      if(val) {
-                        const m = monitoresDisponibles.find(x => x.id_bien === val);
-                        onAsignar(isCreateMode ? { monitor: m } : { id_bien: idBienEquipo, id_monitor: val });
-                      }
-                      setShowPicker(false);
-                    }}
+                    onChange={handleSelectMonitor}
                     options={monitoresDisponibles.map(m => ({
                       value: m.id_bien,
-                      label: `${m.modelo?.descrip_disp || 'Monitor'} - ${m.num_serie || 'Sin Serie'}`
+                      label: `${m.modelo?.descrip_disp || 'Monitor'} - ${m.num_serie || 'Sin Serie'}${
+                        m.equipoAsignado ? ' ⚠ En uso' : ''
+                      }`
                     }))}
                     placeholder="Buscar por número de serie o modelo..."
                   />
                 )}
               </div>
             )}
-          </>
+        </>
       </div>
     </div>
   );
@@ -1090,7 +1162,7 @@ export default function Inventario() {
           // Asignar Monitores pendientes si aplica
           if (pendingMonitors.length > 0) {
             pendingMonitors.forEach(m => {
-              asignarMonitor({ id_bien: bienCreado.id_bien, id_monitor: m.id_monitor });
+              asignarMonitor({ id_bien: bienCreado.id_bien, id_monitor: m.id_monitor, forzar: m.forzar || false });
             });
           }
 

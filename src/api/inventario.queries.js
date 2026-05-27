@@ -362,14 +362,24 @@ export const GET_BIENES_MONITOR = gql`
         clave_modelo
         descrip_disp
       }
+      equipoAsignado {
+        id_bien_monitor
+        id_bien
+        equipo {
+          id_bien
+          num_serie
+          num_inv
+          modelo { descrip_disp }
+        }
+      }
     }
   }
 `;
 
 /** Asigna un monitor (bien) a un equipo */
 export const ASIGNAR_MONITOR_MUTATION = gql`
-  mutation AsignarMonitor($id_bien: ID!, $id_monitor: ID!) {
-    asignarMonitor(id_bien: $id_bien, id_monitor: $id_monitor) {
+  mutation AsignarMonitor($id_bien: ID!, $id_monitor: ID!, $forzar: Boolean) {
+    asignarMonitor(id_bien: $id_bien, id_monitor: $id_monitor, forzar: $forzar) {
       id_bien_monitor
       id_bien
       id_monitor
