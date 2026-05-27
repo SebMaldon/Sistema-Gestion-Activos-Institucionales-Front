@@ -71,6 +71,22 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
 
   // Obtener valor actual de un campo
   const getValorActual = (campo) => {
+    if (campo === 'monitores' && bienActual.monitores) {
+      const mapped = bienActual.monitores.map(bm => {
+        const desc = bm.monitor?.modelo?.descrip_disp || '';
+        const marca = bm.monitor?.modelo?.marca?.marca || '';
+        let cleanMod = desc;
+        if (marca && desc.toLowerCase().startsWith(marca.toLowerCase())) {
+          cleanMod = desc.substring(marca.length).trim();
+        }
+        return {
+          marca: marca,
+          modelo: cleanMod,
+          num_serie: bm.monitor?.num_serie || ''
+        };
+      });
+      return formatValue(campo, mapped);
+    }
     if (bienActual[campo] !== undefined && bienActual[campo] !== null) {
       return formatValue(campo, bienActual[campo]);
     }
