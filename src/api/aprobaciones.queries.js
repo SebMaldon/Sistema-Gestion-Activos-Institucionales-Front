@@ -26,6 +26,17 @@ export const GET_SOLICITUDES_PENDIENTES = gql`
           cpu_info ram_gb almacenamiento_gb mac_address
           dir_ip puerto_red switch_red modelo_so
         }
+        monitores {
+          monitor {
+            num_serie
+            modelo {
+              descrip_disp
+              marca {
+                marca
+              }
+            }
+          }
+        }
       }
       solicitante {
         id_usuario
