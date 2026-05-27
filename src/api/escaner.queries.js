@@ -135,6 +135,11 @@ export const CREATE_NOTA_BIEN = gql`
   mutation CreateNotaBien($id_bien: ID!, $contenido_nota: String!) {
     createNotaBien(id_bien: $id_bien, contenido_nota: $contenido_nota) {
       id_nota
+      contenido_nota
+      fecha_creacion
+      usuarioAutor {
+        nombre_completo
+      }
     }
   }
 `;
