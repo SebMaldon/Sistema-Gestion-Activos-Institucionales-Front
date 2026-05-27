@@ -5,6 +5,7 @@ import Barcode from 'react-barcode';
 import { useBienes, mapBienNode } from '../hooks/useBienes';
 import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
 import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI } from '../hooks/useBienMutations';
+import { useCreateNotaBien } from '../hooks/useEscaner';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
 import {
@@ -634,6 +635,8 @@ export default function Inventario() {
   const [activeTab, setActiveTab] = useState('Capitalizable');
   const [search, setSearch]       = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [nuevaNotaText, setNuevaNotaText] = useState('');
+  const { mutateAsync: createNotaBien, isLoading: isCreatingNota } = useCreateNotaBien();
   
   const [filterStatus, setFilterStatus]     = useState('');
   const [filterUbicacion, setFilterUbicacion] = useState('');
@@ -1861,7 +1864,7 @@ export default function Inventario() {
               <InfoField icon={<Tag size={14}/>}      label="No. Inventario"     value={fmt(modalFicha.numInv)} mono />
               <InfoField icon={<Shield size={14}/>}   label="Clave Presupuestal" value={fmt(modalFicha.clavePresupuestal)} mono />
               <InfoField icon={<MapPin size={14}/>}   label="Ubicación"          value={fmt(modalFicha.ubicacion)} />
-              <InfoField icon={<User size={14}/>}     label="En Resguardo de"    value={fmt(modalFicha.resguardo)} />
+              <InfoField icon={<User size={14}/>}     label="En Resguardo de"    value={fmt(modalFicha.resguardo) + (modalFicha.usuarioResguardo?.matricula ? ` (Mat: ${modalFicha.usuarioResguardo.matricula})` : '')} />
               <InfoField icon={<Calendar size={14}/>} label="Fecha Adquisición"  value={formatDate(modalFicha.fechaAdquisicion)} />
               <InfoField icon={<Calendar size={14}/>} label="Última Actualización" value={formatDateTime(modalFicha.fechaActualizacion)} />
               <InfoField icon={<Package size={14}/>}  label="Cantidad"           value={modalFicha.cantidad} />
@@ -1980,14 +1983,14 @@ export default function Inventario() {
             )}
 
             {/* Notas de Observación */}
-            {modalFicha.notas && modalFicha.notas.length > 0 && (
-              <div className="rounded-xl border border-gray-200 overflow-hidden mt-4">
-                <div className="bg-gray-50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100">
-                  <StickyNote size={15} className="text-gray-500" />
-                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Notas de Observación</span>
-                </div>
-                <div className="p-4 space-y-3 bg-white">
-                  {modalFicha.notas.map((nota) => (
+            <div className="rounded-xl border border-gray-200 overflow-hidden mt-4">
+              <div className="bg-gray-50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100">
+                <StickyNote size={15} className="text-gray-500" />
+                <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Notas de Observación</span>
+              </div>
+              <div className="p-4 space-y-3 bg-white">
+                {modalFicha.notas && modalFicha.notas.length > 0 ? (
+                  modalFicha.notas.map((nota) => (
                     <div key={nota.id_nota} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <p className="text-sm text-gray-800">{nota.contenido_nota}</p>
                       <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
@@ -1995,10 +1998,47 @@ export default function Inventario() {
                         <span>{new Date(isNaN(Number(nota.fecha_creacion)) ? nota.fecha_creacion : Number(nota.fecha_creacion)).toLocaleString('es-MX')}</span>
                       </div>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No hay notas registradas para este bien.</p>
+                )}
+                
+                {/* Agregar nueva nota */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <textarea
+                    value={nuevaNotaText}
+                    onChange={(e) => setNuevaNotaText(e.target.value)}
+                    placeholder="Escribe una nueva nota u observación..."
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+                    rows={2}
+                  />
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={async () => {
+                        if (!nuevaNotaText.trim()) return;
+                        try {
+                          const res = await createNotaBien({ id_bien: modalFicha.id_bien, contenido_nota: nuevaNotaText });
+                          showToast('Nota agregada correctamente', 'success');
+                          setNuevaNotaText('');
+                          if (res) {
+                            setModalFicha(prev => ({
+                              ...prev,
+                              notas: [...(prev.notas || []), res]
+                            }));
+                          }
+                        } catch (error) {
+                          showToast('Error al agregar nota', 'error');
+                        }
+                      }}
+                      disabled={!nuevaNotaText.trim() || isCreatingNota}
+                      className="px-4 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-semibold hover:bg-teal-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isCreatingNota ? <Loader2 size={14} className="animate-spin" /> : 'Guardar Nota'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </Modal>
         );
@@ -2596,7 +2636,7 @@ function Modal({ onClose, title, children, footer, wide = false, small = false }
       }}
     >
       <div className="absolute inset-0 bg-black/50 fade-in pointer-events-none" />
-      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${
+      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] h-fit ${
         small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'
       } fade-in`}>
         {/* Header */}
@@ -2608,12 +2648,12 @@ function Modal({ onClose, title, children, footer, wide = false, small = false }
           </button>
         </div>
         {/* Body scrollable */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+        <div className="flex-shrink min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
           {children}
         </div>
         {/* Footer sticky (opcional) */}
         {footer && (
-          <div className="px-5 sm:px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+          <div className="px-5 sm:px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 mt-auto">
             {footer}
           </div>
         )}

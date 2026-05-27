@@ -115,8 +115,8 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.matricula || !form.nombre_completo) {
-      showToast('Matrícula y nombre son obligatorios', 'warning');
+    if (!form.nombre_completo) {
+      showToast('El nombre es obligatorio', 'warning');
       return;
     }
     if (isEdit) {
@@ -150,9 +150,9 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
       <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Matrícula *</label>
+            <label className={labelCls}>Matrícula</label>
             <input className={inputCls} value={form.matricula} onChange={e => handleChange('matricula', e.target.value)}
-              disabled={isEdit} placeholder="abc12345" required />
+              placeholder="Opcional" />
           </div>
           <div>
             <label className={labelCls}>Tipo de Usuario</label>
