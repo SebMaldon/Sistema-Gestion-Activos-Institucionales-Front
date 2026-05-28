@@ -4,7 +4,7 @@ import { gqlClient } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
 import {
-  GET_USUARIOS, GET_ROLES, GET_UNIDADES,
+  GET_USUARIOS, GET_ROLES, GET_CAT_SEGMENTOS, GET_CAT_UNIDADES_FISICAS,
   CREATE_USUARIO, UPDATE_USUARIO, DELETE_USUARIO, RESET_PASSWORD_ADMIN,
   TOGGLE_ESTATUS_USUARIO, HARD_DELETE_USUARIO,
 } from '../api/usuarios.queries';
@@ -12,7 +12,9 @@ import {
   Users, Plus, Edit, UserX, Search, RefreshCw,
   ChevronLeft, ChevronRight, Shield,
   Trash2, UserCheck, UserMinus, X, Eye, EyeOff, Copy, CheckCircle,
+  Building2, Radio,
 } from 'lucide-react';
+import MultiSelect from '../components/MultiSelect';
 
 
 // ─── Constantes de roles ──────────────────────────────────────────────────────
@@ -27,6 +29,18 @@ const getInitials = (name = '') => name.split(' ').slice(0, 2).map(n => n[0]).jo
 const avatarColor = (id) => {
   const colors = ['#006341','#1d4ed8','#7c3aed','#b45309','#0f766e','#be185d'];
   return colors[id % colors.length];
+};
+
+/** Texto descriptivo de la unidad física de un usuario */
+const unidadFisicaLabel = (u) => {
+  if (!u.unidadFisica) return null;
+  return u.unidadFisica.desc_corta || u.unidadFisica.descripcion || u.unidadFisica.clave;
+};
+
+/** Texto descriptivo del segmento de red de un usuario */
+const segmentoLabel = (u) => {
+  if (!u.segmento) return null;
+  return u.segmento.nombre || u.segmento.no_ref;
 };
 
 // ─── Sub-componentes ─────────────────────────────────────────────────────────
@@ -73,7 +87,7 @@ function ModalHeader({ title, onClose }) {
 }
 
 // ─── Modal Crear / Editar Usuario ────────────────────────────────────────────
-function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
+function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFisicas = [] }) {
   const qc = useQueryClient();
   const { showToast } = useApp();
   const isEdit = !!usuario;
@@ -85,7 +99,8 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
     correo_electronico: usuario?.correo_electronico ?? '',
     password: '',
     id_rol: usuario?.id_rol ?? 3,
-    id_unidad: usuario?.id_unidad ?? '',
+    id_unidad: usuario?.id_unidad ?? '',          // FK segmento de red
+    clave_unidad: usuario?.clave_unidad ?? '',    // FK unidad física
   });
   const [showPass, setShowPass] = useState(false);
 
@@ -119,24 +134,21 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
       showToast('El nombre es obligatorio', 'warning');
       return;
     }
+    const vars = {
+      nombre_completo: form.nombre_completo,
+      tipo_usuario: form.tipo_usuario || null,
+      correo_electronico: form.correo_electronico || null,
+      id_rol: parseInt(form.id_rol),
+      id_unidad: form.id_unidad ? parseInt(form.id_unidad) : null,
+      clave_unidad: form.clave_unidad || null,
+    };
     if (isEdit) {
-      updateMut.mutate({
-        id_usuario: usuario.id_usuario,
-        nombre_completo: form.nombre_completo,
-        tipo_usuario: form.tipo_usuario || null,
-        correo_electronico: form.correo_electronico || null,
-        id_rol: parseInt(form.id_rol),
-        id_unidad: form.id_unidad ? parseInt(form.id_unidad) : null,
-      });
+      updateMut.mutate({ id_usuario: usuario.id_usuario, ...vars });
     } else {
       createMut.mutate({
         matricula: form.matricula,
-        nombre_completo: form.nombre_completo,
-        tipo_usuario: form.tipo_usuario || null,
-        correo_electronico: form.correo_electronico || null,
         password: form.password || null,
-        id_rol: parseInt(form.id_rol),
-        id_unidad: form.id_unidad ? parseInt(form.id_unidad) : null,
+        ...vars,
       });
     }
   };
@@ -152,7 +164,7 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
           <div>
             <label className={labelCls}>Matrícula</label>
             <input className={inputCls} value={form.matricula} onChange={e => handleChange('matricula', e.target.value)}
-              placeholder="Opcional" />
+              placeholder="Opcional" disabled={isEdit} />
           </div>
           <div>
             <label className={labelCls}>Tipo de Usuario</label>
@@ -180,21 +192,67 @@ function UsuarioModal({ usuario, onClose, roles = [], unidades = [] }) {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Rol</label>
-            <select className={inputCls} value={form.id_rol} onChange={e => handleChange('id_rol', e.target.value)}>
-              {roles.map(r => <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>Unidad</label>
-            <select className={inputCls} value={form.id_unidad} onChange={e => handleChange('id_unidad', e.target.value)}>
-              <option value="">— Ninguna —</option>
-              {unidades.map(u => <option key={u.id_segmento} value={u.id_segmento}>{u.nombre || u.no_ref}</option>)}
-            </select>
+
+        {/* Rol */}
+        <div>
+          <label className={labelCls}>Rol</label>
+          <select className={inputCls} value={form.id_rol} onChange={e => handleChange('id_rol', e.target.value)}>
+            {roles.map(r => <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}</option>)}
+          </select>
+        </div>
+
+        {/* Asignación de unidad — separador visual */}
+        <div className="border-t border-gray-100 pt-3">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Asignación de Unidad</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Unidad física (clínica / hospital) */}
+            <div>
+              <label className={labelCls}>
+                <span className="inline-flex items-center gap-1">
+                  <Building2 size={11} className="text-green-600" />
+                  Unidad Física
+                </span>
+              </label>
+              <select
+                className={inputCls}
+                value={form.clave_unidad}
+                onChange={e => handleChange('clave_unidad', e.target.value)}
+              >
+                <option value="">— Ninguna —</option>
+                {unidadesFisicas.map(u => (
+                  <option key={u.clave} value={u.clave}>
+                    {u.desc_corta ? `[${u.desc_corta}] ` : ''}{u.descripcion || u.clave}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación</p>
+            </div>
+
+            {/* Segmento de red */}
+            <div>
+              <label className={labelCls}>
+                <span className="inline-flex items-center gap-1">
+                  <Radio size={11} className="text-blue-500" />
+                  Segmento de Red
+                </span>
+              </label>
+              <select
+                className={inputCls}
+                value={form.id_unidad}
+                onChange={e => handleChange('id_unidad', e.target.value)}
+              >
+                <option value="">— Ninguno —</option>
+                {segmentos.map(s => (
+                  <option key={s.id_segmento} value={s.id_segmento}>
+                    {s.nombre || s.no_ref}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-400 mt-0.5">Segmento de red / IP asignado</p>
+            </div>
           </div>
         </div>
+
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose}
             className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
@@ -445,7 +503,7 @@ function ConfirmEliminarModal({ usuario, onClose }) {
   );
 }
 
-// Componente principal ─────────────────────────────────────────────────────
+// ─── Componente principal ──────────────────────────────────────────────────────
 export default function GestionUsuarios() {
   const { showToast } = useApp();
   const usuario = useAuthStore(s => s.usuario);
@@ -455,9 +513,12 @@ export default function GestionUsuarios() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterEstatus, setFilterEstatus] = useState('');
-  const [filterUnidad, setFilterUnidad] = useState('');
+  // Filtro por segmento de red (id_unidad → segmentos.id_segmento)
+  const [filterSegmento, setFilterSegmento] = useState('');
+  // Filtro por unidad física (clave_unidad → unidades.clave) — filtrado en cliente
+  const [filterUnidadesFisicas, setFilterUnidadesFisicas] = useState([]);
   const [cursor, setCursor] = useState(null);
-  const [cursors, setCursors] = useState([]); // historial para retroceder
+  const [cursors, setCursors] = useState([]);
   const PAGE_SIZE = 15;
 
   // Debounce search
@@ -471,6 +532,8 @@ export default function GestionUsuarios() {
     }, 400);
   }, []);
 
+  const resetPage = () => { setCursor(null); setCursors([]); };
+
   // Modales
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
@@ -478,7 +541,7 @@ export default function GestionUsuarios() {
   const [modalToggleEstatus, setModalToggleEstatus] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
 
-  // ── Queries
+  // ── Queries de catálogos
   const { data: catRoles = [] } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
@@ -487,26 +550,42 @@ export default function GestionUsuarios() {
     },
   });
 
-  const { data: catUnidades = [] } = useQuery({
-    queryKey: ['unidades'],
+  // Catálogo de segmentos de red
+  const { data: catSegmentos = [] } = useQuery({
+    queryKey: ['catSegmentos'],
     queryFn: async () => {
-      const d = await gqlClient.request(GET_UNIDADES);
+      const d = await gqlClient.request(GET_CAT_SEGMENTOS);
       return d.catSegmentos ?? [];
     },
   });
 
+  // Catálogo de unidades físicas
+  const { data: catUnidadesFisicas = [] } = useQuery({
+    queryKey: ['catUnidadesFisicas'],
+    queryFn: async () => {
+      const d = await gqlClient.request(GET_CAT_UNIDADES_FISICAS);
+      return d.catUnidades ?? [];
+    },
+  });
+
+  // ── Query principal de usuarios
   const { data: usuariosData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['usuarios', filterEstatus, filterUnidad, debouncedSearch, cursor],
+    queryKey: ['usuarios', filterEstatus, filterSegmento, debouncedSearch, cursor],
     queryFn: () => gqlClient.request(GET_USUARIOS, {
       estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
-      id_unidad: filterUnidad ? parseInt(filterUnidad) : undefined,
+      id_unidad: filterSegmento ? parseInt(filterSegmento) : undefined,
       search: debouncedSearch || undefined,
       pagination: { first: PAGE_SIZE, after: cursor ?? undefined },
     }),
     select: d => d.usuarios,
   });
 
-  const usuarios = usuariosData?.edges?.map(e => e.node) ?? [];
+  // Filtro de unidad física aplicado en cliente (no hay parámetro de API para esto)
+  const allUsuarios = usuariosData?.edges?.map(e => e.node) ?? [];
+  const usuarios = filterUnidadesFisicas.length > 0
+    ? allUsuarios.filter(u => filterUnidadesFisicas.includes(u.clave_unidad))
+    : allUsuarios;
+
   const pageInfo = usuariosData?.pageInfo;
   const totalCount = pageInfo?.totalCount ?? 0;
 
@@ -526,12 +605,8 @@ export default function GestionUsuarios() {
 
   const qc = useQueryClient();
 
-  // toggleEstatus ya es manejado por ConfirmToggleEstatusModal — se deja vacío para no romper refs
-
   const isAdmin  = idRol <= 2;
   const isMaestro = idRol === 2;
-  const roles = catRoles;
-  const unidades = catUnidades;
 
   return (
     <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
@@ -552,204 +627,296 @@ export default function GestionUsuarios() {
         )}
       </div>
 
-      {/* ── TAB: USUARIOS ──────────────────────────────────────────────────── */}
       <div className="flex flex-col flex-1 min-h-0 gap-5">
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            <StatCard label="Totales" val={totalCount} color="#006341" bg="#dcfce7" />
-            <StatCard label="Página actual" val={usuarios.length} color="#2563eb" bg="#dbeafe" />
-            <StatCard label="Página" val={`${cursors.length + 1}`} color="#7c3aed" bg="#ede9fe" />
-          </div>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <StatCard label="Totales" val={totalCount} color="#006341" bg="#dcfce7" />
+          <StatCard label="Página actual" val={usuarios.length} color="#2563eb" bg="#dbeafe" />
+          <StatCard label="Página" val={`${cursors.length + 1}`} color="#7c3aed" bg="#ede9fe" />
+        </div>
 
-          {/* Filtros */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex flex-wrap gap-3">
-              <div className="relative flex-1 min-w-[180px]">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre, matrícula o correo..."
-                  value={search}
-                  onChange={e => handleSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+        {/* Filtros */}
+        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-50">
+          <div className="flex flex-col md:flex-row flex-wrap gap-3 items-center">
+            {/* Búsqueda texto */}
+            <div className="relative flex-1 min-w-[200px] w-full md:w-auto">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={search}
+                onChange={e => handleSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-[38px]"
+              />
+            </div>
+
+            {/* Estatus */}
+            <select value={filterEstatus} onChange={e => { setFilterEstatus(e.target.value); resetPage(); }}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-[38px] bg-white w-full md:w-auto min-w-[140px]">
+              <option value="">Todos los estatus</option>
+              <option value="activos">Activos</option>
+              <option value="inactivos">Inactivos</option>
+            </select>
+
+            {/* Filtro por Unidad Física */}
+            <div className="flex-1 min-w-[220px] w-full md:w-auto z-[60]">
+              <MultiSelect
+                options={catUnidadesFisicas.map(u => ({
+                  value: u.clave,
+                  label: (u.desc_corta ? `[${u.desc_corta}] ` : '') + (u.descripcion || u.clave)
+                }))}
+                selectedValues={filterUnidadesFisicas}
+                onChange={vals => { setFilterUnidadesFisicas(vals); resetPage(); }}
+                placeholder="🏥 Todas las unidades"
+              />
+            </div>
+
+            {/* Filtro por Segmento de Red */}
+            <select
+              value={filterSegmento}
+              onChange={e => { setFilterSegmento(e.target.value); resetPage(); }}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 h-[38px] bg-white flex-1 min-w-[180px] w-full md:w-auto"
+              title="Filtrar por Segmento de Red"
+            >
+              <option value="">📡 Todos los segmentos</option>
+              {catSegmentos.map(s => (
+                <option key={s.id_segmento} value={s.id_segmento}>
+                  {s.nombre || s.no_ref}
+                </option>
+              ))}
+            </select>
+
+            <button onClick={() => refetch()}
+              className="h-[38px] w-full md:w-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors shrink-0" title="Refrescar">
+              <RefreshCw size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabla desktop */}
+        <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex-1 overflow-y-auto relative">
+            <table className="w-full text-sm text-left">
+              <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
+                <tr>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <span className="flex items-center gap-1.5">
+                      <Building2 size={12} className="text-green-600" /> Unidad Física
+                    </span>
+                  </th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <span className="flex items-center gap-1.5">
+                      <Radio size={12} className="text-blue-500" /> Segmento Red
+                    </span>
+                  </th>
+                  <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
+                  {isAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={isAdmin ? 6 : 5} className="py-12 text-center text-sm text-gray-400">Cargando...</td>
+                  </tr>
+                ) : usuarios.length === 0 ? (
+                  <tr>
+                    <td colSpan={isAdmin ? 6 : 5} className="py-12 text-center text-sm text-gray-400">No se encontraron usuarios</td>
+                  </tr>
+                ) : usuarios.map(u => {
+                  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
+                  const ufLabel = unidadFisicaLabel(u);
+                  const segLabel = segmentoLabel(u);
+                  return (
+                    <tr key={u.id_usuario} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                            style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
+                            {getInitials(u.nombre_completo)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{u.nombre_completo}</p>
+                            <p className="text-xs text-gray-400">{u.matricula} {u.correo_electronico && `• ${u.correo_electronico}`}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style={{ backgroundColor: badge.bg, color: badge.color }}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      {/* Unidad física */}
+                      <td className="px-5 py-4">
+                        {ufLabel ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg font-medium">
+                            <Building2 size={11} />
+                            {ufLabel}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                      {/* Segmento de red */}
+                      <td className="px-5 py-4">
+                        {segLabel ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded-lg font-medium">
+                            <Radio size={11} />
+                            {segLabel}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        {isAdmin ? (
+                          <button
+                            onClick={() => setModalToggleEstatus(u)}
+                            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${u.estatus ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
+                            {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
+                            {u.estatus ? 'Activo' : 'Inactivo'}
+                          </button>
+                        ) : (
+                          <span className={`text-xs font-semibold ${u.estatus ? 'text-green-600' : 'text-gray-400'}`}>
+                            {u.estatus ? 'Activo' : 'Inactivo'}
+                          </span>
+                        )}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => setModalEditar(u)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors" title="Editar">
+                              <Edit size={14} />
+                            </button>
+                            <button onClick={() => setModalReset(u)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Resetear contraseña">
+                              <Shield size={14} />
+                            </button>
+                            <button onClick={() => setModalEliminar(u)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Eliminar permanentemente">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Cards móvil */}
+        <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 pb-2">
+          {isLoading ? (
+            <div className="py-8 text-center text-sm text-gray-400">Cargando...</div>
+          ) : usuarios.map(u => {
+            const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
+            const ufLabel = unidadFisicaLabel(u);
+            const segLabel = segmentoLabel(u);
+            return (
+              <div key={u.id_usuario} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                    style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
+                    {getInitials(u.nombre_completo)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{u.nombre_completo}</p>
+                    <p className="text-xs text-gray-400">{u.matricula}</p>
+                  </div>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
+                    style={{ backgroundColor: badge.bg, color: badge.color }}>
+                    {badge.label}
+                  </span>
+                </div>
+                {/* Unidad y segmento en móvil */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {ufLabel && (
+                    <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg font-medium">
+                      <Building2 size={10} />{ufLabel}
+                    </span>
+                  )}
+                  {segLabel && (
+                    <span className="inline-flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg font-medium">
+                      <Radio size={10} />{segLabel}
+                    </span>
+                  )}
+                  {!ufLabel && !segLabel && (
+                    <span className="text-xs text-gray-400">Sin unidad asignada</span>
+                  )}
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-50">
+                    <button
+                      onClick={() => setModalToggleEstatus(u)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold ${u.estatus ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-600'}`}>
+                      {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
+                      {u.estatus ? 'Activo' : 'Inactivo'}
+                    </button>
+                    <button onClick={() => setModalEditar(u)}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600">
+                      <Edit size={14} />
+                    </button>
+                    <button onClick={() => setModalReset(u)}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
+                      <Shield size={14} />
+                    </button>
+                    <button onClick={() => setModalEliminar(u)}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-600">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
-              <select value={filterEstatus} onChange={e => { setFilterEstatus(e.target.value); setCursor(null); setCursors([]); }}
-                className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
-                <option value="">Todos los estatus</option>
-                <option value="activos">Activos</option>
-                <option value="inactivos">Inactivos</option>
-              </select>
-              <select value={filterUnidad} onChange={e => { setFilterUnidad(e.target.value); setCursor(null); setCursors([]); }}
-                className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
-                <option value="">Todas las unidades</option>
-                {unidades.map(u => <option key={u.id_segmento} value={u.id_segmento}>{u.nombre || u.no_ref}</option>)}
-              </select>
-              <button onClick={() => refetch()}
-                className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors" title="Refrescar">
-                <RefreshCw size={15} />
+            );
+          })}
+        </div>
+
+        {/* Paginación */}
+        {(pageInfo?.hasNextPage || cursors.length > 0) && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{totalCount || 0}</span> usuarios registrados.</p>
+              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                Página {cursors.length + 1} {totalCount > 0 && ` de ${Math.ceil(totalCount / PAGE_SIZE)}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={handlePrevPage} disabled={cursors.length === 0}
+                className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+                Anterior
+              </button>
+              <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
+                className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+                Siguiente
               </button>
             </div>
           </div>
-
-          {/* Tabla desktop */}
-          <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="flex-1 overflow-y-auto relative">
-              <table className="w-full text-sm text-left">
-                <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
-                  <tr>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unidad</th>
-                    <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
-                    {isAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                    {usuarios.map(u => {
-                      const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
-                      return (
-                        <tr key={u.id_usuario} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                                style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
-                                {getInitials(u.nombre_completo)}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900 text-sm">{u.nombre_completo}</p>
-                                <p className="text-xs text-gray-400">{u.matricula} {u.correo_electronico && `• ${u.correo_electronico}`}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                              style={{ backgroundColor: badge.bg, color: badge.color }}>
-                              {badge.label}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-xs text-gray-600">
-                            {u.unidad?.nombre || u.unidad?.no_ref || '—'}
-                          </td>
-                          <td className="px-5 py-4">
-                            {isAdmin ? (
-                              <button
-                                onClick={() => setModalToggleEstatus(u)}
-                                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${u.estatus ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
-                                {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
-                                {u.estatus ? 'Activo' : 'Inactivo'}
-                              </button>
-                            ) : (
-                              <span className={`text-xs font-semibold ${u.estatus ? 'text-green-600' : 'text-gray-400'}`}>
-                                {u.estatus ? 'Activo' : 'Inactivo'}
-                              </span>
-                            )}
-                          </td>
-                          {isAdmin && (
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-1.5">
-                                <button onClick={() => setModalEditar(u)}
-                                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors" title="Editar">
-                                  <Edit size={14} />
-                                </button>
-                                <button onClick={() => setModalReset(u)}
-                                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Resetear contraseña">
-                                  <Shield size={14} />
-                                </button>
-                                <button onClick={() => setModalEliminar(u)}
-                                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Eliminar permanentemente">
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-            </div>
-          </div>
-
-          {/* Cards móvil */}
-          <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 pb-2">
-            {isLoading ? (
-              <div className="py-8 text-center text-sm text-gray-400">Cargando...</div>
-            ) : usuarios.map(u => {
-              const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
-              return (
-                <div key={u.id_usuario} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                      style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
-                      {getInitials(u.nombre_completo)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm truncate">{u.nombre_completo}</p>
-                      <p className="text-xs text-gray-400">{u.matricula}</p>
-                    </div>
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
-                      style={{ backgroundColor: badge.bg, color: badge.color }}>
-                      {badge.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-3">{u.unidad?.nombre || '—'}</p>
-                  {isAdmin && (
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-50">
-                      <button
-                        onClick={() => setModalToggleEstatus(u)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold ${u.estatus ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-600'}`}>
-                        {u.estatus ? <UserCheck size={13} /> : <UserX size={13} />}
-                        {u.estatus ? 'Activo' : 'Inactivo'}
-                      </button>
-                      <button onClick={() => setModalEditar(u)}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600">
-                        <Edit size={14} />
-                      </button>
-                      <button onClick={() => setModalReset(u)}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
-                        <Shield size={14} />
-                      </button>
-                      <button onClick={() => setModalEliminar(u)}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-600">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Paginación — estática */}
-          {(pageInfo?.hasNextPage || cursors.length > 0) && (
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-              <div className="flex flex-col gap-0.5">
-                <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{totalCount || 0}</span> usuarios registrados.</p>
-                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                  Página {cursors.length + 1} {totalCount > 0 && ` de ${Math.ceil(totalCount / PAGE_SIZE)}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={handlePrevPage} disabled={cursors.length === 0} 
-                  className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
-                  Anterior
-                </button>
-                <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage} 
-                  className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
+      </div>
 
       {/* ── MODALES ──────────────────────────────────────────────────────── */}
       {modalCrear && (
-        <UsuarioModal roles={roles} unidades={unidades} onClose={() => setModalCrear(false)} />
+        <UsuarioModal
+          roles={catRoles}
+          segmentos={catSegmentos}
+          unidadesFisicas={catUnidadesFisicas}
+          onClose={() => setModalCrear(false)}
+        />
       )}
       {modalEditar && (
-        <UsuarioModal usuario={modalEditar} roles={roles} unidades={unidades} onClose={() => setModalEditar(null)} />
+        <UsuarioModal
+          usuario={modalEditar}
+          roles={catRoles}
+          segmentos={catSegmentos}
+          unidadesFisicas={catUnidadesFisicas}
+          onClose={() => setModalEditar(null)}
+        />
       )}
       {modalReset && (
         <ResetPasswordModal usuario={modalReset} onClose={() => setModalReset(null)} />

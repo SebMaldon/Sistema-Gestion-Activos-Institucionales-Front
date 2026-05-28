@@ -19,9 +19,13 @@ export const GET_USUARIOS = gql`
           correo_electronico
           id_rol
           id_unidad
+          clave_unidad
           estatus
           rol { id_rol nombre_rol }
-          unidad: segmento { id_unidad: id_segmento nombre no_ref }
+          # segmento de red (FK: id_unidad → segmentos.id_segmento)
+          segmento { id_segmento nombre no_ref clave }
+          # unidad física (FK: clave_unidad → unidades.clave)
+          unidadFisica { clave descripcion desc_corta }
         }
         cursor
       }
@@ -42,9 +46,17 @@ export const GET_ROLES = gql`
   }
 `;
 
-export const GET_UNIDADES = gql`
-  query GetUnidades {
+// Catálogo de segmentos de red (para asignar id_unidad)
+export const GET_CAT_SEGMENTOS = gql`
+  query GetCatSegmentos {
     catSegmentos { id_segmento nombre no_ref clave }
+  }
+`;
+
+// Catálogo de unidades físicas (para asignar clave_unidad)
+export const GET_CAT_UNIDADES_FISICAS = gql`
+  query GetCatUnidadesFisicas {
+    catUnidades { clave descripcion desc_corta }
   }
 `;
 
@@ -73,6 +85,7 @@ export const CREATE_USUARIO = gql`
     $password: String
     $id_rol: Int
     $id_unidad: Int
+    $clave_unidad: String
   ) {
     createUsuario(
       matricula: $matricula
@@ -82,11 +95,13 @@ export const CREATE_USUARIO = gql`
       password: $password
       id_rol: $id_rol
       id_unidad: $id_unidad
+      clave_unidad: $clave_unidad
     ) {
       id_usuario matricula nombre_completo tipo_usuario correo_electronico
-      id_rol id_unidad estatus
+      id_rol id_unidad clave_unidad estatus
       rol { id_rol nombre_rol }
-      unidad: segmento { id_unidad: id_segmento nombre no_ref }
+      segmento { id_segmento nombre no_ref clave }
+      unidadFisica { clave descripcion desc_corta }
     }
   }
 `;
@@ -99,6 +114,7 @@ export const UPDATE_USUARIO = gql`
     $correo_electronico: String
     $id_rol: Int
     $id_unidad: Int
+    $clave_unidad: String
     $estatus: Boolean
   ) {
     updateUsuario(
@@ -108,12 +124,14 @@ export const UPDATE_USUARIO = gql`
       correo_electronico: $correo_electronico
       id_rol: $id_rol
       id_unidad: $id_unidad
+      clave_unidad: $clave_unidad
       estatus: $estatus
     ) {
       id_usuario matricula nombre_completo tipo_usuario correo_electronico
-      id_rol id_unidad estatus
+      id_rol id_unidad clave_unidad estatus
       rol { id_rol nombre_rol }
-      unidad: segmento { id_unidad: id_segmento nombre no_ref }
+      segmento { id_segmento nombre no_ref clave }
+      unidadFisica { clave descripcion desc_corta }
     }
   }
 `;
