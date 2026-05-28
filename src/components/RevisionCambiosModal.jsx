@@ -41,7 +41,7 @@ const IGNORE_FIELDS = ['_esCreacion', 'id_bien', 'especificacionTI', '_idBienTem
 
 const CATALOGS_QUERY = gql`
   query GetModalCatalogs {
-    catUnidades { id_unidad nombre clave }
+    catUnidades { clave descripcion desc_corta }
     catSegmentos { id_segmento nombre clave }
     ubicaciones { id_ubicacion nombre_ubicacion }
     catCategoriasActivo { id_categoria nombre_categoria }
@@ -97,8 +97,8 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
         : 'Sin adaptadores';
     }
     if (campo === 'id_unidad' && catData?.catUnidades) {
-      const u = catData.catUnidades.find(x => String(x.id_unidad) === String(valor));
-      if (u) return `${valor} - ${u.nombre || u.clave}`;
+      const u = catData.catUnidades.find(x => String(x.clave) === String(valor));
+      if (u) return `${valor} - ${u.descripcion || u.desc_corta}`;
     }
     if (campo === 'id_segmento' && catData?.catSegmentos) {
       const s = catData.catSegmentos.find(x => String(x.id_segmento) === String(valor));
