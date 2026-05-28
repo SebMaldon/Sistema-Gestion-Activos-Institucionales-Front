@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { useBienes, mapBienNode } from '../hooks/useBienes';
 import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
-import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI } from '../hooks/useBienMutations';
+import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI, useCreateCuentaPC, useUpdateCuentaPC } from '../hooks/useBienMutations';
 import { useCreateNotaBien } from '../hooks/useEscaner';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
@@ -97,8 +97,11 @@ const FORM_EMPTY = {
   fecha_adquisicion: '',
 };
 const TI_EMPTY = {
-  cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '',
-  puerto_red: '', switch_red: '', cuenta_windows: '', correo: '', last_scan: '', tipo_user: '', nombre_host: '', windows_serial: ''
+  nombre_host: '', cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '',
+  puerto_red: '', switch_red: '', last_scan: '', windows_serial: ''
+};
+const CUENTA_EMPTY = {
+  cuenta_windows: '', correo: '', tipo_user: '', nombre_host: ''
 };
 // ─── Mini-CRUD: Modal de Catálogos (Marcas / Tipos / Modelos) ────────────────
 function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }) {
@@ -773,6 +776,8 @@ export default function Inventario() {
   // ── Formulario ────────────────────────────────────────────────────────────
   const [form, setForm]   = useState(FORM_EMPTY);
   const [tiForm, setTiForm] = useState(TI_EMPTY);
+  // cuentas 1:N: array de { id_cuenta?, cuenta_windows, correo, tipo_user, nombre_host, _editing?, _new? }
+  const [cuentasList, setCuentasList] = useState([]);
   const [formErrors, setFormErrors] = useState({});
   const [pendingEavValues, setPendingEavValues] = useState({}); // {id_atributo: valor} para modo creación
   const [pendingMonitors, setPendingMonitors] = useState([]); // [{ monitor: object, id_monitor: string }] para modo creación
@@ -942,6 +947,12 @@ export default function Inventario() {
     onSuccess: () => showToast('Especificaciones TI guardadas.', 'success'),
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al guardar TI.', 'error'),
   });
+  const { mutate: createCuentaPC } = useCreateCuentaPC({
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al guardar cuenta PC.', 'error'),
+  });
+  const { mutate: updateCuentaPC } = useUpdateCuentaPC({
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar cuenta PC.', 'error'),
+  });
 
   // ── Mutaciones de monitores ────────────────────────────────────────────────
   const { mutate: asignarMonitor, isPending: asignando } = useMutation({
@@ -972,6 +983,7 @@ export default function Inventario() {
   const openCreate = useCallback(() => {
     setForm(FORM_EMPTY);
     setTiForm(TI_EMPTY);
+    setCuentasList([]);
     setFormErrors({});
     setPendingEavValues({});
     setPendingMonitors([]);
@@ -997,6 +1009,7 @@ export default function Inventario() {
         ? new Date(bien.fechaAdquisicion).toISOString().split('T')[0] : '',
     });
     setTiForm({
+      nombre_host: bien.especificacionTI?.nombre_host ?? '',
       cpu_info: bien.especificacionTI?.cpu_info ?? '',
       ram_gb: bien.especificacionTI?.ram_gb ?? '',
       almacenamiento_gb: bien.especificacionTI?.almacenamiento_gb ?? '',
@@ -1006,13 +1019,11 @@ export default function Inventario() {
       modelo_so: bien.especificacionTI?.modelo_so ?? '',
       puerto_red: bien.especificacionTI?.puerto_red ?? '',
       switch_red: bien.especificacionTI?.switch_red ?? '',
-      cuenta_windows: bien.especificacionTI?.cuenta_windows ?? '',
-      correo: bien.especificacionTI?.correo ?? '',
       last_scan: bien.especificacionTI?.last_scan ?? '',
-      tipo_user: bien.especificacionTI?.tipo_user ?? '',
-      nombre_host: bien.especificacionTI?.nombre_host ?? '',
       windows_serial: bien.especificacionTI?.windows_serial ?? '',
     });
+    // Cargar todas las cuentas PC
+    setCuentasList((bien.cuentasPC ?? []).map(c => ({ ...c, _editing: false })));
     // Detectar deviceMode por tipo de dispositivo del modelo
     const nombreTipo = bien.modelo?.tipoDispositivo?.nombre_tipo ?? null;
     const mode = getDeviceMode(nombreTipo);
@@ -1043,6 +1054,7 @@ export default function Inventario() {
     setModalForm(null);
     setForm(FORM_EMPTY);
     setTiForm(TI_EMPTY);
+    setCuentasList([]);
     setFormErrors({});
     setPendingEavValues({});
     setPendingMonitors([]);
@@ -1145,9 +1157,12 @@ export default function Inventario() {
           if (showTI) {
             const tiData = parseTI();
             const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
-            if (hayDatosTI) {
-              upsertTI({ id_bien: bienCreado.id_bien, ...tiData });
-            }
+            if (hayDatosTI) upsertTI({ id_bien: bienCreado.id_bien, ...tiData });
+            // Guardar cuentas PC (1:N)
+            cuentasList.forEach(c => {
+              const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
+              createCuentaPC({ id_bien: bienCreado.id_bien, data });
+            });
           }
 
           // Guardar atributos EAV pendientes si aplica (deviceMode === 'OTHER')
@@ -1187,9 +1202,16 @@ export default function Inventario() {
           if (showTI && modalForm.id_bien) {
             const tiData = parseTI();
             const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
-            if (hayDatosTI) {
-              upsertTI({ id_bien: modalForm.id_bien, ...tiData });
-            }
+            if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+            // Sync cuentas PC 1:N
+            cuentasList.forEach(c => {
+              const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
+              if (c.id_cuenta && !c._new) {
+                updateCuentaPC({ id_cuenta: c.id_cuenta, data });
+              } else {
+                createCuentaPC({ id_bien: modalForm.id_bien, data });
+              }
+            });
           }
           if (garantiaForm.show && garantiaForm.fecha_fin) {
             if (garantiaForm.id_garantia) {
@@ -1216,6 +1238,7 @@ export default function Inventario() {
   };
 
   const parseTI = () => ({
+    nombre_host:       tiForm.nombre_host || null,
     cpu_info:          tiForm.cpu_info || null,
     ram_gb:            tiForm.ram_gb ? Number(tiForm.ram_gb) : null,
     almacenamiento_gb: tiForm.almacenamiento_gb ? Number(tiForm.almacenamiento_gb) : null,
@@ -1225,11 +1248,7 @@ export default function Inventario() {
     modelo_so:         tiForm.modelo_so || null,
     puerto_red:        tiForm.puerto_red || null,
     switch_red:        tiForm.switch_red || null,
-    cuenta_windows:    tiForm.cuenta_windows || null,
-    correo:            tiForm.correo || null,
     last_scan:         tiForm.last_scan || null,
-    tipo_user:         tiForm.tipo_user || null,
-    nombre_host:       tiForm.nombre_host || null,
     windows_serial:    tiForm.windows_serial || null,
   });
 
@@ -1878,6 +1897,7 @@ export default function Inventario() {
                   <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Especificaciones TI</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+                  <InfoField icon={<Monitor size={13}/>}   label="Host Name"      value={fmt(modalFicha.especificacionTI.nombre_host)} />
                   <InfoField icon={<Cpu size={13}/>}       label="CPU"            value={fmt(modalFicha.especificacionTI.cpu_info)} />
                   <InfoField icon={<Server size={13}/>}    label="RAM"            value={modalFicha.especificacionTI.ram_gb ? `${modalFicha.especificacionTI.ram_gb} GB` : '—'} />
                   <InfoField icon={<HardDrive size={13}/>} label="Almacenamiento" value={modalFicha.especificacionTI.almacenamiento_gb ? `${modalFicha.especificacionTI.almacenamiento_gb} GB` : '—'} />
@@ -1885,14 +1905,19 @@ export default function Inventario() {
                   <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(modalFicha.especificacionTI.mac_address)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="Dir. MAC Alt"   value={fmt(modalFicha.especificacionTI.dir_mac)} mono />
                   <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(modalFicha.especificacionTI.modelo_so)} />
-                  <InfoField icon={<User size={13}/>}      label="Cuenta Win."    value={fmt(modalFicha.especificacionTI.cuenta_windows)} />
-                  <InfoField icon={<User size={13}/>}      label="Correo"         value={fmt(modalFicha.especificacionTI.correo)} />
-                  <InfoField icon={<User size={13}/>}      label="Tipo Usuario"   value={fmt(modalFicha.especificacionTI.tipo_user)} />
                   <InfoField icon={<Calendar size={13}/>}  label="Último Escaneo" value={formatDateTime(modalFicha.especificacionTI.last_scan)} />
-                  <InfoField icon={<Monitor size={13}/>}   label="Host Name"      value={fmt(modalFicha.especificacionTI.nombre_host)} />
                   <InfoField icon={<Tag size={13}/>}       label="Win Serial"     value={fmt(modalFicha.especificacionTI.windows_serial)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="Pto. Red"       value={fmt(modalFicha.especificacionTI.puerto_red)} />
                   <InfoField icon={<Wifi size={13}/>}      label="Switch Red"     value={fmt(modalFicha.especificacionTI.switch_red)} />
+                  {/* Cuentas PC */}
+                  {modalFicha.cuentasPC && modalFicha.cuentasPC.length > 0 && (() => {
+                    const c = modalFicha.cuentasPC[0];
+                    return (<>
+                      <InfoField icon={<User size={13}/>}      label="Cuenta Win."    value={fmt(c.cuenta_windows)} />
+                      <InfoField icon={<User size={13}/>}      label="Correo"         value={fmt(c.correo)} />
+                      <InfoField icon={<User size={13}/>}      label="Tipo Usuario"   value={fmt(c.tipo_user)} />
+                    </>);
+                  })()}
                 </div>
               </div>
             )}
@@ -2374,7 +2399,6 @@ export default function Inventario() {
                 </div>
               </div>
 
-              {/* — Sección Especificaciones TI — */}
               {showTI && (
                 <div className="rounded-xl border border-blue-200 overflow-hidden">
                   <button
@@ -2388,33 +2412,104 @@ export default function Inventario() {
                   {showTI && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                       {[
-                        { key: 'cpu_info',           label: 'CPU',                  placeholder: 'Intel Core i5-12400' },
-                        { key: 'ram_gb',             label: 'RAM (GB)',              placeholder: '8', type: 'number' },
-                        { key: 'almacenamiento_gb',  label: 'Almacenamiento (GB)',   placeholder: '256', type: 'number' },
-                        { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro' },
-                        { key: 'cuenta_windows',     label: 'Cuenta de Windows',     placeholder: 'usuario.local' },
-                        { key: 'correo',             label: 'Correo Electrónico',    placeholder: 'usuario@imss.gob.mx', type: 'email' },
-                        { key: 'last_scan',          label: 'Último Escaneo',        placeholder: '', type: 'datetime-local' },
-                        { key: 'tipo_user',          label: 'Tipo de Usuario',       placeholder: 'Estándar' },
-                        { key: 'nombre_host',        label: 'Nombre de Host',        placeholder: 'PC-ADMIN' },
-                        { key: 'windows_serial',     label: 'Serial de Windows',     placeholder: 'XXXXX-XXXXX-XXXXX' },
-                        { key: 'dir_ip',             label: 'Dirección IP',          placeholder: '192.168.1.100' },
-                        { key: 'mac_address',        label: 'MAC Address',           placeholder: 'AA:BB:CC:DD:EE:FF' },
-                        { key: 'dir_mac',            label: 'Dir. MAC Alt.',         placeholder: '—' },
-                        { key: 'puerto_red',         label: 'Puerto de Red',         placeholder: 'Pto. 12' },
-                        { key: 'switch_red',         label: 'Switch (IP/Nombre)',    placeholder: '10.28.X.X' },
+                        { key: 'nombre_host',        label: 'Nombre de Host',       placeholder: 'PC-ADMIN', form: 'ti' },
+                        { key: 'cpu_info',           label: 'CPU',                  placeholder: 'Intel Core i5-12400', form: 'ti' },
+                        { key: 'ram_gb',             label: 'RAM (GB)',              placeholder: '8', type: 'number', form: 'ti' },
+                        { key: 'almacenamiento_gb',  label: 'Almacenamiento (GB)',   placeholder: '256', type: 'number', form: 'ti' },
+                        { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro', form: 'ti' },
+                        { key: 'windows_serial',     label: 'Serial de Windows',     placeholder: 'XXXXX-XXXXX-XXXXX', form: 'ti' },
+                        { key: 'dir_ip',             label: 'Dirección IP',          placeholder: '192.168.1.100', form: 'ti' },
+                        { key: 'mac_address',        label: 'MAC Address',           placeholder: 'AA:BB:CC:DD:EE:FF', form: 'ti' },
+                        { key: 'dir_mac',            label: 'Dir. MAC Alt.',         placeholder: '—', form: 'ti' },
+                        { key: 'puerto_red',         label: 'Puerto de Red',         placeholder: 'Pto. 12', form: 'ti' },
+                        { key: 'switch_red',         label: 'Switch (IP/Nombre)',    placeholder: '10.28.X.X', form: 'ti' },
+                        { key: 'last_scan',          label: 'Último Escaneo',        placeholder: '', type: 'datetime-local', form: 'ti' },
                       ].map(({ key, label, placeholder, type = 'text' }) => (
                         <div key={key}>
                           <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>
                           <input
                             type={type}
-                            value={tiForm[key]}
+                            value={tiForm[key] ?? ''}
                             onChange={(e) => setTiForm((f) => ({ ...f, [key]: e.target.value }))}
                             placeholder={placeholder}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
                           />
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* — Cuentas PC (1:N) — */}
+                  {showTI && (
+                    <div className="border-t border-blue-100 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex items-center gap-1.5">
+                          <User size={13}/> Cuentas de Usuario PC
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setCuentasList(prev => [...prev, { _new: true, _editing: true, cuenta_windows: '', correo: '', tipo_user: '' }])}
+                          className="flex items-center gap-1 text-xs text-blue-600 font-semibold hover:text-blue-800 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          <Plus size={13}/> Agregar cuenta
+                        </button>
+                      </div>
+                      {cuentasList.length === 0 && (
+                        <p className="text-xs text-gray-400 italic text-center py-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">Sin cuentas — agrega una con el botón</p>
+                      )}
+                      <div className="space-y-3">
+                        {cuentasList.map((c, idx) => (
+                          <div key={c.id_cuenta ?? `new-${idx}`} className="rounded-lg border border-blue-100 overflow-hidden">
+                            {/* Header de cuenta */}
+                            <div className="flex items-center justify-between px-3 py-2 bg-blue-50">
+                              <span className="text-xs font-semibold text-blue-700">
+                                {c.cuenta_windows || `Cuenta ${idx + 1}`}
+                              </span>
+                              <div className="flex gap-1">
+                                <button type="button"
+                                  onClick={() => setCuentasList(prev => prev.map((x, i) => i === idx ? { ...x, _editing: !x._editing } : x))}
+                                  className="text-[10px] px-2 py-0.5 rounded bg-white border border-blue-200 text-blue-600 hover:bg-blue-100 font-semibold"
+                                >{c._editing ? 'Cerrar' : 'Editar'}</button>
+                                <button type="button"
+                                  onClick={() => {
+                                    if (c.id_cuenta && !c._new) { deleteCuentaPC({ id_cuenta: c.id_cuenta }); }
+                                    setCuentasList(prev => prev.filter((_, i) => i !== idx));
+                                  }}
+                                  className="text-[10px] px-2 py-0.5 rounded bg-white border border-red-200 text-red-500 hover:bg-red-50 font-semibold"
+                                >Eliminar</button>
+                              </div>
+                            </div>
+                            {/* Campos editables */}
+                            {c._editing && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white">
+                                {[
+                                  { key: 'cuenta_windows', label: 'Windows', placeholder: 'usuario.local' },
+                                  { key: 'correo',         label: 'Correo',  placeholder: 'usuario@imss.gob.mx', type: 'email' },
+                                  { key: 'tipo_user',      label: 'Tipo',    placeholder: 'Estándar' },
+                                ].map(({ key, label, placeholder, type = 'text' }) => (
+                                  <div key={key}>
+                                    <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">{label}</label>
+                                    <input
+                                      type={type}
+                                      value={c[key] ?? ''}
+                                      onChange={e => setCuentasList(prev => prev.map((x, i) => i === idx ? { ...x, [key]: e.target.value } : x))}
+                                      placeholder={placeholder}
+                                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {/* Vista compacta cuando cerrado */}
+                            {!c._editing && (
+                              <div className="px-3 py-2 bg-white grid grid-cols-2 gap-1">
+                                {c.cuenta_windows && <span className="text-[10px] text-gray-600"><span className="font-semibold">Win:</span> {c.cuenta_windows}</span>}
+                                {c.correo && <span className="text-[10px] text-gray-600"><span className="font-semibold">Correo:</span> {c.correo}</span>}
+                                {c.tipo_user && <span className="text-[10px] text-gray-600"><span className="font-semibold">Tipo:</span> {c.tipo_user}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

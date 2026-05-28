@@ -1,4 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { gql } from 'graphql-request';
 import { X, Check, XCircle, ArrowRight, AlertTriangle, PlusCircle } from 'lucide-react';
 
 // Etiquetas legibles para los campos
@@ -34,12 +37,30 @@ const FIELD_LABELS = {
 };
 
 // Campos a ignorar en la comparación
-const IGNORE_FIELDS = ['_esCreacion', 'id_bien', 'especificacionTI'];
+const IGNORE_FIELDS = ['_esCreacion', 'id_bien', 'especificacionTI', '_idBienTemporal'];
+
+const CATALOGS_QUERY = gql`
+  query GetModalCatalogs {
+    catUnidades { id_unidad nombre clave }
+    catSegmentos { id_segmento nombre clave }
+    ubicaciones { id_ubicacion nombre_ubicacion }
+    catCategoriasActivo { id_categoria nombre_categoria }
+    usuarios(pagination: { first: 20000 }) {
+      edges { node { id_usuario nombre_completo matricula } }
+    }
+  }
+`;
 
 export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar, onClose }) {
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [showRechazoInput, setShowRechazoInput] = useState(false);
   const [processing, setProcessing] = useState(false);
+
+  const { data: catData } = useQuery({
+    queryKey: ['modalCatalogs'],
+    queryFn: () => gqlClient.request(CATALOGS_QUERY),
+    staleTime: 1000 * 60 * 5,
+  });
 
   const datosNuevos = useMemo(() => {
     try {
@@ -64,6 +85,36 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
       return valor.length > 0 
         ? valor.map(m => `${m.marca || ''} ${m.modelo || ''} (Serie: ${m.num_serie || 'S/N'})`.trim()).join(' | ')
         : 'Sin monitores';
+    }
+    if (campo === 'cuentasList' && Array.isArray(valor)) {
+      return valor.length > 0
+        ? valor.map(c => `${c.cuenta_windows} (${c.correo || 'Sin correo'}) - ${c.tipo_user || 'Estándar'}`).join(' | ')
+        : 'Sin cuentas';
+    }
+    if (campo === 'adaptadores_red' && Array.isArray(valor)) {
+      return valor.length > 0
+        ? valor.map(a => `${a.descripcion} [IP: ${a.ip || 'N/A'}]`).join(' | ')
+        : 'Sin adaptadores';
+    }
+    if (campo === 'id_unidad' && catData?.catUnidades) {
+      const u = catData.catUnidades.find(x => String(x.id_unidad) === String(valor));
+      if (u) return `${valor} - ${u.nombre || u.clave}`;
+    }
+    if (campo === 'id_segmento' && catData?.catSegmentos) {
+      const s = catData.catSegmentos.find(x => String(x.id_segmento) === String(valor));
+      if (s) return `${valor} - ${s.nombre || s.clave}`;
+    }
+    if (campo === 'id_usuario_resguardo' && catData?.usuarios) {
+      const u = catData.usuarios.edges.find(x => String(x.node.id_usuario) === String(valor))?.node;
+      if (u) return `${valor} - ${u.nombre_completo}`;
+    }
+    if (campo === 'id_ubicacion' && catData?.ubicaciones) {
+      const u = catData.ubicaciones.find(x => String(x.id_ubicacion) === String(valor));
+      if (u) return `${valor} - ${u.nombre_ubicacion}`;
+    }
+    if (campo === 'id_categoria' && catData?.catCategoriasActivo) {
+      const c = catData.catCategoriasActivo.find(x => String(x.id_categoria) === String(valor));
+      if (c) return `${valor} - ${c.nombre_categoria}`;
     }
     if (typeof valor === 'object') return JSON.stringify(valor);
     return String(valor);

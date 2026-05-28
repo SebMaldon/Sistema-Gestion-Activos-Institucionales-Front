@@ -71,12 +71,16 @@ const BIEN_FIELDS = gql`
       modelo_so
       puerto_red
       switch_red
-      cuenta_windows
-      correo
       last_scan
-      tipo_user
-      nombre_host
       windows_serial
+      nombre_host
+    }
+    cuentasPC {
+      id_cuenta
+      id_bien
+      cuenta_windows
+      tipo_user
+      correo
     }
     monitores {
       id_bien_monitor
@@ -303,12 +307,9 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
     $puerto_red: String
     $switch_red: String
     $modelo_so: String
-    $cuenta_windows: String
-    $correo: String
     $last_scan: String
-    $tipo_user: String
-    $nombre_host: String
     $windows_serial: String
+    $nombre_host: String
   ) {
     upsertEspecificacionTI(
       id_bien: $id_bien
@@ -321,12 +322,9 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
       puerto_red: $puerto_red
       switch_red: $switch_red
       modelo_so: $modelo_so
-      cuenta_windows: $cuenta_windows
-      correo: $correo
       last_scan: $last_scan
-      tipo_user: $tipo_user
-      nombre_host: $nombre_host
       windows_serial: $windows_serial
+      nombre_host: $nombre_host
     ) {
       id_bien
       cpu_info
@@ -338,14 +336,40 @@ export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
       modelo_so
       puerto_red
       switch_red
-      modelo_so
-      cuenta_windows
-      correo
       last_scan
-      tipo_user
-      nombre_host
       windows_serial
+      nombre_host
     }
+  }
+`;
+
+export const CREATE_CUENTA_PC_MUTATION = gql`
+  mutation CreateCuentaPC($id_bien: ID!, $data: CuentaPCInput!) {
+    createCuentaPC(id_bien: $id_bien, data: $data) {
+      id_cuenta
+      id_bien
+      cuenta_windows
+      tipo_user
+      correo
+    }
+  }
+`;
+
+export const UPDATE_CUENTA_PC_MUTATION = gql`
+  mutation UpdateCuentaPC($id_cuenta: ID!, $data: CuentaPCInput!) {
+    updateCuentaPC(id_cuenta: $id_cuenta, data: $data) {
+      id_cuenta
+      id_bien
+      cuenta_windows
+      tipo_user
+      correo
+    }
+  }
+`;
+
+export const DELETE_CUENTA_PC_MUTATION = gql`
+  mutation DeleteCuentaPC($id_cuenta: ID!) {
+    deleteCuentaPC(id_cuenta: $id_cuenta)
   }
 `;
 
