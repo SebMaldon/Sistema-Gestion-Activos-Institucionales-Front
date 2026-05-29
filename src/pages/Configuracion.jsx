@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, Save, Building, Database, Shield, Bell, Monitor } from 'lucide-react';
+import { Settings, Save, Building, Database, Shield, Bell, Monitor, Key, Eye, EyeOff } from 'lucide-react';
+import { useAuthStore } from '../store/auth.store';
+import { useMutation } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { CHANGE_PASSWORD_MUTATION } from '../api/auth.queries';
 
 export default function Configuracion() {
   const { showToast } = useApp();
@@ -19,8 +23,41 @@ export default function Configuracion() {
     sessionTimeout: 30,
   });
 
+  const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
+  const [showPass, setShowPass] = useState({ current: false, new: false, confirm: false });
+  const usuario = useAuthStore(s => s.usuario);
+
+  const changePassMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(CHANGE_PASSWORD_MUTATION, vars),
+    onSuccess: () => {
+      showToast('Contraseña actualizada correctamente', 'success');
+      setPassForm({ current: '', new: '', confirm: '' });
+    },
+    onError: (e) => {
+      showToast(e?.response?.errors?.[0]?.message ?? 'Error al cambiar contraseña', 'error');
+    }
+  });
+
   const handleSave = () => {
     showToast('Configuración del sistema guardada correctamente.', 'success');
+  };
+
+  const handlePasswordChange = (e) => {
+    e.preventDefault();
+    if (!passForm.current || !passForm.new || !passForm.confirm) {
+      return showToast('Completa todos los campos', 'warning');
+    }
+    if (passForm.new !== passForm.confirm) {
+      return showToast('Las contraseñas nuevas no coinciden', 'error');
+    }
+    if (passForm.new.length < 6) {
+      return showToast('La nueva contraseña debe tener al menos 6 caracteres', 'error');
+    }
+    changePassMut.mutate({
+      id_usuario: usuario.id_usuario,
+      currentPassword: passForm.current,
+      newPassword: passForm.new,
+    });
   };
 
   return (
@@ -40,123 +77,68 @@ export default function Configuracion() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-        {/* Institutional Data */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+        {/* Password Change */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4 max-w-2xl">
           <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <Building size={15} style={{ color: '#006341' }} />
-            Datos Institucionales
+            <Key size={15} style={{ color: '#006341' }} />
+            Cambiar Mi Contraseña
           </h2>
-          {[
-            { label: 'Nombre de la Institución', key: 'institucion' },
-            { label: 'Delegación', key: 'delegacion' },
-            { label: 'Coordinación de Informática', key: 'coordinacion' },
-            { label: 'Jefe de Coord. de Informática', key: 'jefe' },
-          ].map(({ label, key }) => (
-            <div key={key}>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
-              <input
-                type="text"
-                value={config[key]}
-                onChange={e => setConfig(prev => ({ ...prev, [key]: e.target.value }))}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contraseña Actual</label>
+              <div className="relative">
+                <input
+                  type={showPass.current ? 'text' : 'password'}
+                  value={passForm.current}
+                  onChange={e => setPassForm(p => ({ ...p, current: e.target.value }))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500 pr-10"
+                />
+                <button type="button" onClick={() => setShowPass(p => ({ ...p, current: !p.current }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  {showPass.current ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-
-        {/* Alerts */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <Bell size={15} style={{ color: '#006341' }} />
-            Alertas y Notificaciones
-          </h2>
-          {[
-            { label: 'Notificaciones por correo electrónico', key: 'emailAlerts' },
-            { label: 'Respaldo automático de datos', key: 'backupAuto' },
-            { label: 'Mostrar logo IMSS en reportes', key: 'logoImss' },
-          ].map(({ label, key }) => (
-            <div key={key} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-              <span className="text-sm text-gray-700">{label}</span>
-              <button
-                onClick={() => setConfig(prev => ({ ...prev, [key]: !prev[key] }))}
-                className="relative w-11 h-6 rounded-full transition-colors flex-shrink-0"
-                style={{ backgroundColor: config[key] ? '#006341' : '#d1d5db' }}>
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${config[key] ? 'left-6' : 'left-1'}`} />
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nueva Contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showPass.new ? 'text' : 'password'}
+                    value={passForm.new}
+                    onChange={e => setPassForm(p => ({ ...p, new: e.target.value }))}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500 pr-10"
+                  />
+                  <button type="button" onClick={() => setShowPass(p => ({ ...p, new: !p.new }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    {showPass.new ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Confirmar Nueva Contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showPass.confirm ? 'text' : 'password'}
+                    value={passForm.confirm}
+                    onChange={e => setPassForm(p => ({ ...p, confirm: e.target.value }))}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500 pr-10"
+                  />
+                  <button type="button" onClick={() => setShowPass(p => ({ ...p, confirm: !p.confirm }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    {showPass.confirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
             </div>
-          ))}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Días de aviso previo a vencimiento de garantía</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="range" min={30} max={180} step={30}
-                value={config.alertGarantia}
-                onChange={e => setConfig(prev => ({ ...prev, alertGarantia: +e.target.value }))}
-                className="flex-1 accent-green-700"
-              />
-              <span className="text-sm font-bold text-gray-700 w-16 text-right">{config.alertGarantia} días</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Agent & Sync */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <Monitor size={15} style={{ color: '#006341' }} />
-            Agente Windows & Sincronización
-          </h2>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-gray-700">Sincronización automática con Agente</span>
             <button
-              onClick={() => setConfig(prev => ({ ...prev, agentSync: !prev.agentSync }))}
-              className="relative w-11 h-6 rounded-full transition-colors"
-              style={{ backgroundColor: config.agentSync ? '#006341' : '#d1d5db' }}>
-              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${config.agentSync ? 'left-6' : 'left-1'}`} />
+              type="submit"
+              disabled={changePassMut.isPending}
+              className="px-5 py-2.5 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+              {changePassMut.isPending ? 'Cambiando...' : 'Actualizar Contraseña'}
             </button>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Intervalo de sincronización (minutos)</label>
-            <select
-              value={config.syncInterval}
-              onChange={e => setConfig(prev => ({ ...prev, syncInterval: +e.target.value }))}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white">
-              {[15, 30, 60, 120, 240].map(v => <option key={v} value={v}>{v} minutos</option>)}
-            </select>
-          </div>
-          <div className="bg-green-50 rounded-xl p-3 flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500 pulse-ring flex-shrink-0" />
-            <p className="text-xs text-green-700 font-medium">Agente IMSS-Asset v1.3 activo — Última sincronización: hoy 17:30</p>
-          </div>
-        </div>
-
-        {/* Security */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-            <Shield size={15} style={{ color: '#006341' }} />
-            Seguridad del Sistema
-          </h2>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tiempo de sesión máxima (minutos)</label>
-            <input
-              type="number" min={10} max={120}
-              value={config.sessionTimeout}
-              onChange={e => setConfig(prev => ({ ...prev, sessionTimeout: +e.target.value }))}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Máximo de usuarios simultáneos</label>
-            <input
-              type="number" min={10} max={200}
-              value={config.maxUsers}
-              onChange={e => setConfig(prev => ({ ...prev, maxUsers: +e.target.value }))}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500"
-            />
-          </div>
-          <div className="p-3 rounded-xl border border-red-100 bg-red-50 text-xs text-red-700">
-            <p className="font-bold mb-1">⚠ Zona Crítica</p>
-            <p>Modificar parámetros de seguridad afecta a todos los usuarios del sistema. Se requiere confirmación de Dirección General.</p>
-          </div>
+          </form>
         </div>
       </div>
     </div>

@@ -19,8 +19,8 @@ import MultiSelect from '../components/MultiSelect';
 
 // ─── Constantes de roles ──────────────────────────────────────────────────────
 const ROLE_BADGE = {
-  1: { bg: '#dcfce7', color: '#166534', label: 'Administrador' },
-  2: { bg: '#ede9fe', color: '#6d28d9', label: 'Maestro' },
+  1: { bg: '#ede9fe', color: '#6d28d9', label: 'Maestro' },
+  2: { bg: '#dcfce7', color: '#166534', label: 'Administrador' },
   3: { bg: '#dbeafe', color: '#1e40af', label: 'Usuario' },
 };
 
