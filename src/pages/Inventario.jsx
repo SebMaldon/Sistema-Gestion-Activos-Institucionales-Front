@@ -50,10 +50,11 @@ const CATEGORIAS_TI = [1, 3];
  * Detecta el modo del dispositivo basado en el nombre_tipo del tipo de dispositivo.
  * Retorna: 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
  */
-function getDeviceMode(nombreTipo) {
-  if (!nombreTipo) return null;
-  const n = nombreTipo.toLowerCase();
-  if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio')) return 'PC';
+function getDeviceMode(nombreTipo, nombreCategoria = null) {
+  const n = (nombreTipo || '').toLowerCase();
+  const c = (nombreCategoria || '').toLowerCase();
+  
+  if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio') || c.includes('cómputo') || c.includes('computo')) return 'PC';
   if (n.includes('laptop') || n.includes('port') || n.includes('notebook')) return 'LAPTOP';
   if (n.includes('monitor')) return 'MONITOR';
   return 'OTHER';
@@ -843,7 +844,7 @@ export default function Inventario() {
   const eavQueries = useQueries({
     queries: selectedEAVTiposObj
       .filter(t => {
-        const mode = getDeviceMode(t.nombre_tipo);
+        const mode = getDeviceMode(t.nombre_tipo, t.nombre_categoria);
         return mode === 'OTHER' || mode === 'MONITOR';
       })
       .map(t => ({
@@ -1026,7 +1027,7 @@ export default function Inventario() {
     setCuentasList((bien.cuentasPC ?? []).map(c => ({ ...c, _editing: false })));
     // Detectar deviceMode por tipo de dispositivo del modelo
     const nombreTipo = bien.modelo?.tipoDispositivo?.nombre_tipo ?? null;
-    const mode = getDeviceMode(nombreTipo);
+    const mode = getDeviceMode(nombreTipo, bien.categoria?.nombre_categoria);
     setDeviceMode(mode);
     setShowTI(mode === 'PC' || mode === 'LAPTOP');
     setFormErrors({});
@@ -1098,7 +1099,7 @@ export default function Inventario() {
     const tipoDispRaw = modelMeta?.tipo_disp ?? modelo?.tipo_disp;
     const tipoDispStr = String(tipoDispRaw ?? '');
     const tipo = (catalogos?.tipos ?? []).find(t => String(t.tipo_disp) === tipoDispStr);
-    const mode = getDeviceMode(tipo?.nombre_tipo ?? null);
+    const mode = getDeviceMode(tipo?.nombre_tipo ?? null, null);
     console.log('[handleModeloChange]', { clave, tipoDispStr, nombre_tipo: tipo?.nombre_tipo, mode });
     setDeviceMode(mode);
     setShowTI(mode === 'PC' || mode === 'LAPTOP');
@@ -1423,11 +1424,11 @@ export default function Inventario() {
             {showAdvancedFilters && (() => {
               const selectedTiposObj = (catalogos?.tipos ?? []).filter(t => advFilters.tipo_disp.includes(String(t.tipo_disp)));
               const hasPCorLaptop = selectedTiposObj.some(t => {
-                const mode = getDeviceMode(t.nombre_tipo);
+                const mode = getDeviceMode(t.nombre_tipo, t.nombre_categoria);
                 return mode === 'PC' || mode === 'LAPTOP';
               });
               const hasOtherDevice = selectedTiposObj.some(t => {
-                const mode = getDeviceMode(t.nombre_tipo);
+                const mode = getDeviceMode(t.nombre_tipo, t.nombre_categoria);
                 return mode === 'OTHER' || mode === 'MONITOR';
               });
               const showTIFilter = advFilters.tipo_disp.length > 0 && hasPCorLaptop;
@@ -1861,7 +1862,7 @@ export default function Inventario() {
           MODAL: FICHA TÉCNICA
       ═══════════════════════════════════════════════════════════════════════ */}
       {modalFicha && (() => {
-        const fichaMode = getDeviceMode(modalFicha.modelo?.tipoDispositivo?.nombre_tipo);
+        const fichaMode = getDeviceMode(modalFicha.modelo?.tipoDispositivo?.nombre_tipo, modalFicha.categoria?.nombre_categoria);
         return (
         <Modal onClose={() => setModalFicha(null)} title="Ficha Técnica" wide>
           <div className="space-y-4 text-sm">
@@ -1909,15 +1910,25 @@ export default function Inventario() {
                   <InfoField icon={<Tag size={13}/>}       label="Win Serial"     value={fmt(modalFicha.especificacionTI.windows_serial)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="Pto. Red"       value={fmt(modalFicha.especificacionTI.puerto_red)} />
                   <InfoField icon={<Wifi size={13}/>}      label="Switch Red"     value={fmt(modalFicha.especificacionTI.switch_red)} />
-                  {/* Cuentas PC */}
-                  {modalFicha.cuentasPC && modalFicha.cuentasPC.length > 0 && (() => {
-                    const c = modalFicha.cuentasPC[0];
-                    return (<>
-                      <InfoField icon={<User size={13}/>}      label="Cuenta Win."    value={fmt(c.cuenta_windows)} />
+                </div>
+              </div>
+            )}
+
+            {/* Cuentas PC */}
+            {modalFicha.cuentasPC && modalFicha.cuentasPC.length > 0 && (
+              <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">
+                <div className="bg-purple-50 px-4 py-2.5 flex items-center gap-2">
+                  <User size={15} className="text-purple-600" />
+                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Cuentas de Usuario</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-white">
+                  {modalFicha.cuentasPC.map((c, i) => (
+                    <div key={i} className="col-span-full border-b border-gray-100 last:border-0 pb-2 mb-2 last:pb-0 last:mb-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <InfoField icon={<User size={13}/>}      label={`Cuenta Win. ${i+1}`}    value={fmt(c.cuenta_windows)} />
                       <InfoField icon={<User size={13}/>}      label="Correo"         value={fmt(c.correo)} />
                       <InfoField icon={<User size={13}/>}      label="Tipo Usuario"   value={fmt(c.tipo_user)} />
-                    </>);
-                  })()}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

@@ -32,9 +32,12 @@ export default function Aprobaciones() {
     fetchSolicitudes();
   }, [fetchSolicitudes]);
 
-  const handleAprobar = async (solicitudId) => {
+  const handleAprobar = async (solicitudId, camposAprobados = null) => {
     try {
-      await gqlClient.request(APROBAR_CAMBIO, { solicitudId: parseInt(solicitudId) });
+      await gqlClient.request(APROBAR_CAMBIO, { 
+        solicitudId: parseInt(solicitudId),
+        camposAprobados
+      });
       showToast?.('Cambio aprobado exitosamente.', 'success');
       setSelectedSolicitud(null);
       fetchSolicitudes();

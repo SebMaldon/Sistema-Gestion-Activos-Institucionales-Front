@@ -9,7 +9,7 @@ const FIELD_LABELS = {
   num_serie: 'No. Serie',
   num_inv: 'No. Inventario',
   estatus_operativo: 'Estatus Operativo',
-  clave_unidad_ref: 'Inmueble',
+  clave_unidad_ref: 'Unidad',
   clave_modelo: 'Modelo',
   id_usuario_resguardo: 'Usuario Resguardo',
   id_unidad: 'Unidad Operativa',
@@ -148,14 +148,25 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
   };
 
   // Lista de campos a comparar
-  const camposComparar = Object.keys(datosNuevos).filter(
+  const camposComparar = useMemo(() => Object.keys(datosNuevos).filter(
     (k) => !IGNORE_FIELDS.includes(k)
-  );
+  ), [datosNuevos]);
+
+  const [selectedCampos, setSelectedCampos] = useState(() => {
+    const initial = {};
+    camposComparar.forEach(c => initial[c] = true);
+    return initial;
+  });
+
+  const toggleCampo = (campo) => {
+    setSelectedCampos(prev => ({ ...prev, [campo]: !prev[campo] }));
+  };
 
   const handleAprobar = async () => {
     setProcessing(true);
     try {
-      await onAprobar(solicitud.id);
+      const aprobados = Object.keys(selectedCampos).filter(k => selectedCampos[k]);
+      await onAprobar(solicitud.id, aprobados);
     } finally {
       setProcessing(false);
     }
@@ -214,7 +225,8 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
             <div className="space-y-1">
               {/* Header de columnas */}
               {!esCreacion && (
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 px-4 py-2 mb-2">
+                <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-3 px-4 py-2 mb-2 items-center">
+                  <div className="w-5" />
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Valor Actual
                   </p>
@@ -245,10 +257,22 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
                 return (
                   <div
                     key={campo}
-                    className={`grid grid-cols-[1fr_auto_1fr] gap-3 items-center px-4 py-3 rounded-xl transition-colors ${
-                      hayCambio ? 'bg-amber-50/70' : 'bg-gray-50/50'
-                    }`}
+                    onClick={() => !esCreacion && toggleCampo(campo)}
+                    className={`grid ${esCreacion ? 'grid-cols-[1fr]' : 'grid-cols-[auto_1fr_auto_1fr] cursor-pointer hover:bg-gray-100'} gap-3 items-center px-4 py-3 rounded-xl transition-colors ${
+                      hayCambio && selectedCampos[campo] ? 'bg-amber-50/70' : 'bg-gray-50/50'
+                    } ${!selectedCampos[campo] ? 'opacity-50 grayscale' : ''}`}
                   >
+                    {!esCreacion && (
+                      <div className="flex items-center justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={!!selectedCampos[campo]} 
+                          onChange={() => {}} 
+                          className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 cursor-pointer"
+                        />
+                      </div>
+                    )}
+
                     {/* Valor actual */}
                     <div>
                       <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>

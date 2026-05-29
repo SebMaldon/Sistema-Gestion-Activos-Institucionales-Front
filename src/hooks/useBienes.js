@@ -42,6 +42,7 @@ export function mapBienNode(node) {
     inmueble: node.inmueble,
     unidadMedida: node.unidadMedida,
     usuarioResguardo: node.usuarioResguardo,
+    cuentasPC: node.cuentasPC || [],
     originalNode: node,
   };
 }

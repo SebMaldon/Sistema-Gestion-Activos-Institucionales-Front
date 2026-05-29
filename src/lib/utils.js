@@ -8,6 +8,13 @@ export function parseServerDate(dateStr) {
   if (dateStr instanceof Date) return dateStr;
   
   let str = dateStr;
+  
+  // Si es un timestamp en string o número
+  if (!isNaN(Number(str))) {
+    const d = new Date(Number(str));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   // Si tiene espacio en lugar de T (formato SQL), lo normalizamos
   if (typeof str === 'string' && str.includes(' ') && !str.includes('T')) {
     str = str.replace(' ', 'T');

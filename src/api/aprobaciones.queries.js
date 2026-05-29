@@ -48,8 +48,8 @@ export const GET_SOLICITUDES_PENDIENTES = gql`
 `;
 
 export const APROBAR_CAMBIO = gql`
-  mutation AprobarCambio($solicitudId: Int!) {
-    aprobarCambio(solicitudId: $solicitudId)
+  mutation AprobarCambio($solicitudId: Int!, $camposAprobados: [String!]) {
+    aprobarCambio(solicitudId: $solicitudId, camposAprobados: $camposAprobados)
   }
 `;
 
