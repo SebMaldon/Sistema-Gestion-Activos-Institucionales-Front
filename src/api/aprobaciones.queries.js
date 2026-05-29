@@ -24,7 +24,13 @@ export const GET_SOLICITUDES_PENDIENTES = gql`
         modelo { descrip_disp }
         especificacionTI {
           cpu_info ram_gb almacenamiento_gb mac_address
-          dir_ip puerto_red switch_red modelo_so
+          dir_ip dir_mac puerto_red switch_red modelo_so
+          last_scan windows_serial nombre_host
+        }
+        cuentasPC {
+          cuenta_windows
+          correo
+          tipo_user
         }
         monitores {
           monitor {

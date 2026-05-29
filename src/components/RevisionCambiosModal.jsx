@@ -34,6 +34,7 @@ const FIELD_LABELS = {
   tipo_user: 'Tipo de Usuario',
   windows_serial: 'Serial de Windows',
   monitores: 'Monitores Detectados',
+  cuentasList: 'Cuentas de Usuario',
 };
 
 // Campos a ignorar en la comparación
@@ -96,7 +97,7 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
         ? valor.map(a => `${a.descripcion} [IP: ${a.ip || 'N/A'}]`).join(' | ')
         : 'Sin adaptadores';
     }
-    if (campo === 'id_unidad' && catData?.catUnidades) {
+    if ((campo === 'id_unidad' || campo === 'clave_unidad_ref') && catData?.catUnidades) {
       const u = catData.catUnidades.find(x => String(x.clave) === String(valor));
       if (u) return `${valor} - ${u.descripcion || u.desc_corta}`;
     }
@@ -137,6 +138,9 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
         };
       });
       return formatValue(campo, mapped);
+    }
+    if (campo === 'cuentasList') {
+      return formatValue(campo, bienActual.cuentasPC || []);
     }
     if (bienActual[campo] !== undefined && bienActual[campo] !== null) {
       return formatValue(campo, bienActual[campo]);
@@ -240,16 +244,29 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
               {camposComparar.map((campo) => {
                 const valorActual = esCreacion ? '—' : getValorActual(campo);
                 const valorNuevo = formatValue(campo, datosNuevos[campo]);
-                const hayCambio = valorActual !== valorNuevo;
+                const hayCambio = String(valorActual) !== String(valorNuevo);
                 const label = FIELD_LABELS[campo] || campo;
+
+                const renderValueText = (val) => {
+                  if (typeof val === 'string' && val.includes(' | ')) {
+                    return (
+                      <ul className="list-disc pl-4 space-y-0.5 m-0">
+                        {val.split(' | ').map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    );
+                  }
+                  return val || '—';
+                };
 
                 if (esCreacion) {
                   return (
                     <div key={campo} className="px-4 py-3 rounded-xl bg-gray-50/50 border-b border-gray-100 last:border-0">
                       <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
-                      <p className="text-sm font-semibold text-green-600">
-                        {valorNuevo || '—'}
-                      </p>
+                      <div className="text-sm font-semibold text-green-600">
+                        {renderValueText(valorNuevo)}
+                      </div>
                     </div>
                   );
                 }
@@ -276,9 +293,9 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
                     {/* Valor actual */}
                     <div>
                       <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
-                      <p className={`text-sm ${hayCambio ? 'text-red-500 line-through' : 'text-gray-600'}`}>
-                        {valorActual || '—'}
-                      </p>
+                      <div className={`text-sm ${hayCambio ? 'text-red-500 line-through' : 'text-gray-600'}`}>
+                        {renderValueText(valorActual)}
+                      </div>
                     </div>
 
                     {/* Flecha */}
@@ -289,9 +306,9 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
                     {/* Valor nuevo */}
                     <div>
                       <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
-                      <p className={`text-sm font-semibold ${hayCambio ? 'text-green-600' : 'text-gray-600'}`}>
-                        {valorNuevo || '—'}
-                      </p>
+                      <div className={`text-sm font-semibold ${hayCambio ? 'text-green-600' : 'text-gray-600'}`}>
+                        {renderValueText(valorNuevo)}
+                      </div>
                     </div>
                   </div>
                 );
