@@ -54,9 +54,10 @@ function getDeviceMode(nombreTipo, nombreCategoria = null) {
   const n = (nombreTipo || '').toLowerCase();
   const c = (nombreCategoria || '').toLowerCase();
   
+  if (n.includes('monitor') || c.includes('monitor')) return 'MONITOR';
+  if (n.includes('laptop') || n.includes('port') || n.includes('notebook') || c.includes('laptop')) return 'LAPTOP';
   if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio') || c.includes('cómputo') || c.includes('computo')) return 'PC';
-  if (n.includes('laptop') || n.includes('port') || n.includes('notebook')) return 'LAPTOP';
-  if (n.includes('monitor')) return 'MONITOR';
+  
   return 'OTHER';
 }
 
@@ -1728,14 +1729,33 @@ export default function Inventario() {
                       <Package size={32} className="mx-auto mb-2 opacity-30" />
                       No se encontraron bienes con los filtros aplicados.
                     </td></tr>
-                  ) : bienes.map((bien) => (
-                    <tr key={bien.id} className="hover:bg-gray-50/70 transition-colors group">
-                      <td className="px-4 py-3.5">
-                        <div>
-                          <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                            {fmt(bien.numSerie)}
-                          </span>
-                          <p className="text-xs text-gray-400 mt-0.5">Inv: {fmt(bien.numInv)}</p>
+                  ) : bienes.map((bien) => {
+                    const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria);
+                    const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
+                    const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
+                    const isConflictRow = isPcOrLaptop && isMissingInv;
+                    
+                    const hasRecentNotes = bien.notas?.some(n => {
+                      const d = new Date(isNaN(Number(n.fecha_creacion)) ? n.fecha_creacion : Number(n.fecha_creacion));
+                      return (new Date() - d) < 86400000;
+                    });
+
+                    return (
+                    <tr key={bien.id} className={`hover:bg-gray-50/70 transition-colors group ${isConflictRow ? 'bg-red-50/60' : ''}`}>
+                      <td className="px-4 py-3.5 relative">
+                        {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <div className="min-w-0">
+                            <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-block truncate max-w-full">
+                              {fmt(bien.numSerie)}
+                            </span>
+                            <p className={`text-xs mt-0.5 truncate max-w-full ${isConflictRow ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>Inv: {fmt(bien.numInv)}</p>
+                          </div>
+                          {hasRecentNotes && (
+                            <div title="Tiene notas de observación recientes (últimas 24h)" className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-600 shadow-sm flex-shrink-0">
+                              <AlertTriangle size={14} className="animate-pulse" />
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3.5">
@@ -1773,7 +1793,8 @@ export default function Inventario() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1788,11 +1809,26 @@ export default function Inventario() {
                 <Package size={32} className="mx-auto mb-2 opacity-30" />
                 No se encontraron bienes.
               </div>
-            ) : bienes.map((bien) => (
-              <div key={bien.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="flex items-start justify-between gap-3 mb-3">
+            ) : bienes.map((bien) => {
+              const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria);
+              const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
+              const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
+              const isConflictRow = isPcOrLaptop && isMissingInv;
+              
+              const hasRecentNotes = bien.notas?.some(n => {
+                const d = new Date(isNaN(Number(n.fecha_creacion)) ? n.fecha_creacion : Number(n.fecha_creacion));
+                return (new Date() - d) < 86400000;
+              });
+
+              return (
+              <div key={bien.id} className={`rounded-2xl border shadow-sm p-4 relative overflow-hidden ${isConflictRow ? 'bg-red-50/40 border-red-200' : 'bg-white border-gray-100'}`}>
+                {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
+                <div className="flex items-start justify-between gap-3 mb-3 pl-1">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm leading-tight">{bien.equipo}</p>
+                    <div className="flex items-center gap-2">
+                      <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700' : 'text-gray-900'}`}>{bien.equipo}</p>
+                      {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
+                    </div>
                     <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
                     <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">
                       {fmt(bien.numSerie)}
@@ -1828,7 +1864,8 @@ export default function Inventario() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -2742,7 +2779,7 @@ function Modal({ onClose, title, children, footer, wide = false, small = false }
       }}
     >
       <div className="absolute inset-0 bg-black/50 fade-in pointer-events-none" />
-      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] h-fit ${
+      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${
         small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'
       } fade-in`}>
         {/* Header */}
@@ -2754,7 +2791,7 @@ function Modal({ onClose, title, children, footer, wide = false, small = false }
           </button>
         </div>
         {/* Body scrollable */}
-        <div className="flex-shrink min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
           {children}
         </div>
         {/* Footer sticky (opcional) */}
