@@ -161,6 +161,15 @@ export const GET_BIEN_DETAIL_QUERY = gql`
   }
 `;
 
+export const GET_BIEN_BY_SERIE_QUERY = gql`
+  ${BIEN_FIELDS}
+  query GetBienBySerie($num_serie: String!) {
+    bienByNumSerie(num_serie: $num_serie) {
+      ...BienFields
+    }
+  }
+`;
+
 export const GET_CATALOGOS_BIENES_QUERY = gql`
   query GetCatalogosBienes {
     catCategoriasActivo {

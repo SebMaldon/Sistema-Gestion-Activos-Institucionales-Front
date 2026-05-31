@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
-import { GET_BIENES_QUERY } from '../api/inventario.queries';
+import { GET_BIENES_QUERY, GET_BIEN_BY_SERIE_QUERY } from '../api/inventario.queries';
 import {
   GET_FOLIO_SALIDAS,
   CONFIRMAR_FOLIO,
@@ -14,10 +14,11 @@ import { useApp } from '../context/AppContext';
 import {
   FileText, Trash2, Loader2, Download, Eye, Check,
   Hash, Edit2, X, Printer, ChevronRight, AlertCircle,
-  UserCheck, Plus,
+  UserCheck, Plus, Upload, HelpCircle, MonitorUp
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import * as XLSX from 'xlsx';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 // Por página: 1 slot en la fila del encabezado del PDF (que se borra y rellena)
@@ -56,6 +57,8 @@ export default function SalidasForm() {
   });
 
   const [bienesSeleccionados, setBienesSeleccionados] = useState([]);
+  const fileInputRef = useRef(null);
+  const [incluirMonitores, setIncluirMonitores] = useState(false);
 
   // ─── Flujo PDF ─────────────────────────────────────────────
   const [etapa, setEtapa]                 = useState('formulario'); // 'formulario'|'preview'|'confirmado'
@@ -170,13 +173,34 @@ export default function SalidasForm() {
     }
     const bien = bienesList.find((b) => b.id_bien === idBien);
     if (bien) {
-      setBienesSeleccionados((p) => [...p, {
-        id_bien:     bien.id_bien,
-        cantidad:    bien.num_serie || '1',
-        naturaleza:  'BMC',
-        descripcion: `${bien.modelo?.descrip_disp || ''}${bien.num_inv ? ` - INV: ${bien.num_inv}` : ''}`,
-        originalData: bien,
-      }]);
+      setBienesSeleccionados((p) => {
+        const updated = [...p];
+        const nat = (bien.num_inv && bien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
+        updated.push({
+          id_bien:     bien.id_bien,
+          cantidad:    bien.num_serie || '1',
+          naturaleza:  nat,
+          descripcion: `${bien.modelo?.descrip_disp || ''}${bien.num_inv ? ` - INV: ${bien.num_inv}` : ''}`,
+          originalData: bien,
+        });
+
+        if (incluirMonitores && bien.monitores && bien.monitores.length > 0) {
+          bien.monitores.forEach(rel => {
+            const monitorBien = rel.monitor;
+            if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
+              const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
+              updated.push({
+                id_bien:     monitorBien.id_bien,
+                cantidad:    monitorBien.num_serie || '1',
+                naturaleza:  natMon,
+                descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
+                originalData: monitorBien,
+              });
+            }
+          });
+        }
+        return updated;
+      });
     }
   };
 
@@ -188,6 +212,162 @@ export default function SalidasForm() {
 
   const handleRemoveBien = (idx) => {
     setBienesSeleccionados((p) => p.filter((_, i) => i !== idx));
+  };
+
+  const handleDownloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([['numero de serie']]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Equipos');
+    XLSX.writeFile(wb, 'plantilla_equipos.xlsx');
+  };
+
+  const handleImportExcel = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        let agregados = 0;
+        let noEncontrados = [];
+
+        // 1. Extract serial numbers carefully to avoid matching wrong columns
+        const serialsToFetch = [];
+        data.forEach(row => {
+          const key = Object.keys(row).find(k => {
+             const lower = k.toLowerCase().trim();
+             return lower === 'numero de serie' || lower === 'serie' || lower === 'num_serie' || lower === 'no. serie';
+          });
+          if (key && row[key]) {
+            const snStr = String(row[key]).trim();
+            if (snStr.length > 0) {
+              serialsToFetch.push({ rawValue: snStr });
+            }
+          }
+        });
+
+        if (serialsToFetch.length === 0) {
+          showToast('No se encontró una columna válida ("numero de serie") o el archivo está vacío.', 'warning');
+          e.target.value = null;
+          return;
+        }
+
+        showToast(`Procesando ${serialsToFetch.length} números de serie...`, 'info');
+
+        // 2. Fetch directly from DB to bypass the 1000 items limitation of the local list
+        const fetchPromises = serialsToFetch.map(async item => {
+           try {
+             const res = await gqlClient.request(GET_BIEN_BY_SERIE_QUERY, { num_serie: item.rawValue });
+             return { ...item, bienFound: res.bienByNumSerie };
+           } catch(err) {
+             return { ...item, bienFound: null };
+           }
+        });
+
+        const results = await Promise.all(fetchPromises);
+
+        let monitoresAgregados = 0;
+
+        setBienesSeleccionados(prev => {
+          let updated = [...prev];
+          results.forEach(({ rawValue, bienFound }) => {
+            if (bienFound) {
+              if (!updated.some(p => p.id_bien === bienFound.id_bien)) {
+                agregados++;
+                const nat = (bienFound.num_inv && bienFound.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
+                updated.push({
+                  id_bien: bienFound.id_bien,
+                  cantidad: bienFound.num_serie || '1',
+                  naturaleza: nat,
+                  descripcion: `${bienFound.modelo?.descrip_disp || ''}${bienFound.num_inv ? ` - INV: ${bienFound.num_inv}` : ''}`,
+                  originalData: bienFound,
+                });
+              }
+              
+              if (incluirMonitores && bienFound.monitores && bienFound.monitores.length > 0) {
+                bienFound.monitores.forEach(rel => {
+                  const monitorBien = rel.monitor;
+                  if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
+                    monitoresAgregados++;
+                    const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
+                    updated.push({
+                      id_bien:     monitorBien.id_bien,
+                      cantidad:    monitorBien.num_serie || '1',
+                      naturaleza:  natMon,
+                      descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
+                      originalData: monitorBien,
+                    });
+                  }
+                });
+              }
+            } else {
+              noEncontrados.push(rawValue);
+            }
+          });
+          return updated;
+        });
+
+        setTimeout(() => {
+          if (agregados > 0 || monitoresAgregados > 0) {
+            const msgs = [];
+            if (agregados > 0) msgs.push(`${agregados} equipos`);
+            if (monitoresAgregados > 0) msgs.push(`${monitoresAgregados} monitores`);
+            showToast(`Se agregaron ${msgs.join(' y ')}.`, 'success');
+          } else if (noEncontrados.length === 0) {
+            showToast('No se agregaron nuevos equipos (tal vez ya estaban en la lista).', 'info');
+          }
+          if (noEncontrados.length > 0) {
+            showToast(`No se encontraron ${noEncontrados.length} números de serie (revisa la consola).`, 'warning');
+            console.warn('Números de serie no encontrados en la base de datos:', noEncontrados);
+          }
+        }, 300);
+
+      } catch (err) {
+        console.error(err);
+        showToast('Error al procesar el archivo Excel', 'error');
+      }
+      e.target.value = null;
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleAgregarMonitoresFaltantes = () => {
+    let agregados = 0;
+    setBienesSeleccionados(prev => {
+      let updated = [...prev];
+      prev.forEach(bienSel => {
+        const original = bienSel.originalData;
+        if (original && original.monitores && original.monitores.length > 0) {
+          original.monitores.forEach(rel => {
+            const monitorBien = rel.monitor;
+            if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
+              agregados++;
+              const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
+              updated.push({
+                id_bien:     monitorBien.id_bien,
+                cantidad:    monitorBien.num_serie || '1',
+                naturaleza:  natMon,
+                descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
+                originalData: monitorBien,
+              });
+            }
+          });
+        }
+      });
+      return updated;
+    });
+
+    if (agregados > 0) {
+      showToast(`Se agregaron ${agregados} monitores a la lista.`, 'success');
+    } else {
+      showToast('No se encontraron monitores faltantes para los equipos actuales.', 'info');
+    }
   };
 
   // ─── Generación del PDF ───────────────────────────────────
@@ -671,16 +851,62 @@ export default function SalidasForm() {
 
         {/* ─ Derecha: bienes ─ */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex justify-between items-center">
-            Bienes a Retirar
-            <span className="text-xs font-normal bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+          <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
+            <div className="flex flex-col">
+              <span>Bienes a Retirar</span>
+              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-500 font-normal">
+                <HelpCircle size={12} className="text-teal-600" />
+                <span><strong className="text-teal-700">BMC:</strong> C/Inventario</span>
+                <span>• <strong className="text-teal-700">BMNC:</strong> S/Inventario</span>
+                <span>• <strong className="text-teal-700">BC:</strong> Consumo</span>
+                <span>• <strong className="text-teal-700">BPS:</strong> Servicios</span>
+              </div>
+            </div>
+            <span className="text-xs font-normal bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full w-max">
               {totalBienes} bien{totalBienes !== 1 ? 'es' : ''} · {paginasNecesarias} pág.
             </span>
           </h3>
 
+          {/* Excel Controls */}
+          <div className="flex flex-col sm:flex-row gap-2 bg-teal-50/50 p-2 rounded-lg border border-teal-100">
+            <button onClick={handleDownloadTemplate}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-teal-200 text-teal-700 rounded-md text-xs font-semibold hover:bg-teal-50 transition-colors">
+              <Download size={14} /> Plantilla Excel
+            </button>
+            <button onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-600 border border-teal-600 text-white rounded-md text-xs font-semibold hover:bg-teal-700 transition-colors">
+              <Upload size={14} /> Importar Excel
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleImportExcel} accept=".xlsx, .xls" className="hidden" />
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 pb-1">
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="incluirMonitores"
+                checked={incluirMonitores}
+                onChange={(e) => setIncluirMonitores(e.target.checked)}
+                className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+              />
+              <label htmlFor="incluirMonitores" className="text-xs text-gray-700 cursor-pointer select-none">
+                Auto-incluir monitores al agregar
+              </label>
+            </div>
+            
+            <button 
+              onClick={handleAgregarMonitoresFaltantes}
+              disabled={bienesSeleccionados.length === 0}
+              className="flex items-center gap-1 text-[10px] px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded font-semibold transition-colors disabled:opacity-50"
+              title="Añade a la lista los monitores de los equipos que ya tienes seleccionados"
+            >
+              <MonitorUp size={12} /> Traer monitores faltantes
+            </button>
+          </div>
+
           {/* Selector */}
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Buscar y Agregar Bien</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Buscar y Agregar Bien (Manual)</label>
             {isLoadingBienes ? (
               <div className="flex items-center text-xs text-gray-500">
                 <Loader2 size={14} className="animate-spin mr-2" /> Cargando inventario…
