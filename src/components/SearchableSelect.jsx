@@ -23,15 +23,27 @@ export default function SearchableSelect({
 
   const filteredOptions = useMemo(() => {
     const safeOptions = options || [];
-    if (!query) return safeOptions.slice(0, 100);
-    const lowercaseQuery = query.toLowerCase();
-    return safeOptions.filter(opt => {
-      if (!opt) return false;
-      const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
-      const searchKeyStr = opt.searchKey ? String(opt.searchKey).toLowerCase() : '';
-      return labelStr.includes(lowercaseQuery) || searchKeyStr.includes(lowercaseQuery);
-    }).slice(0, 100);
-  }, [options, query]);
+    let result = safeOptions;
+    if (query) {
+      const lowercaseQuery = query.toLowerCase();
+      result = safeOptions.filter(opt => {
+        if (!opt) return false;
+        const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
+        const searchKeyStr = opt.searchKey ? String(opt.searchKey).toLowerCase() : '';
+        return labelStr.includes(lowercaseQuery) || searchKeyStr.includes(lowercaseQuery);
+      });
+    }
+
+    result = [...result].sort((a, b) => {
+      const aSelected = a.value === value;
+      const bSelected = b.value === value;
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    });
+
+    return result.slice(0, 100);
+  }, [options, query, value]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -160,7 +172,7 @@ export default function SearchableSelect({
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <span className={`block truncate min-w-0 flex-1 text-left ${opt.value === value ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>
+                  <span className={`block whitespace-normal break-words leading-tight min-w-0 flex-1 text-left ${opt.value === value ? 'text-green-700 font-semibold' : 'text-gray-700'}`}>
                     {opt.label}
                   </span>
                   {opt.value === value && <Check size={14} className="flex-shrink-0 text-green-600 ml-2" />}

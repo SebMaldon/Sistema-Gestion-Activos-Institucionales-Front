@@ -15,6 +15,7 @@ import {
   Building2, Radio,
 } from 'lucide-react';
 import MultiSelect from '../components/MultiSelect';
+import SearchableSelect from '../components/SearchableSelect';
 
 
 // ─── Constantes de roles ──────────────────────────────────────────────────────
@@ -126,12 +127,34 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
 
   const isLoading = createMut.isPending || updateMut.isPending;
 
-  const handleChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const handleChange = (k, v) => {
+    setForm(p => {
+      const next = { ...p, [k]: v };
+      if (k === 'clave_unidad') {
+        next.id_unidad = '';
+      } else if (k === 'id_unidad' && v) {
+        const selectedSeg = segmentos.find(s => String(s.id_segmento) === String(v));
+        if (selectedSeg && selectedSeg.clave) {
+          next.clave_unidad = selectedSeg.clave;
+        }
+      }
+      return next;
+    });
+  };
+
+  const filteredSegmentos = React.useMemo(() => {
+    if (!form.clave_unidad) return segmentos;
+    return segmentos.filter(s => String(s.clave) === String(form.clave_unidad));
+  }, [segmentos, form.clave_unidad]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.nombre_completo) {
       showToast('El nombre es obligatorio', 'warning');
+      return;
+    }
+    if (form.id_unidad && !form.clave_unidad) {
+      showToast('Debe seleccionar la Unidad Física correspondiente al segmento', 'warning');
       return;
     }
     const vars = {
@@ -204,8 +227,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
         {/* Asignación de unidad — separador visual */}
         <div className="border-t border-gray-100 pt-3">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Asignación de Unidad</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Unidad física (clínica / hospital) */}
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className={labelCls}>
                 <span className="inline-flex items-center gap-1">
@@ -213,18 +235,18 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
                   Unidad Física
                 </span>
               </label>
-              <select
-                className={inputCls}
+              <SearchableSelect
                 value={form.clave_unidad}
-                onChange={e => handleChange('clave_unidad', e.target.value)}
-              >
-                <option value="">— Ninguna —</option>
-                {unidadesFisicas.map(u => (
-                  <option key={u.clave} value={u.clave}>
-                    {u.desc_corta ? `[${u.desc_corta}] ` : ''}{u.descripcion || u.clave}
-                  </option>
-                ))}
-              </select>
+                onChange={val => handleChange('clave_unidad', val || '')}
+                options={[
+                  { value: '', label: '— Ninguna —' },
+                  ...unidadesFisicas.map(u => ({
+                    value: u.clave,
+                    label: (u.desc_corta ? `[${u.desc_corta}] ` : '') + (u.descripcion || u.clave)
+                  }))
+                ]}
+                placeholder="Buscar unidad..."
+              />
               <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación</p>
             </div>
 
@@ -236,18 +258,18 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
                   Segmento de Red
                 </span>
               </label>
-              <select
-                className={inputCls}
-                value={form.id_unidad}
-                onChange={e => handleChange('id_unidad', e.target.value)}
-              >
-                <option value="">— Ninguno —</option>
-                {segmentos.map(s => (
-                  <option key={s.id_segmento} value={s.id_segmento}>
-                    {s.nombre || s.no_ref}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={form.id_unidad ? String(form.id_unidad) : ''}
+                onChange={val => handleChange('id_unidad', val || '')}
+                options={[
+                  { value: '', label: '— Ninguno —' },
+                  ...filteredSegmentos.map(s => ({
+                    value: String(s.id_segmento),
+                    label: s.nombre || s.no_ref
+                  }))
+                ]}
+                placeholder="Buscar segmento..."
+              />
               <p className="text-[10px] text-gray-400 mt-0.5">Segmento de red / IP asignado</p>
             </div>
           </div>
@@ -569,7 +591,7 @@ export default function GestionUsuarios() {
   });
 
   // ── Query principal de usuarios
-  const { data: usuariosData, isLoading, isError, refetch } = useQuery({
+  const { data: usuariosData, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['usuarios', filterEstatus, filterSegmento, debouncedSearch, cursor],
     queryFn: () => gqlClient.request(GET_USUARIOS, {
       estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
@@ -671,24 +693,24 @@ export default function GestionUsuarios() {
               />
             </div>
 
-            {/* Filtro por Segmento de Red */}
-            <select
-              value={filterSegmento}
-              onChange={e => { setFilterSegmento(e.target.value); resetPage(); }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 h-[38px] bg-white flex-1 min-w-[180px] w-full md:w-auto"
-              title="Filtrar por Segmento de Red"
-            >
-              <option value="">📡 Todos los segmentos</option>
-              {catSegmentos.map(s => (
-                <option key={s.id_segmento} value={s.id_segmento}>
-                  {s.nombre || s.no_ref}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1 min-w-[180px] w-full md:w-auto z-[60]">
+              <SearchableSelect
+                value={filterSegmento}
+                onChange={val => { setFilterSegmento(val || ''); resetPage(); }}
+                options={[
+                  { value: '', label: '📡 Todos los segmentos' },
+                  ...catSegmentos.map(s => ({
+                    value: String(s.id_segmento),
+                    label: s.nombre || s.no_ref
+                  }))
+                ]}
+                placeholder="📡 Todos los segmentos"
+              />
+            </div>
 
             <button onClick={() => refetch()}
               className="h-[38px] w-full md:w-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors shrink-0" title="Refrescar">
-              <RefreshCw size={15} />
+              <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>

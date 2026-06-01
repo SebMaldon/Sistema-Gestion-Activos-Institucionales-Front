@@ -790,7 +790,7 @@ export default function Inventario() {
   const [printStartOffset, setPrintStartOffset] = useState(0);
 
   // ── Datos ─────────────────────────────────────────────────────────────────
-  const { data: bienesData, isLoading, isError, refetch } = useBienes(serverFilter, { first: PAGE_SIZE, after: cursor ?? undefined });
+  const { data: bienesData, isLoading, isError, refetch, isFetching } = useBienes(serverFilter, { first: PAGE_SIZE, after: cursor ?? undefined });
   const bienes = bienesData?.items ?? [];
   const pageInfo = bienesData?.pageInfo ?? {};
 
@@ -1271,7 +1271,7 @@ export default function Inventario() {
             title="Refrescar"
             className="w-9 h-9 rounded-xl flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
           </button>
           {canEdit && (
             <button
@@ -1899,7 +1899,12 @@ export default function Inventario() {
           MODAL: FICHA TÉCNICA
       ═══════════════════════════════════════════════════════════════════════ */}
       {modalFicha && (() => {
-        const fichaMode = getDeviceMode(modalFicha.modelo?.tipoDispositivo?.nombre_tipo, modalFicha.categoria?.nombre_categoria);
+        const activeFicha = (() => {
+          const b = bienes.find(x => x.id === modalFicha.id);
+          if (!b) return modalFicha;
+          return { ...b, notas: (modalFicha.notas?.length > (b.notas?.length || 0)) ? modalFicha.notas : b.notas };
+        })();
+        const fichaMode = getDeviceMode(activeFicha.modelo?.tipoDispositivo?.nombre_tipo, activeFicha.categoria?.nombre_categoria);
         return (
         <Modal onClose={() => setModalFicha(null)} title="Ficha Técnica" wide>
           <div className="space-y-4 text-sm">
@@ -1909,57 +1914,57 @@ export default function Inventario() {
                 <Package size={22} className="text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 text-base leading-tight">{modalFicha.equipo}</p>
-                <p className="text-xs text-gray-500">{modalFicha.categoria?.nombre_categoria}</p>
+                <p className="font-bold text-gray-900 text-base leading-tight">{activeFicha.equipo}</p>
+                <p className="text-xs text-gray-500">{activeFicha.categoria?.nombre_categoria}</p>
               </div>
-              <EstatusBadge estatus={modalFicha.estatusOperativo} />
+              <EstatusBadge estatus={activeFicha.estatusOperativo} />
             </div>
 
             {/* Campos informativos en grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoField icon={<Tag size={14}/>}      label="No. Serie"          value={fmt(modalFicha.numSerie)} mono />
-              <InfoField icon={<Tag size={14}/>}      label="No. Inventario"     value={fmt(modalFicha.numInv)} mono />
-              <InfoField icon={<Shield size={14}/>}   label="Clave Presupuestal" value={fmt(modalFicha.clavePresupuestal)} mono />
-              <InfoField icon={<MapPin size={14}/>}   label="Ubicación"          value={fmt(modalFicha.ubicacion)} />
-              <InfoField icon={<User size={14}/>}     label="En Resguardo de"    value={fmt(modalFicha.resguardo) + (modalFicha.usuarioResguardo?.matricula ? ` (Mat: ${modalFicha.usuarioResguardo.matricula})` : '')} />
-              <InfoField icon={<Calendar size={14}/>} label="Fecha Adquisición"  value={formatDate(modalFicha.fechaAdquisicion)} />
-              <InfoField icon={<Calendar size={14}/>} label="Última Actualización" value={formatDateTime(modalFicha.fechaActualizacion)} />
-              <InfoField icon={<Package size={14}/>}  label="Cantidad"           value={modalFicha.cantidad} />
+              <InfoField icon={<Tag size={14}/>}      label="No. Serie"          value={fmt(activeFicha.numSerie)} mono />
+              <InfoField icon={<Tag size={14}/>}      label="No. Inventario"     value={fmt(activeFicha.numInv)} mono />
+              <InfoField icon={<Shield size={14}/>}   label="Clave Presupuestal" value={fmt(activeFicha.clavePresupuestal)} mono />
+              <InfoField icon={<MapPin size={14}/>}   label="Ubicación"          value={fmt(activeFicha.ubicacion)} />
+              <InfoField icon={<User size={14}/>}     label="En Resguardo de"    value={fmt(activeFicha.resguardo) + (activeFicha.usuarioResguardo?.matricula ? ` (Mat: ${activeFicha.usuarioResguardo.matricula})` : '')} />
+              <InfoField icon={<Calendar size={14}/>} label="Fecha Adquisición"  value={formatDate(activeFicha.fechaAdquisicion)} />
+              <InfoField icon={<Calendar size={14}/>} label="Última Actualización" value={formatDateTime(activeFicha.fechaActualizacion)} />
+              <InfoField icon={<Package size={14}/>}  label="Cantidad"           value={activeFicha.cantidad} />
             </div>
 
             {/* Especificaciones TI */}
-            {modalFicha.especificacionTI && (fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
+            {activeFicha.especificacionTI && (fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
               <div className="rounded-xl border border-blue-100 overflow-hidden">
                 <div className="bg-blue-50 px-4 py-2.5 flex items-center gap-2">
                   <Monitor size={15} className="text-blue-600" />
                   <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Especificaciones TI</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                  <InfoField icon={<Monitor size={13}/>}   label="Host Name"      value={fmt(modalFicha.especificacionTI.nombre_host)} />
-                  <InfoField icon={<Cpu size={13}/>}       label="CPU"            value={fmt(modalFicha.especificacionTI.cpu_info)} />
-                  <InfoField icon={<Server size={13}/>}    label="RAM"            value={modalFicha.especificacionTI.ram_gb ? `${modalFicha.especificacionTI.ram_gb} GB` : '—'} />
-                  <InfoField icon={<HardDrive size={13}/>} label="Almacenamiento" value={modalFicha.especificacionTI.almacenamiento_gb ? `${modalFicha.especificacionTI.almacenamiento_gb} GB` : '—'} />
-                  <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(modalFicha.especificacionTI.dir_ip)} mono />
-                  <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(modalFicha.especificacionTI.mac_address)} mono />
-                  <InfoField icon={<Wifi size={13}/>}      label="Dir. MAC Alt"   value={fmt(modalFicha.especificacionTI.dir_mac)} mono />
-                  <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(modalFicha.especificacionTI.modelo_so)} />
-                  <InfoField icon={<Calendar size={13}/>}  label="Último Escaneo" value={formatDateTime(modalFicha.especificacionTI.last_scan)} />
-                  <InfoField icon={<Tag size={13}/>}       label="Win Serial"     value={fmt(modalFicha.especificacionTI.windows_serial)} mono />
-                  <InfoField icon={<Wifi size={13}/>}      label="Pto. Red"       value={fmt(modalFicha.especificacionTI.puerto_red)} />
-                  <InfoField icon={<Wifi size={13}/>}      label="Switch Red"     value={fmt(modalFicha.especificacionTI.switch_red)} />
+                  <InfoField icon={<Monitor size={13}/>}   label="Host Name"      value={fmt(activeFicha.especificacionTI.nombre_host)} />
+                  <InfoField icon={<Cpu size={13}/>}       label="CPU"            value={fmt(activeFicha.especificacionTI.cpu_info)} />
+                  <InfoField icon={<Server size={13}/>}    label="RAM"            value={activeFicha.especificacionTI.ram_gb ? `${activeFicha.especificacionTI.ram_gb} GB` : '—'} />
+                  <InfoField icon={<HardDrive size={13}/>} label="Almacenamiento" value={activeFicha.especificacionTI.almacenamiento_gb ? `${activeFicha.especificacionTI.almacenamiento_gb} GB` : '—'} />
+                  <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(activeFicha.especificacionTI.dir_ip)} mono />
+                  <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(activeFicha.especificacionTI.mac_address)} mono />
+                  <InfoField icon={<Wifi size={13}/>}      label="Dir. MAC Alt"   value={fmt(activeFicha.especificacionTI.dir_mac)} mono />
+                  <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(activeFicha.especificacionTI.modelo_so)} />
+                  <InfoField icon={<Calendar size={13}/>}  label="Último Escaneo" value={formatDateTime(activeFicha.especificacionTI.last_scan)} />
+                  <InfoField icon={<Tag size={13}/>}       label="Win Serial"     value={fmt(activeFicha.especificacionTI.windows_serial)} mono />
+                  <InfoField icon={<Wifi size={13}/>}      label="Pto. Red"       value={fmt(activeFicha.especificacionTI.puerto_red)} />
+                  <InfoField icon={<Wifi size={13}/>}      label="Switch Red"     value={fmt(activeFicha.especificacionTI.switch_red)} />
                 </div>
               </div>
             )}
 
             {/* Cuentas PC */}
-            {modalFicha.cuentasPC && modalFicha.cuentasPC.length > 0 && (
+            {activeFicha.cuentasPC && activeFicha.cuentasPC.length > 0 && (
               <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">
                 <div className="bg-purple-50 px-4 py-2.5 flex items-center gap-2">
                   <User size={15} className="text-purple-600" />
                   <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Cuentas de Usuario</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-white">
-                  {modalFicha.cuentasPC.map((c, i) => (
+                  {activeFicha.cuentasPC.map((c, i) => (
                     <div key={i} className="col-span-full border-b border-gray-100 last:border-0 pb-2 mb-2 last:pb-0 last:mb-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <InfoField icon={<User size={13}/>}      label={`Cuenta Win. ${i+1}`}    value={fmt(c.cuenta_windows)} />
                       <InfoField icon={<User size={13}/>}      label="Correo"         value={fmt(c.correo)} />
@@ -1971,14 +1976,14 @@ export default function Inventario() {
             )}
 
             {/* Monitores Asignados (Para PC / Laptop) */}
-            {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && modalFicha.monitores?.length > 0 && (
+            {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && activeFicha.monitores?.length > 0 && (
               <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
                 <div className="bg-teal-50 px-4 py-2.5 flex items-center gap-2">
                   <Monitor size={15} className="text-teal-600" />
                   <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Monitores Asignados</span>
                 </div>
                 <div className="p-4 space-y-2 bg-white">
-                  {modalFicha.monitores.map((am) => (
+                  {activeFicha.monitores.map((am) => (
                     <div key={am.id_bien_monitor} className="flex justify-between items-center p-2 rounded-lg border border-gray-100 bg-gray-50">
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-gray-800">
@@ -1995,7 +2000,7 @@ export default function Inventario() {
             )}
 
             {/* Equipo Asignado (Para Monitores) */}
-            {modalFicha.equipoAsignado && (
+            {activeFicha.equipoAsignado && (
               <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
                 <div className="bg-teal-50 px-4 py-2.5 flex items-center gap-2">
                   <Monitor size={15} className="text-teal-600" />
@@ -2004,13 +2009,13 @@ export default function Inventario() {
                 <div className="p-4 bg-white">
                   <div className="flex flex-col p-2 rounded-lg border border-gray-100 bg-gray-50">
                     <span className="text-xs font-semibold text-gray-800">
-                      {modalFicha.equipoAsignado.equipo?.modelo?.descrip_disp || 'Equipo genérico'}
+                      {activeFicha.equipoAsignado.equipo?.modelo?.descrip_disp || 'Equipo genérico'}
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono mt-1">
-                      ID: {modalFicha.equipoAsignado.equipo?.id_bien || 'N/A'}
+                      ID: {activeFicha.equipoAsignado.equipo?.id_bien || 'N/A'}
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
-                      S/N: {modalFicha.equipoAsignado.equipo?.num_serie || 'S/N'} | INV: {modalFicha.equipoAsignado.equipo?.num_inv || 'S/N'}
+                      S/N: {activeFicha.equipoAsignado.equipo?.num_serie || 'S/N'} | INV: {activeFicha.equipoAsignado.equipo?.num_inv || 'S/N'}
                     </span>
                   </div>
                 </div>
@@ -2025,30 +2030,30 @@ export default function Inventario() {
                   <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Atributos Técnicos</span>
                 </div>
                 <div className="p-4 bg-white">
-                  <BienAtributosPanel id_bien={modalFicha.id_bien} readOnly={true} />
+                  <BienAtributosPanel id_bien={activeFicha.id_bien} readOnly={true} />
                 </div>
               </div>
             )}
 
             {/* Póliza de Garantía */}
-            {modalFicha.garantias && modalFicha.garantias.length > 0 && (
+            {activeFicha.garantias && activeFicha.garantias.length > 0 && (
               <div className="rounded-xl border border-green-200 overflow-hidden mt-4">
                 <div className="bg-green-50 px-4 py-2.5 flex items-center gap-2">
                   <Shield size={15} className="text-green-600" />
                   <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Póliza de Garantía</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-white">
-                  <InfoField icon={<Calendar size={13}/>} label="Fecha Inicio" value={formatDate(modalFicha.garantias[0].fecha_inicio)} />
-                  <InfoField icon={<Calendar size={13}/>} label="Fecha Fin" value={formatDate(modalFicha.garantias[0].fecha_fin)} />
-                  <InfoField icon={<User size={13}/>} label="Proveedor" value={modalFicha.garantias[0].proveedorObj?.nombre_proveedor || 'Sin proveedor'} />
+                  <InfoField icon={<Calendar size={13}/>} label="Fecha Inicio" value={formatDate(activeFicha.garantias[0].fecha_inicio)} />
+                  <InfoField icon={<Calendar size={13}/>} label="Fecha Fin" value={formatDate(activeFicha.garantias[0].fecha_fin)} />
+                  <InfoField icon={<User size={13}/>} label="Proveedor" value={activeFicha.garantias[0].proveedorObj?.nombre_proveedor || 'Sin proveedor'} />
                   <div>
                     <p className="text-xs text-gray-400 flex items-center gap-1 mb-0.5">Estado</p>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${
-                        modalFicha.garantias[0].estado_garantia === 'VIGENTE' ? 'bg-green-100 text-green-800' :
-                        modalFicha.garantias[0].estado_garantia === 'VENCIDA' ? 'bg-red-100 text-red-800' :
+                        activeFicha.garantias[0].estado_garantia === 'VIGENTE' ? 'bg-green-100 text-green-800' :
+                        activeFicha.garantias[0].estado_garantia === 'VENCIDA' ? 'bg-red-100 text-red-800' :
                         'bg-gray-100 text-gray-800'
                     }`}>
-                      {modalFicha.garantias[0].estado_garantia || 'VIGENTE'}
+                      {activeFicha.garantias[0].estado_garantia || 'VIGENTE'}
                     </span>
                   </div>
                 </div>
@@ -2062,8 +2067,8 @@ export default function Inventario() {
                 <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Notas de Observación</span>
               </div>
               <div className="p-4 space-y-3 bg-white">
-                {modalFicha.notas && modalFicha.notas.length > 0 ? (
-                  modalFicha.notas.map((nota) => (
+                {activeFicha.notas && activeFicha.notas.length > 0 ? (
+                  activeFicha.notas.map((nota) => (
                     <div key={nota.id_nota} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <p className="text-sm text-gray-800">{nota.contenido_nota}</p>
                       <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
@@ -2090,14 +2095,17 @@ export default function Inventario() {
                       onClick={async () => {
                         if (!nuevaNotaText.trim()) return;
                         try {
-                          const res = await createNotaBien({ id_bien: modalFicha.id_bien, contenido_nota: nuevaNotaText });
+                          const res = await createNotaBien({ id_bien: activeFicha.id_bien, contenido_nota: nuevaNotaText });
                           showToast('Nota agregada correctamente', 'success');
                           setNuevaNotaText('');
                           if (res) {
-                            setModalFicha(prev => ({
-                              ...prev,
-                              notas: [...(prev.notas || []), res]
-                            }));
+                            setModalFicha(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                notas: [...(prev.notas || []), res]
+                              };
+                            });
                           }
                         } catch (error) {
                           showToast('Error al agregar nota', 'error');

@@ -129,18 +129,6 @@ export default function Topbar() {
         >
           <Menu size={20} className="text-gray-600" />
         </button>
-
-        {/* Search */}
-        <div className="relative hidden sm:flex items-center">
-          <svg className="absolute left-3 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar activo, serie, usuario..."
-            className="pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg w-48 md:w-64 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
-          />
-        </div>
       </div>
 
       {/* Right: Controls */}

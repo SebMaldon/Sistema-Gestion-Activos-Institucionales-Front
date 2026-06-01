@@ -23,14 +23,25 @@ export default function MultiSelect({
   // Filtrar las opciones según el query de búsqueda
   const filteredOptions = useMemo(() => {
     const safeOptions = options || [];
-    if (!searchQuery) return safeOptions;
-    const lowercaseQuery = searchQuery.toLowerCase();
-    return safeOptions.filter(opt => {
-      if (!opt) return false;
-      const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
-      return labelStr.includes(lowercaseQuery);
+    let result = safeOptions;
+    if (searchQuery) {
+      const lowercaseQuery = searchQuery.toLowerCase();
+      result = safeOptions.filter(opt => {
+        if (!opt) return false;
+        const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
+        return labelStr.includes(lowercaseQuery);
+      });
+    }
+
+    // Sort so selected items appear at the top
+    return [...result].sort((a, b) => {
+      const aSelected = safeSelected.includes(a.value);
+      const bSelected = safeSelected.includes(b.value);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
     });
-  }, [options, searchQuery]);
+  }, [options, searchQuery, safeSelected]);
 
   // Cerrar el dropdown al hacer clic fuera
   useEffect(() => {
@@ -211,7 +222,7 @@ export default function MultiSelect({
                     }`}>
                       {isChecked && <Check size={10} strokeWidth={3} />}
                     </div>
-                    <span className="truncate flex-1">{opt.label}</span>
+                    <span className="whitespace-normal break-words leading-tight min-w-0 flex-1">{opt.label}</span>
                   </button>
                 );
               })
