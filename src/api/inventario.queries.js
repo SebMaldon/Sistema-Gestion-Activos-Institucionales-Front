@@ -170,6 +170,12 @@ export const GET_BIEN_BY_SERIE_QUERY = gql`
   }
 `;
 
+export const CHECK_BIENES_EXIST_QUERY = gql`
+  query CheckBienesExistBySerie($series: [String!]!) {
+    checkBienesExistBySerie(series: $series)
+  }
+`;
+
 export const GET_CATALOGOS_BIENES_QUERY = gql`
   query GetCatalogosBienes {
     catCategoriasActivo {

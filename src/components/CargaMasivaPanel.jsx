@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
-import { GET_CATALOGOS_BIENES_QUERY, CREATE_BIENES_BULK_MUTATION } from '../api/inventario.queries';
+import { GET_CATALOGOS_BIENES_QUERY, CREATE_BIENES_BULK_MUTATION, CHECK_BIENES_EXIST_QUERY } from '../api/inventario.queries';
 import { Upload, Download, Trash2, Edit2, Loader2, Save, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CargaMasivaRowModal } from './CargaMasivaRowModal';
@@ -38,22 +38,22 @@ export default function CargaMasivaPanel() {
 
   const handleDownloadTemplate = (type) => {
     let headers = [
-      "Num Serie", "Num Inventario", "Cantidad", "Estatus Operativo", 
-      "Categoria (Nombre o ID)", "Unidad Medida (Nombre o ID)", "Modelo", 
-      "Unidad Base (Clave)", "Ubicacion (Nombre o ID)", "Usuario Resguardo (Matricula o Nombre)", 
-      "Fecha Adquisicion (YYYY-MM-DD)"
+      "Num. Serie (Texto)", "Num. Inventario (Texto)", "Cantidad (Número)", "Categoria (Nombre o ID - Texto/Num)", 
+      "Modelo (Texto)", "Estatus Operativo (Texto)", "Unidad Medida (Nombre o ID - Texto/Num)", 
+      "Unidad Base (Clave - Texto)", "Ubicacion (Nombre o ID - Texto/Num)", 
+      "Usuario Resguardo (Matricula o Nombre - Texto)", "Fecha Adquisicion (YYYY-MM-DD - Fecha)"
     ];
-    
+
     let exampleData = [
-      "SN-12345", "INV-001", 1, "ACTIVO", 
-      "Equipo de Cómputo", "Pieza", "HP-1020", 
+      "SERIE123", "INV-001", 1, "Equipo de Computo", 
+      "MOD-X1", "ACTIVO", "Pieza", 
       "UMF-1", "Sistemas", "12345678", "2024-01-01"
     ];
 
     if (type === 'computo') {
       headers = headers.concat([
-        "Sistema Operativo", "CPU", "RAM (GB)", "Almacenamiento (GB)", 
-        "Direccion IP", "MAC Address", "Switch", "Puerto Red"
+        "Sistema Operativo (Texto)", "CPU (Texto)", "RAM (GB - Número)", "Almacenamiento (GB - Número)", 
+        "Direccion IP (Texto)", "MAC Address (Texto)", "Switch (Texto)", "Puerto Red (Texto)"
       ]);
       exampleData = exampleData.concat([
         "Windows 11", "Intel Core i5", 16, 512, 
@@ -72,7 +72,7 @@ export default function CargaMasivaPanel() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
@@ -83,7 +83,7 @@ export default function CargaMasivaPanel() {
         const mappedRows = data.map((row, index) => {
           // Intentar mapear Categoría
           let id_categoria = null;
-          const catStr = String(row["Categoria (Nombre o ID)"] || "").trim();
+          const catStr = String(row["Categoria (Nombre o ID - Texto/Num)"] || row["Categoria (Nombre o ID)"] || "").trim();
           if (catStr) {
             if (!isNaN(parseInt(catStr))) id_categoria = parseInt(catStr);
             else {
@@ -94,7 +94,7 @@ export default function CargaMasivaPanel() {
 
           // Intentar mapear Unidad Medida
           let id_unidad_medida = null;
-          const umStr = String(row["Unidad Medida (Nombre o ID)"] || "").trim();
+          const umStr = String(row["Unidad Medida (Nombre o ID - Texto/Num)"] || row["Unidad Medida (Nombre o ID)"] || "").trim();
           if (umStr) {
             if (!isNaN(parseInt(umStr))) id_unidad_medida = parseInt(umStr);
             else {
@@ -103,7 +103,7 @@ export default function CargaMasivaPanel() {
             }
           }
 
-          let clave_modelo = String(row["Modelo"] || "").trim() || null;
+          let clave_modelo = String(row["Modelo (Texto)"] || row["Modelo"] || "").trim() || null;
           let invalidModelo = false;
           if (clave_modelo) {
             const match = catalogs?.catModelos?.find(m => m.clave_modelo.toUpperCase() === clave_modelo.toUpperCase());
@@ -114,11 +114,11 @@ export default function CargaMasivaPanel() {
             }
           }
 
-          let clave_unidad_ref = String(row["Unidad Base (Clave)"] || "").trim() || null;
+          let clave_unidad_ref = String(row["Unidad Base (Clave - Texto)"] || row["Unidad Base (Clave)"] || "").trim() || null;
 
           // Intentar mapear Ubicación
           let id_ubicacion = null;
-          const ubiStr = String(row["Ubicacion (Nombre o ID)"] || "").trim();
+          const ubiStr = String(row["Ubicacion (Nombre o ID - Texto/Num)"] || row["Ubicacion (Nombre o ID)"] || "").trim();
           if (ubiStr && clave_unidad_ref) {
             if (!isNaN(parseInt(ubiStr))) id_ubicacion = parseInt(ubiStr);
             else {
@@ -129,35 +129,35 @@ export default function CargaMasivaPanel() {
 
           // Intentar mapear Usuario Resguardo
           let id_usuario_resguardo = null;
-          const usrStr = String(row["Usuario Resguardo (Matricula o Nombre)"] || "").trim();
+          const usrStr = String(row["Usuario Resguardo (Matricula o Nombre - Texto)"] || row["Usuario Resguardo (Matricula o Nombre)"] || "").trim();
           if (usrStr) {
             const match = catalogs?.usuarios?.edges?.find(e => e.node.matricula === usrStr || e.node.nombre_completo.toLowerCase() === usrStr.toLowerCase());
             if (match) id_usuario_resguardo = parseInt(match.node.id_usuario);
           }
 
-          let fecha_adquisicion = String(row["Fecha Adquisicion (YYYY-MM-DD)"] || "").trim() || null;
+          let fecha_adquisicion = String(row["Fecha Adquisicion (YYYY-MM-DD - Fecha)"] || row["Fecha Adquisicion (YYYY-MM-DD)"] || "").trim() || null;
           
-          let estatus_operativo = String(row["Estatus Operativo"] || "ACTIVO").toUpperCase().trim();
+          let estatus_operativo = String(row["Estatus Operativo (Texto)"] || row["Estatus Operativo"] || "ACTIVO").toUpperCase().trim();
           if(estatus_operativo !== 'ACTIVO' && estatus_operativo !== 'BAJA' && estatus_operativo !== 'EN_REPARACION') estatus_operativo = 'ACTIVO';
 
           const especificacionTI = {
-            modelo_so: String(row["Sistema Operativo"] || "").trim(),
-            cpu_info: String(row["CPU"] || "").trim(),
-            ram_gb: row["RAM (GB)"] ? parseInt(row["RAM (GB)"]) : null,
-            almacenamiento_gb: row["Almacenamiento (GB)"] ? parseInt(row["Almacenamiento (GB)"]) : null,
-            dir_ip: String(row["Direccion IP"] || "").trim(),
-            mac_address: String(row["MAC Address"] || "").trim(),
-            switch_red: String(row["Switch"] || "").trim(),
-            puerto_red: String(row["Puerto Red"] || "").trim(),
+            modelo_so: String(row["Sistema Operativo (Texto)"] || row["Sistema Operativo"] || "").trim(),
+            cpu_info: String(row["CPU (Texto)"] || row["CPU"] || "").trim(),
+            ram_gb: (row["RAM (GB - Número)"] || row["RAM (GB)"]) ? parseInt(row["RAM (GB - Número)"] || row["RAM (GB)"]) : null,
+            almacenamiento_gb: (row["Almacenamiento (GB - Número)"] || row["Almacenamiento (GB)"]) ? parseInt(row["Almacenamiento (GB - Número)"] || row["Almacenamiento (GB)"]) : null,
+            dir_ip: String(row["Direccion IP (Texto)"] || row["Direccion IP"] || "").trim(),
+            mac_address: String(row["MAC Address (Texto)"] || row["MAC Address"] || "").trim(),
+            switch_red: String(row["Switch (Texto)"] || row["Switch"] || "").trim(),
+            puerto_red: String(row["Puerto Red (Texto)"] || row["Puerto Red"] || "").trim(),
           };
 
           const hasSpecs = Object.values(especificacionTI).some(v => v !== "" && v !== null);
 
           return {
             _tmpId: Date.now() + index, // Para key de React
-            num_serie: String(row["Num Serie"] || "").trim(),
-            num_inv: String(row["Num Inventario"] || "").trim(),
-            cantidad: row["Cantidad"] ? parseFloat(row["Cantidad"]) : 1,
+            num_serie: String(row["Num. Serie (Texto)"] || row["Num Serie"] || "").trim(),
+            num_inv: String(row["Num. Inventario (Texto)"] || row["Num Inventario"] || "").trim(),
+            cantidad: (row["Cantidad (Número)"] || row["Cantidad"]) ? parseFloat(row["Cantidad (Número)"] || row["Cantidad"]) : 1,
             estatus_operativo,
             id_categoria,
             id_unidad_medida,
@@ -171,7 +171,24 @@ export default function CargaMasivaPanel() {
           };
         });
 
-        setRows(mappedRows);
+        // Determinar qué registros son actualizaciones y cuáles son nuevos
+        const numSeries = mappedRows.map(r => r.num_serie).filter(s => s && s.trim() !== '');
+        let existingSeries = [];
+        if (numSeries.length > 0) {
+          try {
+            const res = await gqlClient.request(CHECK_BIENES_EXIST_QUERY, { series: numSeries });
+            existingSeries = res.checkBienesExistBySerie || [];
+          } catch (e) {
+            console.error('Error al verificar series existentes:', e);
+          }
+        }
+
+        const rowsWithUpdateFlag = mappedRows.map(r => ({
+          ...r,
+          isUpdate: r.num_serie && existingSeries.includes(r.num_serie)
+        }));
+
+        setRows(rowsWithUpdateFlag);
         showToast(`Se cargaron ${mappedRows.length} registros del Excel. Por favor revisa y guarda.`, 'success');
 
       } catch (err) {
@@ -277,8 +294,10 @@ export default function CargaMasivaPanel() {
         ) : (
           <>
             <div className="bg-green-50/50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-              <span className="text-sm font-semibold text-green-800">
-                {rows.length} {rows.length === 1 ? 'registro cargado' : 'registros cargados'} en memoria
+              <span className="text-sm font-semibold text-green-800 flex gap-4">
+                <span>{rows.length} {rows.length === 1 ? 'registro en memoria' : 'registros en memoria'}</span>
+                <span className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-green-400"></div> Nuevos</span>
+                <span className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-amber-400"></div> Actualizaciones</span>
               </span>
               <button 
                 onClick={handleSaveAll}
@@ -309,7 +328,7 @@ export default function CargaMasivaPanel() {
                     const hasErrors = !row.id_categoria || !row.id_unidad_medida || row.invalidModelo;
                     
                     return (
-                      <tr key={row._tmpId} className={`hover:bg-gray-50 transition-colors ${hasErrors ? 'bg-red-50/30' : ''}`}>
+                      <tr key={row._tmpId} className={`transition-colors ${hasErrors ? 'bg-red-50/50' : row.isUpdate ? 'bg-amber-50/50 hover:bg-amber-100/50' : 'bg-green-50/50 hover:bg-green-100/50'}`}>
                         <td className="px-4 py-3 font-mono text-xs">{row.num_serie || '—'}</td>
                         <td className="px-4 py-3 font-mono text-xs text-gray-500">{row.num_inv || '—'}</td>
                         <td className="px-4 py-3 text-xs">

@@ -138,7 +138,13 @@ export default function SalidasForm() {
   useEffect(() => {
     const u = usuarioMatData?.usuarioPorMatricula;
     if (u?.nombre_completo) {
-      setForm((p) => ({ ...p, solicitante: u.nombre_completo }));
+      setForm((p) => {
+        const next = { ...p, solicitante: u.nombre_completo };
+        if (u.unidadFisica) {
+          next.adscripcion = u.unidadFisica.descripcion || u.unidadFisica.desc_corta || next.adscripcion;
+        }
+        return next;
+      });
       setNombreAutoFilled(true);
     } else if (matriculaQuery.length >= 3) {
       setNombreAutoFilled(false);
@@ -736,7 +742,13 @@ export default function SalidasForm() {
                 onChange={(matricula) => {
                   const user = usuariosList.find(u => u.matricula === matricula);
                   if (user) {
-                    setForm(p => ({ ...p, matricula: user.matricula, solicitante: user.nombre_completo }));
+                    setForm(p => {
+                      const next = { ...p, matricula: user.matricula, solicitante: user.nombre_completo };
+                      if (user.unidadFisica) {
+                        next.adscripcion = user.unidadFisica.descripcion || user.unidadFisica.desc_corta || next.adscripcion;
+                      }
+                      return next;
+                    });
                     setNombreAutoFilled(true);
                   }
                 }}

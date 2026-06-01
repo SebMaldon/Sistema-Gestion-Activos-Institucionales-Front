@@ -15,6 +15,7 @@ const NAV_BY_ROL = {
     { path: '/inventario', label: 'Inventario de Bienes', icon: Package, group: 'Gestión' },
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Gestión' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Gestión' },
+
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftRight, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },

@@ -24,6 +24,10 @@ export const GET_USUARIO_POR_MATRICULA = gql`
       matricula
       nombre_completo
       correo_electronico
+      unidadFisica {
+        descripcion
+        desc_corta
+      }
     }
   }
 `;

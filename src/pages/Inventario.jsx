@@ -635,6 +635,7 @@ export default function Inventario() {
   const idRol = usuario?.id_rol ?? 3;
   const canEdit   = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
   const canDelete = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
+  const queryClient = useQueryClient();
 
   // ── Estado de UI ──────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('Capitalizable');
@@ -687,6 +688,9 @@ export default function Inventario() {
     // EAV
     atributo_id: '',
     atributo_valor: '',
+    // Quick filters
+    con_notas_recientes: false,
+    sin_inventario: false,
   });
 
   const EMPTY_ADV = {
@@ -696,6 +700,7 @@ export default function Inventario() {
     modelo_so: '', cpu_info: '', dir_ip: '',
     tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: '',
     atributo_id: '', atributo_valor: '',
+    con_notas_recientes: false, sin_inventario: false,
   };
 
   // Contar filtros activos
@@ -716,6 +721,8 @@ export default function Inventario() {
     if (advFilters.garantia_vigente) count++;
     if (advFilters.garantia_fin_desde || advFilters.garantia_fin_hasta) count++;
     if (advFilters.atributo_id && advFilters.atributo_valor) count++;
+    if (advFilters.con_notas_recientes) count++;
+    if (advFilters.sin_inventario) count++;
     return count;
   }, [advFilters]);
 
@@ -760,14 +767,7 @@ export default function Inventario() {
 
   // ── Modales ────────────────────────────────────────────────────────────────
   const [modalQR, setModalQR]           = useState(null);
-  const [modalFichaState, setModalFichaState] = useState(null);
-  const modalFicha = modalFichaState;
-  const setModalFicha = (bien) => {
-    if (bien) {
-      console.log("=== BIEN FICHA TECNICA ===", JSON.parse(JSON.stringify(bien)));
-    }
-    setModalFichaState(bien);
-  };
+  const [modalFicha, setModalFicha] = useState(null);
   const [modalForm, setModalForm]       = useState(null); // null | 'create' | bien
   const [modalConfirmDel, setModalConfirmDel] = useState(null);
   const [showTI, setShowTI]             = useState(false);
@@ -793,6 +793,16 @@ export default function Inventario() {
   const { data: bienesData, isLoading, isError, refetch, isFetching } = useBienes(serverFilter, { first: PAGE_SIZE, after: cursor ?? undefined });
   const bienes = bienesData?.items ?? [];
   const pageInfo = bienesData?.pageInfo ?? {};
+
+  // Sincronizar modalFicha con bienes actualizados (ej. después de agregar una nota o editar)
+  useEffect(() => {
+    if (modalFicha && bienes.length > 0) {
+      const updatedBien = bienes.find(b => b.id_bien === modalFicha.id_bien);
+      if (updatedBien && JSON.stringify(updatedBien) !== JSON.stringify(modalFicha)) {
+        setModalFicha(updatedBien);
+      }
+    }
+  }, [bienes]);
 
   const handleNextPage = () => {
     if (pageInfo?.hasNextPage && pageInfo.endCursor) {
@@ -1267,7 +1277,16 @@ export default function Inventario() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => refetch()}
+            onClick={() => {
+              setSearch('');
+              setDebouncedSearch('');
+              setFilterStatus('');
+              setAdvFilters(EMPTY_ADV);
+              setCursor(null);
+              setCursors([]);
+              queryClient.invalidateQueries({ queryKey: ['bienes'] });
+              refetch();
+            }}
             title="Refrescar"
             className="w-9 h-9 rounded-xl flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
           >
@@ -1292,21 +1311,49 @@ export default function Inventario() {
         <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
           {[
             { key: 'Capitalizable',    label: 'Bienes Capitalizables' },
-          { key: 'No Capitalizable', label: 'Bienes No Capitalizables' },
-          { key: 'Carga Masiva', label: 'Carga Masiva' },
-          { key: 'Impresión de Etiquetas', label: 'Impresión de Etiquetas QR' },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => { setActiveTab(tab.key); setCursor(null); setCursors([]); }}
-            className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${
-              activeTab === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+            { key: 'No Capitalizable', label: 'Bienes No Capitalizables' },
+            { key: 'Carga Masiva', label: 'Carga Masiva' },
+            { key: 'Impresión de Etiquetas', label: 'Impresión de Etiquetas QR' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => { setActiveTab(tab.key); setCursor(null); setCursors([]); }}
+              className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${
+                activeTab === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+
+        {/* Quick Filters */}
+        <div className="flex gap-2 flex-wrap mt-3 sm:mt-0">
+          <button
+            onClick={() => setAdvFilters(prev => ({ ...prev, con_notas_recientes: !prev.con_notas_recientes }))}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border shadow-sm ${
+              advFilters.con_notas_recientes ? 'bg-amber-100 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title="Filtrar bienes con notas en las últimas 24 hrs"
+          >
+            <AlertTriangle size={14} className={advFilters.con_notas_recientes ? "text-amber-600" : "text-amber-500"} />
+            Notas Recientes
+          </button>
+
+          {activeTab === 'No Capitalizable' && (
+            <button
+              onClick={() => setAdvFilters(prev => ({ ...prev, sin_inventario: !prev.sin_inventario }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border shadow-sm ${
+                advFilters.sin_inventario ? 'bg-red-100 border-red-200 text-red-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+              title="Filtrar equipos PC/Laptop sin Número de Inventario"
+            >
+              <AlertTriangle size={14} className={advFilters.sin_inventario ? "text-red-600" : "text-red-500"} />
+              Falta No. Inventario
+            </button>
+          )}
+        </div>
+
         {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
           <button
             onClick={() => setShowAtributosModal(true)}
@@ -1347,6 +1394,30 @@ export default function Inventario() {
                   <option value="BAJA">Baja</option>
                   <option value="INACTIVO">Inactivo</option>
                 </select>
+                <button
+                  onClick={() => { setAdvFilters(p => ({...p, con_notas_recientes: !p.con_notas_recientes})); setCursor(null); setCursors([]); }}
+                  className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
+                    advFilters.con_notas_recientes
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Mostrar bienes con notas recientes (últimos 30 días)"
+                >
+                  <StickyNote size={14} /> Notas Recientes
+                </button>
+                {activeTab === 'No Capitalizable' && (
+                  <button
+                    onClick={() => { setAdvFilters(p => ({...p, sin_inventario: !p.sin_inventario})); setCursor(null); setCursors([]); }}
+                    className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
+                      advFilters.sin_inventario
+                        ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    title="Mostrar equipos sin número de inventario"
+                  >
+                    <AlertTriangle size={14} /> Sin Inventario
+                  </button>
+                )}
                 <button
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
@@ -1762,11 +1833,11 @@ export default function Inventario() {
                         <p className="font-semibold text-gray-900 text-sm">{bien.equipo}</p>
                         <p className="text-xs text-gray-400">{bien.categoria?.nombre_categoria}</p>
                       </td>
-                      <td className="px-4 py-3.5 text-xs max-w-[160px] truncate">
-                        <p className="font-semibold text-gray-900 text-[13px]">{fmt(bien.unidadFisica)}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{fmt(bien.ubicacion)}</p>
+                      <td className="px-4 py-3.5 text-xs min-w-[200px]">
+                        <p className="font-semibold text-gray-900 text-[13px] break-words">{fmt(bien.unidadFisica)}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5 break-words">{fmt(bien.ubicacion)}</p>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-gray-600 max-w-[140px] truncate">{fmt(bien.resguardo)}</td>
+                      <td className="px-4 py-3.5 text-xs text-gray-600 min-w-[180px] break-words">{fmt(bien.resguardo)}</td>
                       <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1.5">

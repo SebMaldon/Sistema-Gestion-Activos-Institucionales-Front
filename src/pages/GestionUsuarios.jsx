@@ -246,8 +246,9 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
                   }))
                 ]}
                 placeholder="Buscar unidad..."
+                disabled={!!form.id_unidad}
               />
-              <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación {!!form.id_unidad && "(Bloqueado por segmento seleccionado)"}</p>
             </div>
 
             {/* Segmento de red */}
@@ -536,7 +537,7 @@ export default function GestionUsuarios() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterEstatus, setFilterEstatus] = useState('');
   // Filtro por segmento de red (id_unidad → segmentos.id_segmento)
-  const [filterSegmento, setFilterSegmento] = useState('');
+  const [filterSegmento, setFilterSegmento] = useState([]);
   // Filtro por unidad física (clave_unidad → unidades.clave) — filtrado en cliente
   const [filterUnidadesFisicas, setFilterUnidadesFisicas] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -595,18 +596,19 @@ export default function GestionUsuarios() {
     queryKey: ['usuarios', filterEstatus, filterSegmento, debouncedSearch, cursor],
     queryFn: () => gqlClient.request(GET_USUARIOS, {
       estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
-      id_unidad: filterSegmento ? parseInt(filterSegmento) : undefined,
       search: debouncedSearch || undefined,
       pagination: { first: PAGE_SIZE, after: cursor ?? undefined },
     }),
     select: d => d.usuarios,
   });
 
-  // Filtro de unidad física aplicado en cliente (no hay parámetro de API para esto)
+  // Filtro de unidad física y segmento aplicado en cliente
   const allUsuarios = usuariosData?.edges?.map(e => e.node) ?? [];
-  const usuarios = filterUnidadesFisicas.length > 0
-    ? allUsuarios.filter(u => filterUnidadesFisicas.includes(u.clave_unidad))
-    : allUsuarios;
+  const usuarios = allUsuarios.filter(u => {
+    if (filterUnidadesFisicas.length > 0 && !filterUnidadesFisicas.includes(u.clave_unidad)) return false;
+    if (filterSegmento.length > 0 && !filterSegmento.includes(String(u.id_unidad))) return false;
+    return true;
+  });
 
   const pageInfo = usuariosData?.pageInfo;
   const totalCount = pageInfo?.totalCount ?? 0;
@@ -694,21 +696,32 @@ export default function GestionUsuarios() {
             </div>
 
             <div className="flex-1 min-w-[180px] w-full md:w-auto z-[60]">
-              <SearchableSelect
-                value={filterSegmento}
-                onChange={val => { setFilterSegmento(val || ''); resetPage(); }}
+              <MultiSelect
+                selectedValues={filterSegmento}
+                onChange={vals => { setFilterSegmento(vals); resetPage(); }}
                 options={[
-                  { value: '', label: '📡 Todos los segmentos' },
-                  ...catSegmentos.map(s => ({
-                    value: String(s.id_segmento),
-                    label: s.nombre || s.no_ref
-                  }))
+                  ...catSegmentos
+                    .filter(s => filterUnidadesFisicas.length === 0 || filterUnidadesFisicas.includes(String(s.clave)))
+                    .map(s => ({
+                      value: String(s.id_segmento),
+                      label: s.nombre || s.no_ref
+                    }))
                 ]}
                 placeholder="📡 Todos los segmentos"
               />
             </div>
 
-            <button onClick={() => refetch()}
+            <button onClick={() => {
+                setSearch('');
+                setDebouncedSearch('');
+                setFilterEstatus('');
+                setFilterSegmento([]);
+                setFilterUnidadesFisicas([]);
+                setCursor(null);
+                setCursors([]);
+                qc.invalidateQueries({ queryKey: ['usuarios'] });
+                refetch();
+              }}
               className="h-[38px] w-full md:w-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors shrink-0" title="Refrescar">
               <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
             </button>
