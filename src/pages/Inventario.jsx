@@ -99,7 +99,7 @@ const FORM_EMPTY = {
   fecha_adquisicion: '',
 };
 const TI_EMPTY = {
-  nombre_host: '', cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '',
+  nombre_host: '', cpu_info: '', ram_gb: '', almacenamiento_gb: '', dir_ip: '', dir_mac: '', mac_address: '', modelo_so: '', version_office: '',
   puerto_red: '', switch_red: '', last_scan: '', windows_serial: ''
 };
 const CUENTA_EMPTY = {
@@ -697,7 +697,7 @@ export default function Inventario() {
     clave_unidad_ref: [], id_segmento: [], id_ubicacion: [],
     tipo_disp: [], clave_marca: [], id_categoria: [],
     ram_min: '', ram_max: '', almacenamiento_min: '', almacenamiento_max: '',
-    modelo_so: '', cpu_info: '', dir_ip: '',
+    modelo_so: '', version_office: '', cpu_info: '', dir_ip: '',
     tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: '',
     atributo_id: '', atributo_valor: '',
     con_notas_recientes: false, sin_inventario: false,
@@ -1029,6 +1029,7 @@ export default function Inventario() {
       dir_mac: bien.especificacionTI?.dir_mac ?? '',
       mac_address: bien.especificacionTI?.mac_address ?? '',
       modelo_so: bien.especificacionTI?.modelo_so ?? '',
+      version_office: bien.especificacionTI?.version_office ?? '',
       puerto_red: bien.especificacionTI?.puerto_red ?? '',
       switch_red: bien.especificacionTI?.switch_red ?? '',
       last_scan: bien.especificacionTI?.last_scan ?? '',
@@ -1258,6 +1259,7 @@ export default function Inventario() {
     dir_mac:           tiForm.dir_mac || null,
     mac_address:       tiForm.mac_address || null,
     modelo_so:         tiForm.modelo_so || null,
+    version_office:    tiForm.version_office || null,
     puerto_red:        tiForm.puerto_red || null,
     switch_red:        tiForm.switch_red || null,
     last_scan:         tiForm.last_scan || null,
@@ -2019,6 +2021,7 @@ export default function Inventario() {
                   <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(activeFicha.especificacionTI.mac_address)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="Dir. MAC Alt"   value={fmt(activeFicha.especificacionTI.dir_mac)} mono />
                   <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(activeFicha.especificacionTI.modelo_so)} />
+                  <InfoField icon={<Monitor size={13}/>}   label="Versión Office" value={fmt(activeFicha.especificacionTI.version_office)} />
                   <InfoField icon={<Calendar size={13}/>}  label="Último Escaneo" value={formatDateTime(activeFicha.especificacionTI.last_scan)} />
                   <InfoField icon={<Tag size={13}/>}       label="Win Serial"     value={fmt(activeFicha.especificacionTI.windows_serial)} mono />
                   <InfoField icon={<Wifi size={13}/>}      label="Pto. Red"       value={fmt(activeFicha.especificacionTI.puerto_red)} />
@@ -2544,6 +2547,7 @@ export default function Inventario() {
                         { key: 'ram_gb',             label: 'RAM (GB)',              placeholder: '8', type: 'number', form: 'ti' },
                         { key: 'almacenamiento_gb',  label: 'Almacenamiento (GB)',   placeholder: '256', type: 'number', form: 'ti' },
                         { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro', form: 'ti' },
+                        { key: 'version_office',     label: 'Versión de Office',     placeholder: 'Office 2021', form: 'ti' },
                         { key: 'windows_serial',     label: 'Serial de Windows',     placeholder: 'XXXXX-XXXXX-XXXXX', form: 'ti' },
                         { key: 'dir_ip',             label: 'Dirección IP',          placeholder: '192.168.1.100', form: 'ti' },
                         { key: 'mac_address',        label: 'MAC Address',           placeholder: 'AA:BB:CC:DD:EE:FF', form: 'ti' },

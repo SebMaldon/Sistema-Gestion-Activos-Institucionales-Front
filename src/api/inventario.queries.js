@@ -74,6 +74,7 @@ const BIEN_FIELDS = gql`
       last_scan
       windows_serial
       nombre_host
+      version_office
     }
     cuentasPC {
       id_cuenta
