@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Package, AlertTriangle, ArrowLeftRight,
   QrCode, Users, Settings, ShieldCheck, LogOut, ChevronRight,
-  Building2, ClipboardList, X
+  Building2, ClipboardList, X, Mail
 } from 'lucide-react';
 
 // ─── 1 = Maestro,  2 = Administrador,  3 = Usuario Estándar, 4 = Sin Acceso ──
@@ -18,6 +18,7 @@ const NAV_BY_ROL = {
 
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftRight, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
+    { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
     { path: '/aprobaciones', label: 'Aprobaciones', icon: ClipboardList, group: 'Sistema' },
     { path: '/usuarios', label: 'Gestión de Usuarios', icon: Users, group: 'Sistema' },
@@ -31,6 +32,7 @@ const NAV_BY_ROL = {
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Administración' },
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftRight, group: 'Administración' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Administración' },
+    { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Administración' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
   ],
   3: [ // Usuario Estándar (solo consulta)
@@ -43,7 +45,7 @@ const NAV_BY_ROL = {
 };
 
 export default function Sidebar() {
-  const { currentPage, setSidebarOpen, sidebarCollapsed } = useApp();
+  const { setSidebarOpen, sidebarCollapsed } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();

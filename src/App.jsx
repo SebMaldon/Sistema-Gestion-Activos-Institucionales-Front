@@ -19,6 +19,7 @@ import Configuracion from './pages/Configuracion';
 import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
 import Aprobaciones from './pages/Aprobaciones';
+import Correspondencia from './pages/Correspondencia';
 import { useCurrentUser } from './hooks/useCurrentUser';
 
 
@@ -157,6 +158,11 @@ export default function App() {
           <Route path="/movimientos" element={
             <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
               <AppLayout page="movimientos"><Movimientos /></AppLayout>
+            </RoleRoute>
+          } />
+          <Route path="/correspondencia" element={
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+              <AppLayout page="correspondencia"><Correspondencia /></AppLayout>
             </RoleRoute>
           } />
 
