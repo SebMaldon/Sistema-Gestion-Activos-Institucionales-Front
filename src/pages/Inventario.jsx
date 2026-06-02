@@ -762,6 +762,8 @@ export default function Inventario() {
       f.atributo_id = parseInt(advFilters.atributo_id);
       f.atributo_valor = advFilters.atributo_valor;
     }
+    if (advFilters.con_notas_recientes) f.con_notas_recientes = true;
+    if (advFilters.sin_inventario) f.sin_inventario = true;
     return f;
   }, [debouncedSearch, filterStatus, activeTab, advFilters]);
 
@@ -1319,7 +1321,14 @@ export default function Inventario() {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setCursor(null); setCursors([]); }}
+              onClick={() => { 
+                setActiveTab(tab.key); 
+                setCursor(null); 
+                setCursors([]); 
+                if (tab.key === 'Capitalizable') {
+                  setAdvFilters(prev => ({ ...prev, sin_inventario: false }));
+                }
+              }}
               className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${
                 activeTab === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
@@ -1348,7 +1357,7 @@ export default function Inventario() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border shadow-sm ${
                 advFilters.sin_inventario ? 'bg-red-100 border-red-200 text-red-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
-              title="Filtrar equipos PC/Laptop sin Número de Inventario"
+              title="Filtrar equipos sin Número de Inventario"
             >
               <AlertTriangle size={14} className={advFilters.sin_inventario ? "text-red-600" : "text-red-500"} />
               Falta No. Inventario
@@ -2265,9 +2274,8 @@ export default function Inventario() {
               {modalForm !== 'create' && (
                 <div className="bg-gray-50 rounded-xl p-4 space-y-2 border border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Información de Solo Lectura</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <ReadonlyField label="ID Bien" value={modalForm.id_bien} mono />
-                    <ReadonlyField label="No. Serie" value={fmt(modalForm.numSerie)} mono />
                     <ReadonlyField label="Clave Presupuestal" value={fmt(modalForm.clavePresupuestal)} mono />
                   </div>
                 </div>
@@ -2906,9 +2914,12 @@ function ReadonlyField({ label, value, mono = false }) {
   return (
     <div>
       <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className={`text-xs py-1.5 px-2 bg-white border border-gray-200 rounded-lg text-gray-600 truncate ${mono ? 'font-mono' : ''}`}>
-        {value ?? '—'}
-      </p>
+      <input 
+        readOnly 
+        value={value ?? '—'} 
+        title={value ?? '—'}
+        className={`w-full text-xs py-1.5 px-2 bg-white border border-gray-200 rounded-lg text-gray-600 focus:outline-none focus:ring-1 focus:ring-green-500 cursor-text ${mono ? 'font-mono' : ''}`} 
+      />
     </div>
   );
 }
