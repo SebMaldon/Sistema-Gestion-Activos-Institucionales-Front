@@ -270,19 +270,19 @@ export function EditBienModal({ asset, onClose }) {
         onClick={e => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+        <div className="bg-[#00472e] px-6 py-4 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center">
-              <Package size={18} className="text-green-700" />
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+              <Package size={20} className="text-green-100" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Editar Registro</h2>
-              <p className="text-xs text-gray-500">Serie: {asset.numSerie} — {asset.equipo}</p>
+              <h2 className="text-xl font-bold">Editar Registro</h2>
+              <p className="text-sm text-green-100 mt-0.5">Serie: {asset.numSerie} — {asset.equipo}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-700 rounded-full transition-colors"
+            className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
           >
             <X size={20} />
           </button>

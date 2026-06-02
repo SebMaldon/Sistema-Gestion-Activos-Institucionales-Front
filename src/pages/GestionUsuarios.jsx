@@ -28,7 +28,7 @@ const ROLE_BADGE = {
 // ─── Utilidades ──────────────────────────────────────────────────────────────
 const getInitials = (name = '') => name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 const avatarColor = (id) => {
-  const colors = ['#006341','#1d4ed8','#7c3aed','#b45309','#0f766e','#be185d'];
+  const colors = ['#006341', '#1d4ed8', '#7c3aed', '#b45309', '#0f766e', '#be185d'];
   return colors[id % colors.length];
 };
 
@@ -59,8 +59,8 @@ import { createPortal } from 'react-dom';
 
 function ModalOverlay({ children, onClose, wide = false }) {
   return createPortal(
-    <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" 
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -76,12 +76,15 @@ function ModalOverlay({ children, onClose, wide = false }) {
   );
 }
 
-function ModalHeader({ title, onClose }) {
+function ModalHeader({ title, subtitle, onClose }) {
   return (
-    <div className="flex items-center justify-between p-5 sm:px-6 border-b border-gray-100 flex-shrink-0">
-      <h2 className="font-bold text-gray-900 text-lg">{title}</h2>
-      <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
-        <X size={18} />
+    <div className="bg-[#00472e] p-5 sm:px-6 flex items-center justify-between text-white flex-shrink-0">
+      <div>
+        <h2 className="text-xl font-bold">{title}</h2>
+        {subtitle && <p className="text-green-100 text-sm mt-1">{subtitle}</p>}
+      </div>
+      <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
+        <X size={20} />
       </button>
     </div>
   );
@@ -181,7 +184,11 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
 
   return (
     <ModalOverlay onClose={onClose} wide>
-      <ModalHeader title={isEdit ? 'Editar Usuario' : 'Nuevo Usuario'} onClose={onClose} />
+      <ModalHeader 
+        title={isEdit ? 'Editar Usuario' : 'Nuevo Usuario'} 
+        subtitle={isEdit ? 'Modificar datos y permisos del usuario' : 'Registrar un nuevo usuario en el sistema'}
+        onClose={onClose} 
+      />
       <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -322,7 +329,11 @@ function ResetPasswordModal({ usuario, onClose }) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <ModalHeader title="Resetear Contraseña" onClose={onClose} />
+      <ModalHeader 
+        title="Resetear Contraseña" 
+        subtitle="Generar una nueva contraseña de acceso"
+        onClose={onClose} 
+      />
       <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
         {/* Info del usuario */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-3">
@@ -419,7 +430,11 @@ function ConfirmToggleEstatusModal({ usuario, onClose }) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <ModalHeader title={isActive ? 'Desactivar Usuario' : 'Activar Usuario'} onClose={onClose} />
+      <ModalHeader 
+        title={isActive ? 'Desactivar Usuario' : 'Activar Usuario'} 
+        subtitle={isActive ? 'Suspender el acceso del usuario temporalmente' : 'Restaurar el acceso del usuario al sistema'}
+        onClose={onClose} 
+      />
       <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className={`border rounded-xl p-3 text-sm ${isActive ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-green-50 border-green-200 text-green-700'}`}>
           <strong>{isActive ? `¿Desactivar a ${usuario.nombre_completo}?` : `¿Activar a ${usuario.nombre_completo}?`}</strong>
@@ -480,7 +495,11 @@ function ConfirmEliminarModal({ usuario, onClose }) {
 
   return (
     <ModalOverlay onClose={onClose}>
-      <ModalHeader title="Eliminar Usuario Permanentemente" onClose={onClose} />
+      <ModalHeader 
+        title="Eliminar Usuario Permanentemente" 
+        subtitle="Esta acción no se puede deshacer"
+        onClose={onClose} 
+      />
       <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-sm text-red-800">
           <strong>⚠️ Esta acción es IRREVERSIBLE</strong>
@@ -536,6 +555,7 @@ export default function GestionUsuarios() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterEstatus, setFilterEstatus] = useState('');
+  const [filterRoles, setFilterRoles] = useState([]);
   // Filtro por segmento de red (id_unidad → segmentos.id_segmento)
   const [filterSegmento, setFilterSegmento] = useState([]);
   // Filtro por unidad física (clave_unidad → unidades.clave) — filtrado en cliente
@@ -593,10 +613,11 @@ export default function GestionUsuarios() {
 
   // ── Query principal de usuarios
   const { data: usuariosData, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['usuarios', filterEstatus, filterSegmento, debouncedSearch, cursor],
+    queryKey: ['usuarios', filterEstatus, filterSegmento, filterRoles, debouncedSearch, cursor],
     queryFn: () => gqlClient.request(GET_USUARIOS, {
       estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
       search: debouncedSearch || undefined,
+      roles: filterRoles.length > 0 ? filterRoles.map(Number) : undefined,
       pagination: { first: PAGE_SIZE, after: cursor ?? undefined },
     }),
     select: d => d.usuarios,
@@ -629,8 +650,12 @@ export default function GestionUsuarios() {
 
   const qc = useQueryClient();
 
-  const isAdmin  = idRol <= 2;
+  const isAdmin = idRol <= 2;
   const isMaestro = idRol === 2;
+
+  // Ordenar roles: Maestro(1), Admin(2), Estándar(3), Sin Acceso(4)
+  const roleOrder = { '1': 1, '2': 2, '3': 3, '4': 4 };
+  const sortedRoles = [...catRoles].sort((a, b) => (roleOrder[a.id_rol] || 99) - (roleOrder[b.id_rol] || 99));
 
   return (
     <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
@@ -652,11 +677,65 @@ export default function GestionUsuarios() {
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 gap-5">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <StatCard label="Totales" val={totalCount} color="#006341" bg="#dcfce7" />
-          <StatCard label="Página actual" val={usuarios.length} color="#2563eb" bg="#dbeafe" />
-          <StatCard label="Página" val={`${cursors.length + 1}`} color="#7c3aed" bg="#ede9fe" />
+        {/* Filtros rápidos (Roles y Totales) en una sola fila deslizable */}
+        <div className="flex flex-nowrap overflow-x-auto pb-2 gap-3 sm:gap-4 scrollbar-hide">
+          <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-gray-200 bg-white shadow-sm w-1/3 min-w-[280px] flex-shrink-0 relative">
+            <span className="text-3xl font-black text-gray-800">{totalCount}</span>
+            <span className="text-xs sm:text-sm text-gray-500 font-bold uppercase tracking-wider mt-0.5 text-center">Registros Totales</span>
+
+            {/* Slider Toggle 3-estados */}
+            <div className="flex bg-gray-100 rounded-lg p-1.5 mt-3 w-full relative max-w-[320px]">
+              <button
+                onClick={() => { setFilterEstatus(''); resetPage(); }}
+                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all z-10 ${filterEstatus === '' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                Todos
+              </button>
+              <button
+                onClick={() => { setFilterEstatus('activos'); resetPage(); }}
+                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all z-10 ${filterEstatus === 'activos' ? 'bg-green-500 shadow-sm text-white' : 'text-gray-400 hover:text-gray-600'}`}>
+                Activos
+              </button>
+              <button
+                onClick={() => { setFilterEstatus('inactivos'); resetPage(); }}
+                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all z-10 ${filterEstatus === 'inactivos' ? 'bg-orange-500 shadow-sm text-white' : 'text-gray-400 hover:text-gray-600'}`}>
+                Inact.
+              </button>
+            </div>
+          </div>
+
+          {sortedRoles.map(r => {
+            const isSelected = filterRoles.includes(r.id_rol);
+            // Default styling based on role ID
+            let badge = { bg: '#f3f4f6', color: '#4b5563' };
+            if (String(r.id_rol) === '1') badge = { bg: '#ede9fe', color: '#6d28d9' }; // Maestro
+            if (String(r.id_rol) === '2') badge = { bg: '#dcfce7', color: '#166534' }; // Admin
+            if (String(r.id_rol) === '3') badge = { bg: '#dbeafe', color: '#1e40af' }; // Estandar
+            if (String(r.id_rol) === '4') badge = { bg: '#fef3c7', color: '#b45309' }; // Sin Acceso
+
+            return (
+              <button
+                key={r.id_rol}
+                onClick={() => {
+                  setFilterRoles(prev => prev.includes(r.id_rol) ? prev.filter(id => id !== r.id_rol) : [...prev, r.id_rol]);
+                  resetPage();
+                }}
+                className={`flex flex-col items-center justify-center py-2 px-3 rounded-2xl border transition-all duration-200 flex-1 min-w-[110px] flex-shrink-0 ${isSelected ? 'shadow-sm border-2' : 'hover:bg-gray-50'
+                  }`}
+                style={{
+                  backgroundColor: isSelected ? badge.bg : '#ffffff',
+                  borderColor: isSelected ? badge.color : '#f3f4f6',
+                  color: isSelected ? badge.color : '#6b7280'
+                }}
+              >
+                {String(r.id_rol) <= '2' ? (
+                  <Shield size={16} className="mb-1" style={{ color: isSelected ? badge.color : '#9ca3af' }} />
+                ) : (
+                  <Users size={16} className="mb-1" style={{ color: isSelected ? badge.color : '#9ca3af' }} />
+                )}
+                <span className="text-[10px] sm:text-xs font-bold leading-tight text-center uppercase tracking-wide">{r.nombre_rol}</span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Filtros */}
@@ -667,20 +746,12 @@ export default function GestionUsuarios() {
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar..."
+                placeholder="Buscar por nombre o matrícula..."
                 value={search}
                 onChange={e => handleSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-[38px]"
               />
             </div>
-
-            {/* Estatus */}
-            <select value={filterEstatus} onChange={e => { setFilterEstatus(e.target.value); resetPage(); }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-[38px] bg-white w-full md:w-auto min-w-[140px]">
-              <option value="">Todos los estatus</option>
-              <option value="activos">Activos</option>
-              <option value="inactivos">Inactivos</option>
-            </select>
 
             {/* Filtro por Unidad Física */}
             <div className="flex-1 min-w-[220px] w-full md:w-auto z-[60]">
@@ -712,16 +783,17 @@ export default function GestionUsuarios() {
             </div>
 
             <button onClick={() => {
-                setSearch('');
-                setDebouncedSearch('');
-                setFilterEstatus('');
-                setFilterSegmento([]);
-                setFilterUnidadesFisicas([]);
-                setCursor(null);
-                setCursors([]);
-                qc.invalidateQueries({ queryKey: ['usuarios'] });
-                refetch();
-              }}
+              setSearch('');
+              setDebouncedSearch('');
+              setFilterEstatus('');
+              setFilterSegmento([]);
+              setFilterUnidadesFisicas([]);
+              setFilterRoles([]);
+              setCursor(null);
+              setCursors([]);
+              qc.invalidateQueries({ queryKey: ['usuarios'] });
+              refetch();
+            }}
               className="h-[38px] w-full md:w-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors shrink-0" title="Refrescar">
               <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
             </button>

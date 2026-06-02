@@ -1988,7 +1988,7 @@ export default function Inventario() {
         })();
         const fichaMode = getDeviceMode(activeFicha.modelo?.tipoDispositivo?.nombre_tipo, activeFicha.categoria?.nombre_categoria);
         return (
-        <Modal onClose={() => setModalFicha(null)} title="Ficha Técnica" wide>
+        <Modal onClose={() => setModalFicha(null)} title="Ficha Técnica" subtitle="Detalles y especificaciones del equipo" wide>
           <div className="space-y-4 text-sm">
             {/* Encabezado del bien */}
             <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100">
@@ -2212,7 +2212,7 @@ export default function Inventario() {
           MODAL: QR / CÓDIGO DE BARRAS
       ═══════════════════════════════════════════════════════════════════════ */}
       {modalQR && (
-        <Modal onClose={() => setModalQR(null)} title="Identificadores" small>
+        <Modal onClose={() => setModalQR(null)} title="Identificadores" subtitle="Códigos QR y de barras generados" small>
           <div className="flex flex-col items-center gap-2 text-center mb-4">
             <p className="font-semibold text-gray-900">{modalQR.equipo}</p>
             <p className="text-xs text-gray-400 font-mono">Serie: {fmt(modalQR.numSerie)}</p>
@@ -2244,6 +2244,7 @@ export default function Inventario() {
         <Modal
           onClose={closeForm}
           title={modalForm === 'create' ? 'Registrar Nuevo Bien' : 'Editar Bien'}
+          subtitle={modalForm === 'create' ? 'Dar de alta un nuevo activo en el inventario' : 'Modificar la información del activo'}
           wide
           footer={
             <div className="flex justify-end gap-3">
@@ -2803,7 +2804,7 @@ export default function Inventario() {
           MODAL: CONFIRMAR ELIMINACIÓN
       ═══════════════════════════════════════════════════════════════════════ */}
       {modalConfirmDel && (
-        <Modal onClose={() => setModalConfirmDel(null)} title="Confirmar Eliminación" small>
+        <Modal onClose={() => setModalConfirmDel(null)} title="Confirmar Eliminación" subtitle="Esta acción es irreversible" small>
           <div className="flex flex-col items-center text-center gap-4">
             <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
               <AlertTriangle size={26} className="text-red-500" />
@@ -2861,7 +2862,7 @@ export default function Inventario() {
 // ─── Sub-componentes ───────────────────────────────────────────────────────────
 
 
-function Modal({ onClose, title, children, footer, wide = false, small = false }) {
+function Modal({ onClose, title, subtitle, children, footer, wide = false, small = false }) {
   return ReactDOM.createPortal(
     <div 
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" 
@@ -2874,11 +2875,14 @@ function Modal({ onClose, title, children, footer, wide = false, small = false }
         small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'
       } fade-in`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
-          <h3 className="font-bold text-gray-900">{title}</h3>
+        <div className="bg-[#00472e] px-5 sm:px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
+          <div>
+            <h3 className="text-xl font-bold">{title}</h3>
+            {subtitle && <p className="text-sm text-green-100 mt-0.5">{subtitle}</p>}
+          </div>
           <button onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors">
-            <X size={18} />
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
+            <X size={20} />
           </button>
         </div>
         {/* Body scrollable */}
