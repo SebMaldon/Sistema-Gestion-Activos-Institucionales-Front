@@ -100,6 +100,19 @@ export const GET_INCIDENCIAS_QUERY = gql`
   }
 `;
 
+export const GET_DASHBOARD_INCIDENCIAS_QUERY = gql`
+  query GetDashboardIncidencias($first: Int) {
+    incidencias(pagination: { first: $first }) {
+      edges {
+        node {
+          id_incidencia
+          estatus_reparacion
+        }
+      }
+    }
+  }
+`;
+
 export const GET_TIPOS_INCIDENCIA_QUERY = gql`
   query GetTiposIncidencia {
     tiposIncidencia {

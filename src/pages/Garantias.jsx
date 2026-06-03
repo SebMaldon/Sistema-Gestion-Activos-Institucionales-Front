@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
+import { useLocation } from 'react-router-dom';
 import {
   GET_GARANTIAS,
   GET_PROVEEDORES,
@@ -332,14 +333,23 @@ function ConfirmEliminarModal({ garantia, onClose }) {
 
 export default function Garantias() {
   const usuario = useAuthStore(s => s.usuario);
+  const location = useLocation();
   const idRol = usuario?.id_rol ?? 3;
   const isMaestro = idRol === 1;
   const isAdministrador = idRol === 2;
 
   const [searchFilter, setSearchFilter] = useState('');
+  const [showPorVencer, setShowPorVencer] = useState(location.state?.filterPorVencer || false);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.filterPorVencer) {
+      setShowPorVencer(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
   
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['garantias'],
@@ -357,6 +367,16 @@ export default function Garantias() {
   const proveedores = proveedoresData || [];
 
   const filteredGarantias = garantias.filter(g => {
+    // Por Vencer Filter
+    if (showPorVencer) {
+      if (!g.fecha_fin || g.estado_garantia !== 'VIGENTE') return false;
+      const d = new Date(g.fecha_fin);
+      const now = new Date();
+      const diffTime = d.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays < 0 || diffDays > 62) return false; // 2 meses aprox
+    }
+
     if (!searchFilter) return true;
     const term = searchFilter.toLowerCase();
     const proveedorMatch = g.proveedorObj?.nombre_proveedor?.toLowerCase().includes(term);
@@ -441,6 +461,14 @@ export default function Garantias() {
                 className="w-full pl-10 pr-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all shadow-inner"
             />
         </div>
+        <button
+            onClick={() => setShowPorVencer(!showPorVencer)}
+            className={`p-3 text-sm font-semibold rounded-xl border transition-colors flex-shrink-0 flex items-center gap-2 ${showPorVencer ? 'bg-amber-100 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            title="Filtrar garantías por vencer (próximos 2 meses)"
+        >
+            <AlertCircle size={18} />
+            {showPorVencer ? 'Por Vencer (Activo)' : 'Por Vencer'}
+        </button>
         <button onClick={() => refetch()} className="p-3 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-green-700 transition-colors bg-white shadow-sm flex-shrink-0" title="Refrescar">
             <RefreshCw size={18} />
         </button>

@@ -153,6 +153,41 @@ export const GET_BIENES_QUERY = gql`
   }
 `;
 
+export const GET_DASHBOARD_BIENES_QUERY = gql`
+  query GetDashboardBienes($pagination: PaginationInput) {
+    bienes(pagination: $pagination) {
+      edges {
+        node {
+          id_bien
+          estatus_operativo
+          unidad {
+            desc_corta
+            descripcion
+          }
+          modelo {
+            tipoDispositivo {
+              nombre_tipo
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_DASHBOARD_CATALOGOS_QUERY = gql`
+  query GetDashboardCatalogos {
+    catModelos {
+      clave_modelo
+      tipo_disp
+    }
+    tiposDispositivo {
+      tipo_disp
+      nombre_tipo
+    }
+  }
+`;
+
 export const GET_BIEN_DETAIL_QUERY = gql`
   ${BIEN_FIELDS}
   query GetBienDetail($id_bien: ID!) {

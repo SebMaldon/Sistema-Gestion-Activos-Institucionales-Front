@@ -19,6 +19,7 @@ import {
 
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
+import { useLocation } from 'react-router-dom';
 import {
   GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION,
   GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
@@ -636,6 +637,7 @@ export default function Inventario() {
   const canEdit   = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
   const canDelete = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
   const queryClient = useQueryClient();
+  const location = useLocation();
 
   // ── Estado de UI ──────────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('Capitalizable');
@@ -644,12 +646,21 @@ export default function Inventario() {
   const [nuevaNotaText, setNuevaNotaText] = useState('');
   const { mutateAsync: createNotaBien, isLoading: isCreatingNota } = useCreateNotaBien();
   
-  const [filterStatus, setFilterStatus]     = useState('');
+  const [filterStatus, setFilterStatus]     = useState(location.state?.filterStatus || '');
   const [filterUbicacion, setFilterUbicacion] = useState('');
   
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]); // historial para retroceder
   const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 60 : 15;
+
+  useEffect(() => {
+    if (location.state?.filterStatus) {
+      setFilterStatus(location.state.filterStatus);
+      setSearch(''); // clear search just in case
+      // clear router state so it doesn't get stuck if we refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Debounce búsqueda simple
   useEffect(() => {
