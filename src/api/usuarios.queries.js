@@ -110,6 +110,7 @@ export const CREATE_USUARIO = gql`
 export const UPDATE_USUARIO = gql`
   mutation UpdateUsuario(
     $id_usuario: ID!
+    $matricula: String
     $nombre_completo: String
     $tipo_usuario: String
     $correo_electronico: String
@@ -120,6 +121,7 @@ export const UPDATE_USUARIO = gql`
   ) {
     updateUsuario(
       id_usuario: $id_usuario
+      matricula: $matricula
       nombre_completo: $nombre_completo
       tipo_usuario: $tipo_usuario
       correo_electronico: $correo_electronico

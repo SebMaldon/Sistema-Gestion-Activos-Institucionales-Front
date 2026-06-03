@@ -162,6 +162,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
       return;
     }
     const vars = {
+      matricula: form.matricula || null,
       nombre_completo: form.nombre_completo,
       tipo_usuario: form.tipo_usuario || null,
       correo_electronico: form.correo_electronico || null,
@@ -173,7 +174,6 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
       updateMut.mutate({ id_usuario: usuario.id_usuario, ...vars });
     } else {
       createMut.mutate({
-        matricula: form.matricula,
         password: form.password || null,
         ...vars,
       });
@@ -195,7 +195,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
           <div>
             <label className={labelCls}>Matrícula</label>
             <input className={inputCls} value={form.matricula} onChange={e => handleChange('matricula', e.target.value)}
-              placeholder="Opcional" disabled={isEdit} />
+              placeholder="Opcional" />
           </div>
           <div>
             <label className={labelCls}>Tipo de Usuario</label>
