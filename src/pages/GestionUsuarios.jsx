@@ -22,7 +22,8 @@ import SearchableSelect from '../components/SearchableSelect';
 const ROLE_BADGE = {
   1: { bg: '#ede9fe', color: '#6d28d9', label: 'Maestro' },
   2: { bg: '#dcfce7', color: '#166534', label: 'Administrador' },
-  3: { bg: '#dbeafe', color: '#1e40af', label: 'Usuario' },
+  3: { bg: '#dbeafe', color: '#1e40af', label: 'Estándar' },
+  4: { bg: '#fef3c7', color: '#b45309', label: 'Sin Acceso' },
 };
 
 // ─── Utilidades ──────────────────────────────────────────────────────────────
