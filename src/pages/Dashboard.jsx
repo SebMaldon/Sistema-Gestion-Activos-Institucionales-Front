@@ -8,7 +8,7 @@ import {
 import {
   Package, AlertTriangle, ShieldAlert, TrendingUp, Activity,
   CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X,
-  LogIn, LogOut, Edit3
+  LogIn, LogOut, Edit3, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { GET_DASHBOARD_BIENES_QUERY } from '../api/inventario.queries';
@@ -540,8 +540,20 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-center">
-            <p className="text-gray-400 text-sm font-medium">Espacio reservado</p>
+          <div 
+            onClick={() => navigate('/unidades')}
+            className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Catálogo General</p>
+                <p className="text-xl font-bold mt-2 text-gray-900">Unidades</p>
+                <p className="text-xs mt-1 text-emerald-600 font-medium">Ir al catálogo</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-100">
+                <Building2 size={22} className="text-emerald-600" />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -631,11 +643,11 @@ export default function Dashboard() {
                     dataKey="equipos" 
                     radius={[6, 6, 0, 0]} 
                     onClick={(data) => {
-                      if (data && data.jefatura && isPrivileged) {
+                      if (data && data.jefatura) {
                         setSelectedDrilldownUnit(data.jefatura);
                       }
                     }}
-                    className={isPrivileged ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
                   >
                     {chartData.map((entry, index) => (
                       <Cell 
@@ -650,13 +662,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Drilldown Chart (Solo Admin/Maestro) */}
-        {isPrivileged && (
-          <DeviceTypeBar
-            drilldownData={drilldownData}
-            selectedDrilldownUnit={selectedDrilldownUnit}
-          />
-        )}
+        {/* Drilldown Chart (Para todos los usuarios) */}
+        <DeviceTypeBar
+          drilldownData={drilldownData}
+          selectedDrilldownUnit={selectedDrilldownUnit}
+        />
       </div>
 
       {/* Activity Log (Solo Maestro) */}

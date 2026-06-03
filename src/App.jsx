@@ -143,16 +143,16 @@ export default function App() {
               <AppLayout page="escaner"><EscanerQR /></AppLayout>
             </ProtectedRoute>
           } />
+          <Route path="/unidades" element={
+            <ProtectedRoute>
+              <AppLayout page="unidades"><Unidades /></AppLayout>
+            </ProtectedRoute>
+          } />
 
           {/* Rutas restringidas: Admin (1) y Maestro (2) */}
           <Route path="/garantias" element={
             <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
               <AppLayout page="garantias"><Garantias /></AppLayout>
-            </RoleRoute>
-          } />
-          <Route path="/unidades" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
-              <AppLayout page="unidades"><Unidades /></AppLayout>
             </RoleRoute>
           } />
           <Route path="/movimientos" element={
