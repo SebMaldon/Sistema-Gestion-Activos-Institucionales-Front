@@ -24,7 +24,8 @@ import {
   GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION,
   GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
   CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
-  GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION
+  GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION,
+  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION
 } from '../api/inventario.queries';
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA, CREATE_PROVEEDOR } from '../api/garantias.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
@@ -1323,6 +1324,25 @@ export default function Inventario() {
               Nuevo Bien
             </button>
           )}
+          {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
+            <button
+              onClick={async () => {
+                if(window.confirm('¿Desea forzar la sincronización de todos los equipos en la red local?')) {
+                  try {
+                    await gqlClient.request(SET_SYNC_PENDING_ALL_MUTATION);
+                    showToast('Sincronización masiva programada', 'success');
+                  } catch(e) {
+                    showToast('Error al programar sincronización', 'error');
+                  }
+                }
+              }}
+              title="Forzar Escaneo de Todos"
+              className="w-9 h-9 sm:w-auto sm:px-4 sm:py-2.5 rounded-xl flex items-center justify-center gap-2 text-white text-sm font-semibold transition-all hover:opacity-90 bg-amber-600 shadow-sm"
+            >
+              <RefreshCw size={16} />
+              <span className="hidden sm:inline">Forzar Todos</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1992,6 +2012,22 @@ export default function Inventario() {
                 <p className="text-xs text-gray-500">{activeFicha.categoria?.nombre_categoria}</p>
               </div>
               <EstatusBadge estatus={activeFicha.estatusOperativo} />
+              {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
+                <button 
+                  onClick={async () => {
+                    try {
+                      await gqlClient.request(SET_SYNC_PENDING_MUTATION, { id_bien: activeFicha.id_bien });
+                      showToast('Sincronización programada', 'success');
+                    } catch(e) {
+                      showToast('Error al programar', 'error');
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-white border border-amber-200 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-50 shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <RefreshCw size={12} />
+                  <span className="hidden sm:inline">Forzar Escaneo</span>
+                </button>
+              )}
             </div>
 
             {/* ── Pestañas Ficha ── */}
@@ -1999,6 +2035,7 @@ export default function Inventario() {
               {[
                 { key: 'info', label: 'Información' },
                 ...(hasTecnico ? [{ key: 'tecnico', label: 'Técnico / Garantía' }] : []),
+                ...(activeFicha.programasPC && activeFicha.programasPC.length > 0 ? [{ key: 'software', label: 'Software Instalado' }] : []),
               ].map(t => (
                 <button
                   key={t.key}
@@ -2206,6 +2243,11 @@ export default function Inventario() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* ── Tab: Software Instalado ── */}
+            {fichaTabs === 'software' && activeFicha.programasPC && (
+              <SoftwareTable programas={activeFicha.programasPC} />
             )}
           </div>
         </Modal>
@@ -2997,3 +3039,70 @@ function PageBtn({ onClick, disabled, icon }) {
     </button>
   );
 }
+
+function SoftwareTable({ programas }) {
+  const [query, setQuery] = useState('');
+  
+  const filtered = useMemo(() => {
+    if (!query) return programas;
+    const lower = query.toLowerCase();
+    return programas.filter(p => 
+      (p.nombre_programa || '').toLowerCase().includes(lower) || 
+      (p.version || '').toLowerCase().includes(lower) ||
+      (p.editor || '').toLowerCase().includes(lower)
+    );
+  }, [programas, query]);
+
+  return (
+    <div className="space-y-4 fade-in">
+      <div className="rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-b border-gray-100 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Layers size={15} className="text-gray-500" />
+            <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+              Programas Instalados ({filtered.length})
+            </span>
+          </div>
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Buscar software..." 
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 w-48"
+            />
+          </div>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-gray-50 sticky top-0 border-b border-gray-100 shadow-sm z-10">
+              <tr>
+                <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wide">Programa</th>
+                <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wide">Versión</th>
+                <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wide">Editor</th>
+                <th className="px-4 py-2 font-semibold text-gray-500 uppercase tracking-wide">Fecha Inst.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 bg-white">
+              {filtered.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-8 text-gray-400">No se encontraron programas</td></tr>
+              ) : filtered.map((prog, idx) => (
+                <tr key={idx} className="hover:bg-gray-50">
+                  <td className="px-4 py-2 text-gray-900 font-medium break-words max-w-[250px]">{prog.nombre_programa || '—'}</td>
+                  <td className="px-4 py-2 text-gray-600 break-words">{prog.version || '—'}</td>
+                  <td className="px-4 py-2 text-gray-600 break-words max-w-[150px]">{prog.editor || '—'}</td>
+                  <td className="px-4 py-2 text-gray-500 break-words whitespace-nowrap">
+                    {prog.fecha_instalacion ? formatDate(prog.fecha_instalacion) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Inventario;

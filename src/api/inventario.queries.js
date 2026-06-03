@@ -83,6 +83,13 @@ const BIEN_FIELDS = gql`
       tipo_user
       correo
     }
+    programasPC {
+      id_programa
+      nombre_programa
+      version
+      editor
+      fecha_instalacion
+    }
     monitores {
       id_bien_monitor
       id_monitor
@@ -530,5 +537,17 @@ export const CREATE_CAT_MODELO_MUTATION = gql`
 export const CREATE_BIENES_BULK_MUTATION = gql`
   mutation CreateBienesBulk($bienes: [BienBulkInput!]!) {
     createBienesBulk(bienes: $bienes)
+  }
+`;
+
+export const SET_SYNC_PENDING_MUTATION = gql`
+  mutation SetSyncPending($id_bien: ID!) {
+    setSyncPending(id_bien: $id_bien)
+  }
+`;
+
+export const SET_SYNC_PENDING_ALL_MUTATION = gql`
+  mutation SetSyncPendingAll {
+    setSyncPendingAll
   }
 `;
