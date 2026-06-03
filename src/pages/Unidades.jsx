@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, Loader2, Building2, AlertTriangle, Eye, MapPin, User, Filter, X } from 'lucide-react';
 import { useUnidades, useCreateUnidad, useUpdateUnidad, useDeleteUnidad, useCatTipoUnidades, useCatDistinctFiltros } from '../hooks/useUnidades';
 import { useApp } from '../context/AppContext';
+import { useAuthStore } from '../store/auth.store';
 import UnidadModal from '../components/UnidadModal';
 import ConfirmModal from '../components/ConfirmModal';
 import DetalleUnidadModal from '../components/DetalleUnidadModal';
@@ -13,6 +14,9 @@ export default function Unidades() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [unidadToEdit, setUnidadToEdit] = useState(null);
   const { showToast } = useApp();
+  const usuario = useAuthStore((s) => s.usuario);
+  const idRol = usuario?.id_rol ?? 3;
+  const isPrivileged = idRol === 1 || idRol === 2;
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [unidadToShow, setUnidadToShow] = useState(null);
@@ -132,9 +136,11 @@ export default function Unidades() {
           </div>
           <p className="text-sm text-gray-500">Gestión de unidades físicas, delegaciones y sus datos de ubicación.</p>
         </div>
-        <button onClick={handleOpenCreate} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-95">
-          <Plus size={20} /> Nueva Unidad
-        </button>
+        {isPrivileged && (
+          <button onClick={handleOpenCreate} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-200 active:scale-95">
+            <Plus size={20} /> Nueva Unidad
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[calc(100vh-220px)]">
@@ -366,8 +372,12 @@ export default function Unidades() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => handleOpenDetail(node)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="Ver Detalles"><Eye size={18} /></button>
-                        <button onClick={() => handleOpenEdit(node)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
-                        <button onClick={() => handleDeleteClick(node)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
+                        {isPrivileged && (
+                          <>
+                            <button onClick={() => handleOpenEdit(node)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
+                            <button onClick={() => handleDeleteClick(node)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

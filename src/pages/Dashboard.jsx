@@ -8,7 +8,7 @@ import {
 import {
   Package, AlertTriangle, ShieldAlert, TrendingUp, Activity,
   CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X,
-  LogIn, LogOut, Edit3
+  LogIn, LogOut, Edit3, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { GET_DASHBOARD_BIENES_QUERY } from '../api/inventario.queries';
@@ -329,11 +329,14 @@ export default function Dashboard() {
   }, [garantias]);
   const garantiasVencer = garantiasVencerList.length;
 
-  const tasaDisponibilidad = useMemo(() => {
-    if (bienes.length === 0) return 0;
-    const inactivos = bienes.filter(b => (b.estatus_operativo || '').toUpperCase() === 'INACTIVO').length;
-    return ((inactivos / bienes.length) * 100).toFixed(1);
+  const inactivosCount = useMemo(() => {
+    return bienes.filter(b => (b.estatus_operativo || '').toUpperCase() === 'INACTIVO').length;
   }, [bienes]);
+
+  const tasaDisponibilidad = useMemo(() => {
+    if (bienes.length === 0) return "0.00";
+    return ((inactivosCount / bienes.length) * 100).toFixed(2);
+  }, [inactivosCount, bienes.length]);
 
   // --- CHART LOGIC ---
   const allUnits = useMemo(() => {
@@ -525,9 +528,11 @@ export default function Dashboard() {
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Tasa de Disponibilidad</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900">{tasaDisponibilidad}%</p>
-                <p className="text-xs mt-1 text-blue-600 font-medium">Equipos inactivos</p>
+                <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Equipos Inactivos</p>
+                <div className="flex flex-col items-start gap-1.5 mt-1">
+                  <p className="text-3xl font-bold text-gray-900 leading-none">{inactivosCount}</p>
+                  <p className="text-[11px] text-blue-700 font-bold bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-100/50">{tasaDisponibilidad}% del total</p>
+                </div>
               </div>
               <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100">
                 <TrendingUp size={22} className="text-blue-600" />
@@ -535,8 +540,20 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-center">
-            <p className="text-gray-400 text-sm font-medium">Espacio reservado</p>
+          <div 
+            onClick={() => navigate('/unidades')}
+            className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Catálogo General</p>
+                <p className="text-xl font-bold mt-2 text-gray-900">Unidades</p>
+                <p className="text-xs mt-1 text-emerald-600 font-medium">Ir al catálogo</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-100">
+                <Building2 size={22} className="text-emerald-600" />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -626,11 +643,11 @@ export default function Dashboard() {
                     dataKey="equipos" 
                     radius={[6, 6, 0, 0]} 
                     onClick={(data) => {
-                      if (data && data.jefatura && isPrivileged) {
+                      if (data && data.jefatura) {
                         setSelectedDrilldownUnit(data.jefatura);
                       }
                     }}
-                    className={isPrivileged ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
                   >
                     {chartData.map((entry, index) => (
                       <Cell 
@@ -645,13 +662,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Drilldown Chart (Solo Admin/Maestro) */}
-        {isPrivileged && (
-          <DeviceTypeBar
-            drilldownData={drilldownData}
-            selectedDrilldownUnit={selectedDrilldownUnit}
-          />
-        )}
+        {/* Drilldown Chart (Para todos los usuarios) */}
+        <DeviceTypeBar
+          drilldownData={drilldownData}
+          selectedDrilldownUnit={selectedDrilldownUnit}
+        />
       </div>
 
       {/* Activity Log (Solo Maestro) */}
