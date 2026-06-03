@@ -353,9 +353,11 @@ export function EditBienModal({ asset, onClose }) {
                       <select value={formData.estatus_operativo}
                         onChange={e => setFormData({ ...formData, estatus_operativo: e.target.value })}
                         className={selectCls}>
-                        <option value="Activo">Activo</option>
-                        <option value="Baja">Baja</option>
-                        <option value="En Reparación">En Reparación</option>
+                        <option value="ACTIVO">Activo</option>
+                        <option value="INACTIVO">Inactivo</option>
+                        <option value="EN_REPARACION">En Reparación</option>
+                        <option value="BAJA">Baja</option>
+                        <option value="PRESTAMO">Préstamo</option>
                       </select>
                     </div>
                     <div>
