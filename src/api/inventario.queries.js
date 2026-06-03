@@ -84,8 +84,7 @@ const BIEN_FIELDS = gql`
       correo
     }
     programasPC {
-      id_programa
-      nombre_programa
+      programa
       version
       editor
       fecha_instalacion

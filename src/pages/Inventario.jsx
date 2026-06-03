@@ -58,7 +58,7 @@ function getDeviceMode(nombreTipo, nombreCategoria = null) {
   
   if (n.includes('monitor') || c.includes('monitor')) return 'MONITOR';
   if (n.includes('laptop') || n.includes('port') || n.includes('notebook') || c.includes('laptop')) return 'LAPTOP';
-  if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio') || c.includes('cómputo') || c.includes('computo')) return 'PC';
+  if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio') || n.includes('cómputo') || n.includes('computo') || c.includes('cómputo') || c.includes('computo')) return 'PC';
   
   return 'OTHER';
 }
@@ -2014,6 +2014,8 @@ export default function Inventario() {
               <EstatusBadge estatus={activeFicha.estatusOperativo} />
               {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
                 <button 
+                  ref={el => { if(el) console.log('DEBUG programasPC:', activeFicha.programasPC); }}
+                  disabled={!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW'))}
                   onClick={async () => {
                     try {
                       await gqlClient.request(SET_SYNC_PENDING_MUTATION, { id_bien: activeFicha.id_bien });
@@ -2022,7 +2024,8 @@ export default function Inventario() {
                       showToast('Error al programar', 'error');
                     }
                   }}
-                  className="px-3 py-1.5 bg-white border border-amber-200 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-50 shadow-sm transition-colors flex items-center gap-1.5"
+                  title={!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW')) ? "Agente no instalado" : "Forzar escaneo de este equipo"}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW')) ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' : 'bg-white border border-amber-200 text-amber-700 hover:bg-amber-50'}`}
                 >
                   <RefreshCw size={12} />
                   <span className="hidden sm:inline">Forzar Escaneo</span>
@@ -3047,7 +3050,7 @@ function SoftwareTable({ programas }) {
     if (!query) return programas;
     const lower = query.toLowerCase();
     return programas.filter(p => 
-      (p.nombre_programa || '').toLowerCase().includes(lower) || 
+      (p.programa || '').toLowerCase().includes(lower) || 
       (p.version || '').toLowerCase().includes(lower) ||
       (p.editor || '').toLowerCase().includes(lower)
     );
@@ -3089,7 +3092,7 @@ function SoftwareTable({ programas }) {
                 <tr><td colSpan={4} className="text-center py-8 text-gray-400">No se encontraron programas</td></tr>
               ) : filtered.map((prog, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-900 font-medium break-words max-w-[250px]">{prog.nombre_programa || '—'}</td>
+                  <td className="px-4 py-2 text-gray-900 font-medium break-words max-w-[250px]">{prog.programa || '—'}</td>
                   <td className="px-4 py-2 text-gray-600 break-words">{prog.version || '—'}</td>
                   <td className="px-4 py-2 text-gray-600 break-words max-w-[150px]">{prog.editor || '—'}</td>
                   <td className="px-4 py-2 text-gray-500 break-words whitespace-nowrap">
@@ -3104,5 +3107,3 @@ function SoftwareTable({ programas }) {
     </div>
   );
 }
-
-export default Inventario;

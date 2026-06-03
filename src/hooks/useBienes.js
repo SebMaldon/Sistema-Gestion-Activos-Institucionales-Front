@@ -43,6 +43,7 @@ export function mapBienNode(node) {
     unidadMedida: node.unidadMedida,
     usuarioResguardo: node.usuarioResguardo,
     cuentasPC: node.cuentasPC || [],
+    programasPC: node.programasPC || [],
     originalNode: node,
   };
 }
