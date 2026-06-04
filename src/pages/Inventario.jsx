@@ -38,6 +38,8 @@ import BienAtributosPanel from '../components/BienAtributosPanel';
 import AtributosCatalogModal from '../components/AtributosCatalogModal';
 import CargaMasivaPanel from '../components/CargaMasivaPanel';
 import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO } from '../api/atributos.queries';
+import ExportExcelModal from '../components/ExportExcelModal';
+import ReportePanel from '../components/ReportePanel';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN    = 1;
@@ -121,6 +123,15 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   const [nuevoModelo, setNuevoModelo] = useState({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
   const [searchModelo, setSearchModelo] = useState('');
   const [selectedTipoFilter, setSelectedTipoFilter] = useState('');
+  const [selectedMarcaFilter, setSelectedMarcaFilter] = useState('');
+  // Estado de selección local (dos pasos: resaltar → confirmar)
+  const [localSelected, setLocalSelected] = useState(modeloActual || '');
+  // Toggle del mini-formulario de creación
+  const [showCrearForm, setShowCrearForm] = useState(false);
+
+  // Ref para scroll al modelo seleccionado
+  const selectedItemRef = useRef(null);
+  const listContainerRef = useRef(null);
 
   // Query: marcas y tipos (ligero)
   const { data: catAux, refetch: refetchAux } = useQuery({
@@ -132,17 +143,31 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   const tipos  = catAux?.tiposDispositivo ?? [];
   const modelos = catalogos?.modelos ?? [];
 
+  // Auto-scroll al modelo destacado (localSelected) cuando se abre el tab
+  useEffect(() => {
+    if (tab === 'modelos' && selectedItemRef.current && listContainerRef.current) {
+      const timer = setTimeout(() => {
+        selectedItemRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 80);
+      return () => clearTimeout(timer);
+    }
+  }, [tab, localSelected]);
+
   const modelosFiltrados = useMemo(() => {
     let res = modelos;
     if (selectedTipoFilter) {
       res = res.filter(m => String(m.tipo_disp) === selectedTipoFilter);
     }
+    if (selectedMarcaFilter) {
+      res = res.filter(m => String(m.clave_marca) === selectedMarcaFilter);
+    }
     const q = searchModelo.toLowerCase();
     if (!q) return res;
     return res.filter(m =>
-      (m.descrip_disp || m.clave_modelo).toLowerCase().includes(q)
+      (m.clave_modelo || '').toLowerCase().includes(q) ||
+      (m.descrip_disp || '').toLowerCase().includes(q)
     );
-  }, [modelos, searchModelo, selectedTipoFilter]);
+  }, [modelos, searchModelo, selectedTipoFilter, selectedMarcaFilter]);
 
   // Mutations
   const mutMarca = useMutation({
@@ -196,8 +221,9 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
       const m = data.createCatModelo;
       showToast(`Modelo "${m.descrip_disp || m.clave_modelo}" creado`, 'success');
       setNuevoModelo({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
-      onSelectModelo(m.clave_modelo, { tipo_disp: m.tipo_disp });
-      onClose();
+      setShowCrearForm(false);
+      // Seleccionar el nuevo modelo localmente (el usuario confirma con el botón)
+      setLocalSelected(m.clave_modelo);
     },
     onError: (e) => {
       const msg = e?.response?.errors?.[0]?.message ?? '';
@@ -296,99 +322,280 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
-          {/* ── TAB MODELOS ── */}
-          {tab === 'modelos' && (
-            <div className="space-y-4 fade-in">
-              {/* Buscador y Filtro por Tipo */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" placeholder="Buscar por clave o descripción..." value={searchModelo}
-                    onChange={e => setSearchModelo(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+          {tab === 'modelos' && (() => {
+            // Buscar el objeto del modelo en el estado local
+            const modeloLocal = localSelected
+              ? modelos.find(m => m.clave_modelo === localSelected)
+              : null;
+            // Helpers con String() para evitar mismatch number vs string
+            const tipoDeModelo = (m) => m
+              ? tipos.find(t => String(t.tipo_disp) === String(m.tipo_disp))
+              : null;
+            const marcaDeModelo = (m) => m
+              ? marcas.find(mk => String(mk.clave_marca) === String(m.clave_marca))
+              : null;
+
+            const tipoSelObj  = tipoDeModelo(modeloLocal);
+            const marcaSelObj = marcaDeModelo(modeloLocal);
+
+            // Hay cambio pendiente si localSelected difiere del original (incluso si es '')
+            const hasPendingChange = localSelected !== modeloActual;
+
+            return (
+            <div className="space-y-3 fade-in">
+
+              {/* —— Tarjeta: estado de selección local —— */}
+              {modeloLocal ? (
+                <div className={`rounded-xl border-2 p-3 transition-colors ${
+                  hasPendingChange ? 'border-amber-300 bg-amber-50' : 'border-green-200 bg-green-50'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                      hasPendingChange ? 'text-amber-700' : 'text-green-700'
+                    }`}>
+                      {hasPendingChange
+                        ? <>○ Pendiente confirmar</>
+                        : <><Check size={11} /> Modelo seleccionado</>}
+                    </p>
+                    <button
+                      onClick={() => setLocalSelected('')}
+                      className="text-[10px] text-red-400 hover:text-red-600 font-semibold px-1.5 py-0.5 rounded hover:bg-red-50 transition-colors"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div>
+                      <p className={`text-[9px] font-bold uppercase tracking-wide ${hasPendingChange ? 'text-amber-600' : 'text-green-600'}`}>Clave</p>
+                      <p className={`font-mono text-xs font-bold ${hasPendingChange ? 'text-amber-900' : 'text-green-900'}`}>{modeloLocal.clave_modelo}</p>
+                    </div>
+                    <div>
+                      <p className={`text-[9px] font-bold uppercase tracking-wide ${hasPendingChange ? 'text-amber-600' : 'text-green-600'}`}>Descripción</p>
+                      <p className={`text-xs font-semibold truncate ${hasPendingChange ? 'text-amber-900' : 'text-green-900'}`}>{modeloLocal.descrip_disp || '—'}</p>
+                    </div>
+                    <div>
+                      <p className={`text-[9px] font-bold uppercase tracking-wide ${hasPendingChange ? 'text-amber-600' : 'text-green-600'}`}>Marca</p>
+                      <p className={`text-xs ${hasPendingChange ? 'text-amber-800' : 'text-green-800'}`}>{marcaSelObj?.marca || '— Sin marca —'}</p>
+                    </div>
+                    <div>
+                      <p className={`text-[9px] font-bold uppercase tracking-wide ${hasPendingChange ? 'text-amber-600' : 'text-green-600'}`}>Tipo</p>
+                      <p className={`text-xs ${hasPendingChange ? 'text-amber-800' : 'text-green-800'}`}>{tipoSelObj?.nombre_tipo || '— Sin tipo —'}</p>
+                    </div>
+                  </div>
                 </div>
-                <select
-                  value={selectedTipoFilter}
-                  onChange={e => setSelectedTipoFilter(e.target.value)}
-                  className="px-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white text-gray-700 font-semibold shrink-0"
-                >
-                  <option value="">Todos los tipos</option>
-                  {tipos.map(t => (
-                    <option key={t.tipo_disp} value={String(t.tipo_disp)}>
-                      {t.nombre_tipo}
-                    </option>
-                  ))}
-                </select>
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-center">
+                  <p className="text-xs text-gray-400 italic">
+                    {modeloActual
+                      ? <><span className="font-semibold text-red-400">Selección quitada</span> — confirma para guardar el cambio</>
+                      : 'Ningún modelo seleccionado — elige uno de la lista'}
+                  </p>
+                </div>
+              )}
+
+              {/* —— Botón Confirmar / Quitar —— siempre visible cuando hay cambio pendiente */}
+              <button
+                onClick={() => {
+                  const m = localSelected ? modelos.find(x => x.clave_modelo === localSelected) : null;
+                  onSelectModelo(localSelected, m ? { tipo_disp: m.tipo_disp } : null);
+                  onClose();
+                }}
+                disabled={!hasPendingChange}
+                className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                  hasPendingChange
+                    ? 'text-white shadow-md hover:opacity-90 cursor-pointer'
+                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                }`}
+                style={hasPendingChange ? {
+                  background: localSelected
+                    ? 'linear-gradient(135deg, #006341, #004d32)'
+                    : 'linear-gradient(135deg, #B91C1C, #991B1B)'
+                } : {}}
+              >
+                {localSelected
+                  ? <><Check size={15} /> {hasPendingChange ? `Confirmar “${modeloLocal?.descrip_disp || localSelected}”` : 'Selección confirmada'}</>
+                  : <><X size={15} /> Confirmar: quitar modelo</>}
+              </button>
+
+              {/* —— Buscador + Filtros —— */}
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por clave o descripción..."
+                    value={searchModelo}
+                    onChange={e => setSearchModelo(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedTipoFilter}
+                    onChange={e => setSelectedTipoFilter(e.target.value)}
+                    className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white text-gray-700 font-semibold"
+                  >
+                    <option value="">Todos los tipos</option>
+                    {tipos.map(t => (
+                      <option key={t.tipo_disp} value={String(t.tipo_disp)}>{t.nombre_tipo}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedMarcaFilter}
+                    onChange={e => setSelectedMarcaFilter(e.target.value)}
+                    className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white text-gray-700 font-semibold"
+                  >
+                    <option value="">Todas las marcas</option>
+                    {marcas.map(mk => (
+                      <option key={mk.clave_marca} value={String(mk.clave_marca)}>{mk.marca}</option>
+                    ))}
+                  </select>
+                  {(selectedTipoFilter || selectedMarcaFilter || searchModelo) && (
+                    <button
+                      onClick={() => { setSelectedTipoFilter(''); setSelectedMarcaFilter(''); setSearchModelo(''); }}
+                      className="px-2 py-1.5 rounded-lg text-xs text-red-500 border border-red-200 hover:bg-red-50 transition-colors shrink-0"
+                      title="Limpiar filtros"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
-              {/* Lista */}
-              <div className="space-y-1 max-h-52 overflow-y-auto">
+
+              {/* —— Encabezado de columnas —— */}
+              <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-3 px-3 py-1.5 bg-gray-100 rounded-lg">
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider w-16">Clave</span>
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Descripción</span>
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Marca</span>
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Tipo</span>
+              </div>
+
+              {/* —— Lista de modelos —— */}
+              <div ref={listContainerRef} className="space-y-0.5 max-h-44 overflow-y-auto rounded-xl border border-gray-100">
                 {modelosFiltrados.map(m => {
-                  const tipoObj = tipos.find(t => t.tipo_disp === m.tipo_disp);
-                  const tipoLabel = tipoObj ? tipoObj.nombre_tipo : '';
+                  const tipoObj  = tipoDeModelo(m);
+                  const marcaObj = marcaDeModelo(m);
+                  const isHighlighted = m.clave_modelo === localSelected;
+                  const isOriginal   = m.clave_modelo === modeloActual && !isHighlighted;
                   return (
-                    <button key={m.clave_modelo} onClick={() => { onSelectModelo(m.clave_modelo, { tipo_disp: m.tipo_disp }); onClose(); }}
-                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                        m.clave_modelo === modeloActual ? 'bg-green-50 text-green-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'
-                      }`}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        {m.clave_modelo === modeloActual && <Check size={13} className="flex-shrink-0" />}
-                        <span className="font-mono text-xs text-gray-400 shrink-0">{m.clave_modelo}</span>
-                        <span className="truncate">{m.descrip_disp || '—'}</span>
-                      </div>
-                      {tipoLabel && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
-                          {tipoLabel}
+                    <button
+                      key={m.clave_modelo}
+                      ref={isHighlighted ? selectedItemRef : null}
+                      onClick={() => setLocalSelected(m.clave_modelo)}
+                      className={`w-full grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-center px-3 py-2.5 text-left text-sm transition-colors ${
+                        isHighlighted
+                          ? 'bg-green-50 border-l-[3px] border-green-500'
+                          : isOriginal
+                          ? 'bg-gray-50 border-l-[3px] border-gray-300'
+                          : 'hover:bg-gray-50 border-l-[3px] border-transparent'
+                      }`}
+                    >
+                      {/* Clave */}
+                      <div className="flex items-center gap-1.5 w-16">
+                        {isHighlighted
+                          ? <Check size={11} className="text-green-600 shrink-0" />
+                          : <span className="w-[11px] shrink-0" />}
+                        <span className={`font-mono text-[11px] font-bold truncate ${
+                          isHighlighted ? 'text-green-700' : 'text-gray-500'
+                        }`}>
+                          {m.clave_modelo}
                         </span>
+                      </div>
+                      {/* Descripción */}
+                      <span className={`text-xs truncate ${
+                        isHighlighted ? 'text-green-800 font-semibold' : 'text-gray-700'
+                      }`}>
+                        {m.descrip_disp || <em className="text-gray-400">Sin descripción</em>}
+                      </span>
+                      {/* Marca (String lookup) */}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 max-w-[80px] truncate border ${
+                        marcaObj
+                          ? 'bg-purple-50 text-purple-700 border-purple-100'
+                          : 'bg-gray-50 text-gray-400 border-gray-200'
+                      }`}>
+                        {marcaObj?.marca || '—'}
+                      </span>
+                      {/* Tipo (String lookup) */}
+                      {tipoObj ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 shrink-0 max-w-[80px] truncate">
+                          {tipoObj.nombre_tipo}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-300 shrink-0 w-[72px]">—</span>
                       )}
                     </button>
                   );
                 })}
-                {modelosFiltrados.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin resultados</p>}
+                {modelosFiltrados.length === 0 && (
+                  <p className="text-center text-xs text-gray-400 py-6">
+                    Sin resultados para los filtros aplicados
+                  </p>
+                )}
               </div>
-              {/* Crear nuevo modelo */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Crear Nuevo Modelo</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Clave <span className="text-red-500">*</span></label>
-                    <input type="text" value={nuevoModelo.clave_modelo} placeholder="Ej: HP-1020"
-                      onChange={e => setNuevoModelo(p => ({ ...p, clave_modelo: e.target.value }))}
-                      className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Descripción</label>
-                    <input type="text" value={nuevoModelo.descrip_disp} placeholder="Ej: HP LaserJet 1020"
-                      onChange={e => setNuevoModelo(p => ({ ...p, descrip_disp: e.target.value }))}
-                      className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Marca</label>
-                    <SearchableSelect 
-                      value={nuevoModelo.clave_marca ? String(nuevoModelo.clave_marca) : ''}
-                      onChange={val => setNuevoModelo(p => ({ ...p, clave_marca: val }))}
-                      options={marcas.map(m => ({ value: String(m.clave_marca), label: m.marca }))}
-                      placeholder="— Ninguna —"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo Dispositivo</label>
-                    <SearchableSelect 
-                      value={nuevoModelo.tipo_disp ? String(nuevoModelo.tipo_disp) : ''}
-                      onChange={val => setNuevoModelo(p => ({ ...p, tipo_disp: val }))}
-                      options={tipos.map(t => ({ value: String(t.tipo_disp), label: t.nombre_tipo }))}
-                      placeholder="— Ninguno —"
-                    />
-                  </div>
-                </div>
-                <button onClick={handleCrearModelo} disabled={mutModelo.isPending || !nuevoModelo.clave_modelo.trim()}
-                  className="mt-3 w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                  style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
-                  {mutModelo.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                  {mutModelo.isPending ? 'Creando...' : 'Crear Modelo y Seleccionar'}
+
+              <p className="text-[10px] text-gray-400 text-right">
+                {modelosFiltrados.length} de {modelos.length} modelos
+              </p>
+
+              {/* —— Toggle mini-formulario —— */}
+              <div className="border-t border-gray-100 pt-3">
+                <button
+                  onClick={() => setShowCrearForm(v => !v)}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 border-dashed border-gray-300 text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                >
+                  {showCrearForm ? <><X size={13} /> Cerrar formulario</> : <><Plus size={13} /> Crear nuevo modelo</>}
                 </button>
+
+                {showCrearForm && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Clave <span className="text-red-500">*</span></label>
+                        <input type="text" value={nuevoModelo.clave_modelo} placeholder="Ej: HP-1020"
+                          onChange={e => setNuevoModelo(p => ({ ...p, clave_modelo: e.target.value }))}
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Descripción</label>
+                        <input type="text" value={nuevoModelo.descrip_disp} placeholder="Ej: HP LaserJet 1020"
+                          onChange={e => setNuevoModelo(p => ({ ...p, descrip_disp: e.target.value }))}
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Marca</label>
+                        <SearchableSelect
+                          value={nuevoModelo.clave_marca ? String(nuevoModelo.clave_marca) : ''}
+                          onChange={val => setNuevoModelo(p => ({ ...p, clave_marca: val }))}
+                          options={marcas.map(m => ({ value: String(m.clave_marca), label: m.marca }))}
+                          placeholder="— Ninguna —"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo Dispositivo</label>
+                        <SearchableSelect
+                          value={nuevoModelo.tipo_disp ? String(nuevoModelo.tipo_disp) : ''}
+                          onChange={val => setNuevoModelo(p => ({ ...p, tipo_disp: val }))}
+                          options={tipos.map(t => ({ value: String(t.tipo_disp), label: t.nombre_tipo }))}
+                          placeholder="— Ninguno —"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCrearModelo}
+                      disabled={mutModelo.isPending || !nuevoModelo.clave_modelo.trim()}
+                      className="w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                      style={{ background: 'linear-gradient(135deg, #1D4ED8, #1e40af)' }}
+                    >
+                      {mutModelo.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                      {mutModelo.isPending ? 'Creando...' : 'Crear y seleccionar'}
+                    </button>
+                  </div>
+                )}
               </div>
+
             </div>
-          )}
+            );
+          })()}
 
           {/* ── TAB TIPOS DISPOSITIVO ── */}
           {tab === 'tipos' && (
@@ -806,6 +1013,10 @@ export default function Inventario() {
   // ── Estado para Impresión ─────────────────────────────────────────────────
   const [printSelectedBienes, setPrintSelectedBienes] = useState([]);
   const [printStartOffset, setPrintStartOffset] = useState(0);
+
+  // ── Estado para Exportar y Reporte ───────────────────────────────────────
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showReporte, setShowReporte] = useState(false);
 
   // ── Datos ─────────────────────────────────────────────────────────────────
   const { data: bienesData, isLoading, isError, refetch, isFetching } = useBienes(serverFilter, { first: PAGE_SIZE, after: cursor ?? undefined });
@@ -1313,6 +1524,17 @@ export default function Inventario() {
           >
             <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
           </button>
+          {/* Botón Exportar — solo en tabs de bienes, no en Impresión ni Carga Masiva */}
+          {(activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
+            <button
+              id="btn-exportar-excel"
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 shadow-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+              <span className="hidden sm:inline">Exportar</span>
+            </button>
+          )}
           {canEdit && (
             <button
               id="btn-nuevo-bien"
@@ -1454,6 +1676,21 @@ export default function Inventario() {
                     <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-600 text-white font-bold">{activeFilterCount}</span>
                   )}
                 </button>
+                {/* Botón Reporte */}
+                {(activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
+                  <button
+                    onClick={() => { setShowReporte(r => !r); if (showAdvancedFilters) setShowAdvancedFilters(false); }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
+                      showReporte
+                        ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    title="Panel de estadísticas y reporte de los datos filtrados"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Reporte
+                  </button>
+                )}
                 {activeFilterCount > 0 && (
                   <button
                     onClick={() => { setAdvFilters({...EMPTY_ADV}); setCursor(null); setCursors([]); }}
@@ -1770,6 +2007,15 @@ export default function Inventario() {
             </p>
           </div>
 
+          {/* ── Panel de Reporte (desplegable, separado de filtros) ─────── */}
+          {showReporte && (activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
+            <ReportePanel
+              serverFilter={serverFilter}
+              activeTab={activeTab}
+              onClose={() => setShowReporte(false)}
+            />
+          )}
+
       {/* ── Contenedor con scroll — tabla desktop + tarjetas móvil ──────── */}
       <div className="flex-1 min-h-0 flex flex-col gap-3">
 
@@ -1986,6 +2232,20 @@ export default function Inventario() {
         </div>
       )}
         </>
+      )}
+
+      {/* ── Modal de Exportación Excel ─────────────────────────────────── */}
+      {showExportModal && (
+        <ExportExcelModal
+          onClose={() => setShowExportModal(false)}
+          serverFilter={serverFilter}
+          advFilters={advFilters}
+          activeTab={activeTab}
+          filterStatus={filterStatus}
+          search={search}
+          catalogos={catalogos}
+          pageInfo={pageInfo}
+        />
       )}
 
       {/* ════════════════════════════════════════════════════════════════════
