@@ -583,10 +583,9 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                     <button
                       onClick={handleCrearModelo}
                       disabled={mutModelo.isPending || !nuevoModelo.clave_modelo.trim()}
-                      className="w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                      style={{ background: 'linear-gradient(135deg, #1D4ED8, #1e40af)' }}
+                      className="w-full py-2 rounded-xl text-blue-600 bg-white border-2 border-blue-100 hover:border-blue-300 hover:bg-blue-50 text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
                     >
-                      {mutModelo.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                      {mutModelo.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                       {mutModelo.isPending ? 'Creando...' : 'Crear y seleccionar'}
                     </button>
                   </div>
