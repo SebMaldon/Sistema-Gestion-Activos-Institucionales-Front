@@ -714,8 +714,8 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
 
   return (
     <div className="rounded-xl border border-teal-200 overflow-hidden mt-4">
-      {/* Modal de conflicto */}
-      {conflictInfo && (
+      {/* Modal de conflicto renderizado en Portal para evitar recortes por el contenedor padre */}
+      {conflictInfo && ReactDOM.createPortal(
         <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-gray-900/60 p-4" onClick={() => setConflictInfo(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-3 mb-4">
@@ -756,7 +756,8 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="px-4 py-3 bg-teal-50 flex items-center justify-between">
