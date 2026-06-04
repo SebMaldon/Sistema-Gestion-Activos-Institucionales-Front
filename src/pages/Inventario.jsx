@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -39,6 +40,8 @@ import AtributosCatalogModal from '../components/AtributosCatalogModal';
 import CargaMasivaPanel from '../components/CargaMasivaPanel';
 import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO } from '../api/atributos.queries';
 import ExportExcelModal from '../components/ExportExcelModal';
+import { EditBienModal } from '../components/EditBienModal';
+
 import ReportePanel from '../components/ReportePanel';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
@@ -911,7 +914,7 @@ export default function Inventario() {
     atributo_valor: '',
     // Quick filters
     con_notas_recientes: false,
-    sin_inventario: false,
+    inconvenientes: false,
   });
 
   const EMPTY_ADV = {
@@ -921,7 +924,7 @@ export default function Inventario() {
     modelo_so: '', version_office: '', cpu_info: '', dir_ip: '',
     tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: '',
     atributo_id: '', atributo_valor: '',
-    con_notas_recientes: false, sin_inventario: false,
+    con_notas_recientes: false, inconvenientes: false,
   };
 
   // Contar filtros activos
@@ -943,7 +946,7 @@ export default function Inventario() {
     if (advFilters.garantia_fin_desde || advFilters.garantia_fin_hasta) count++;
     if (advFilters.atributo_id && advFilters.atributo_valor) count++;
     if (advFilters.con_notas_recientes) count++;
-    if (advFilters.sin_inventario) count++;
+    if (advFilters.inconvenientes) count++;
     return count;
   }, [advFilters]);
 
@@ -984,7 +987,7 @@ export default function Inventario() {
       f.atributo_valor = advFilters.atributo_valor;
     }
     if (advFilters.con_notas_recientes) f.con_notas_recientes = true;
-    if (advFilters.sin_inventario) f.sin_inventario = true;
+    if (advFilters.inconvenientes) f.inconvenientes = true;
     return f;
   }, [debouncedSearch, filterStatus, activeTab, advFilters]);
 
@@ -1584,7 +1587,7 @@ export default function Inventario() {
                 setCursor(null); 
                 setCursors([]); 
                 if (tab.key === 'Capitalizable') {
-                  setAdvFilters(prev => ({ ...prev, sin_inventario: false }));
+                  setAdvFilters(prev => ({ ...prev, inconvenientes: false }));
                 }
               }}
               className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${
@@ -1619,7 +1622,7 @@ export default function Inventario() {
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por serie, inventario, clave presupuestal..."
+                  placeholder="Buscar por serie, inventario, IP o clave..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setCursor(null); setCursors([]); }}
                   className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
@@ -1651,9 +1654,9 @@ export default function Inventario() {
                 </button>
                 {activeTab === 'No Capitalizable' && (
                   <button
-                    onClick={() => { setAdvFilters(p => ({...p, sin_inventario: !p.sin_inventario})); setCursor(null); setCursors([]); }}
+                    onClick={() => { setAdvFilters(p => ({...p, inconvenientes: !p.inconvenientes})); setCursor(null); setCursors([]); }}
                     className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
-                      advFilters.sin_inventario
+                      advFilters.inconvenientes
                         ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
@@ -2072,7 +2075,8 @@ export default function Inventario() {
                     const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria);
                     const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
                     const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
-                    const isConflictRow = isPcOrLaptop && isMissingInv;
+                    const isConflictRow = (isPcOrLaptop && isMissingInv) || (bien.inconvenientes && bien.inconvenientes.length > 0);
+                    const hasWifiConflict = bien.inconvenientes?.some(i => i.includes('IP Duplicada'));
                     
                     const hasRecentNotes = bien.notas?.some(n => {
                       const d = new Date(isNaN(Number(n.fecha_creacion)) ? n.fecha_creacion : Number(n.fecha_creacion));
@@ -2088,7 +2092,13 @@ export default function Inventario() {
                             <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-block truncate max-w-full">
                               {fmt(bien.numSerie)}
                             </span>
-                            <p className={`text-xs mt-0.5 truncate max-w-full ${isConflictRow ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>Inv: {fmt(bien.numInv)}</p>
+                            <p className={`text-xs mt-0.5 truncate max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>Inv: {fmt(bien.numInv)}</p>
+                            {hasWifiConflict && (
+                               <div className="flex items-center gap-1 mt-1 text-red-600 font-semibold text-[10px]" title="IP Duplicada">
+                                 <Wifi size={12} className="animate-pulse" />
+                                 <span>IP Duplicada</span>
+                               </div>
+                            )}
                           </div>
                           {hasRecentNotes && (
                             <div title="Tiene notas de observación recientes (últimas 24h)" className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-600 shadow-sm flex-shrink-0">
@@ -2152,7 +2162,8 @@ export default function Inventario() {
               const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria);
               const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
               const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
-              const isConflictRow = isPcOrLaptop && isMissingInv;
+              const isConflictRow = (isPcOrLaptop && isMissingInv) || (bien.inconvenientes && bien.inconvenientes.length > 0);
+              const hasWifiConflict = bien.inconvenientes?.some(i => i.includes('IP Duplicada'));
               
               const hasRecentNotes = bien.notas?.some(n => {
                 const d = new Date(isNaN(Number(n.fecha_creacion)) ? n.fecha_creacion : Number(n.fecha_creacion));
@@ -2167,6 +2178,7 @@ export default function Inventario() {
                     <div className="flex items-center gap-2">
                       <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700' : 'text-gray-900'}`}>{bien.equipo}</p>
                       {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
+                      {hasWifiConflict && <Wifi size={14} className="text-red-600 animate-pulse" title="IP Duplicada" />}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
                     <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">
@@ -2549,652 +2561,14 @@ export default function Inventario() {
       {/* ════════════════════════════════════════════════════════════════════
           MODAL: CREAR / EDITAR BIEN
       ═══════════════════════════════════════════════════════════════════════ */}
-      {modalForm && (
-        <Modal
-          onClose={closeForm}
-          title={modalForm === 'create' ? 'Registrar Nuevo Bien' : 'Editar Bien'}
-          subtitle={modalForm === 'create' ? 'Dar de alta un nuevo activo en el inventario' : 'Modificar la información del activo'}
-          wide
-          footer={
-            <div className="flex justify-end gap-3">
-              <button onClick={closeForm}
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
-                Cancelar
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={creating || updating}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: 'linear-gradient(135deg,#006341,#004d32)' }}
-              >
-                {(creating || updating) ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                {modalForm === 'create' ? 'Registrar Bien' : 'Guardar Cambios'}
-              </button>
-            </div>
-          }
-        >
-          {loadingCat ? (
-            <div className="flex justify-center py-10 text-gray-400 gap-3">
-              <Loader2 size={20} className="animate-spin" /> Cargando catálogos...
-            </div>
-          ) : (
-            <div className="space-y-4 text-sm">
-
-              {/* — Campos de solo lectura (solo al editar) — */}
-              {modalForm !== 'create' && (
-                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <ReadonlyField label="ID Bien" value={modalForm.id_bien} mono />
-                    <ReadonlyField label="Clave Presupuestal" value={fmt(modalForm.clavePresupuestal)} mono />
-                  </div>
-                </div>
-              )}
-
-              {/* ── Pestañas Formulario ── */}
-              <div className="flex gap-1 border-b border-gray-200">
-                {[
-                  { key: 'general', label: 'General' },
-                  { key: 'tecnico', label: 'Técnico / Garantía', badge: showTI || deviceMode === 'OTHER' || deviceMode === 'PC' || deviceMode === 'LAPTOP' || deviceMode === 'MONITOR' },
-                ].map(t => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setFormTab(t.key)}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${
-                      formTab === t.key
-                        ? 'border-green-600 text-green-700 bg-green-50/50'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {t.label}
-                    {t.badge && formTab !== t.key && (
-                      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* ── Tab: General ── */}
-              {formTab === 'general' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 fade-in">
-                {/* Categoría */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Categoría <span className="text-red-500">*</span>
-                  </label>
-                  <SearchableSelect
-                    value={form.id_categoria ? String(form.id_categoria) : ''}
-                    onChange={(val) => handleCatChange(val)}
-                    options={(catalogos?.categorias ?? []).map(c => ({ value: String(c.id_categoria), label: c.nombre_categoria }))}
-                    placeholder="Seleccionar…"
-                    error={!!formErrors.id_categoria}
-                  />
-                  {formErrors.id_categoria && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_categoria}</p>}
-                </div>
-
-                {/* Unidad de Medida — bloqueada a Pieza si es hardware */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Unidad de Medida <span className="text-red-500">*</span>
-                    {forcePieza && <span className="ml-2 text-xs text-blue-500 font-normal">(forzado a Pieza)</span>}
-                  </label>
-                  <select
-                    value={forcePieza ? ID_UNIDAD_PIEZA : form.id_unidad_medida}
-                    onChange={(e) => !forcePieza && setForm((f) => ({ ...f, id_unidad_medida: e.target.value }))}
-                    disabled={forcePieza}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
-                      forcePieza ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'
-                    } ${formErrors.id_unidad_medida && !forcePieza ? 'border-red-400' : 'border-gray-200'}`}
-                  >
-                    <option value="">Seleccionar…</option>
-                    {(catalogos?.unidadesMedida ?? []).map((u) => (
-                      <option key={u.id_unidad_medida} value={u.id_unidad_medida}>{u.nombre_unidad} ({u.abreviatura})</option>
-                    ))}
-                  </select>
-                  {formErrors.id_unidad_medida && !forcePieza && <p className="text-xs text-red-500 mt-0.5">{formErrors.id_unidad_medida}</p>}
-                </div>
-
-                {/* Número de Serie */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Número de Serie</label>
-                  <input
-                    type="text"
-                    value={form.num_serie}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, num_serie: e.target.value }));
-                      if (formErrors.num_serie) setFormErrors(e2 => { const n = {...e2}; delete n.num_serie; return n; });
-                    }}
-                    onBlur={() => {
-                      const val = form.num_serie?.trim();
-                      if (!val) return;
-                      const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
-                      const dup = bienes.find(b => b.numSerie === val && b.id_bien !== currentId);
-                      if (dup) {
-                        setFormErrors(e2 => ({ ...e2, num_serie: `Ya está registrado en otro bien` }));
-                      } else {
-                        setFormErrors(e2 => { const n = {...e2}; delete n.num_serie; return n; });
-                      }
-                    }}
-                    placeholder="Ej. SN202400001"
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
-                      formErrors.num_serie ? 'border-red-400 bg-red-50' : 'border-gray-200'
-                    }`}
-                  />
-                  {formErrors.num_serie && <p className="text-xs text-red-500 mt-0.5">{formErrors.num_serie}</p>}
-                </div>
-
-                {/* Modelo — selector con mini-CRUD */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Modelo</label>
-                  <div className="flex gap-2">
-                    <div
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 cursor-pointer hover:border-green-400 transition-colors flex items-center justify-between min-w-0"
-                      onClick={() => setShowCatalogModal(true)}
-                    >
-                      {form.clave_modelo ? (
-                        <span className="truncate">
-                          {(catalogos?.modelos ?? []).find(m => m.clave_modelo === form.clave_modelo)?.descrip_disp || form.clave_modelo}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">Sin modelo</span>
-                      )}
-                      <ChevronDown size={13} className="ml-2 text-gray-400 flex-shrink-0" />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCatalogModal(true)}
-                      className="px-3 py-2 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 transition-colors flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
-                    >
-                      <Plus size={13} /> Gestionar
-                    </button>
-                    {form.clave_modelo && (
-                      <button
-                        type="button"
-                        onClick={() => handleModeloChange('')}
-                        className="w-9 h-9 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-400 transition-colors flex items-center justify-center flex-shrink-0"
-                        title="Quitar modelo"
-                      >
-                        <X size={13} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-
-                {/* Número de Inventario */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Número de Inventario</label>
-                  <input
-                    type="text"
-                    value={form.num_inv}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, num_inv: e.target.value }));
-                      if (formErrors.num_inv) setFormErrors(e2 => { const n = {...e2}; delete n.num_inv; return n; });
-                    }}
-                    onBlur={() => {
-                      const val = form.num_inv?.trim();
-                      if (!val) return;
-                      const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
-                      const dup = bienes.find(b => b.numInv === val && b.id_bien !== currentId);
-                      if (dup) {
-                        setFormErrors(e2 => ({ ...e2, num_inv: `Ya está registrado en otro bien` }));
-                      } else {
-                        setFormErrors(e2 => { const n = {...e2}; delete n.num_inv; return n; });
-                      }
-                    }}
-                    placeholder="Ej. INV-2024-001"
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 ${
-                      formErrors.num_inv ? 'border-red-400 bg-red-50' : 'border-gray-200'
-                    }`}
-                  />
-                  {formErrors.num_inv && <p className="text-xs text-red-500 mt-0.5">{formErrors.num_inv}</p>}
-                </div>
-
-
-                {/* Estatus Operativo */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Estatus Operativo</label>
-                  <select
-                    value={form.estatus_operativo}
-                    onChange={(e) => setForm((f) => ({ ...f, estatus_operativo: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                  >
-                    <option value="ACTIVO">Activo</option>
-                    <option value="INACTIVO">Inactivo</option>
-                    <option value="EN_REPARACION">En Reparación</option>
-                    <option value="BAJA">Baja</option>
-                    <option value="PRESTAMO">Préstamo</option>
-                  </select>
-                </div>
-
-                {/* Cantidad - bloqueada si la categoria maneja serie individual */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Cantidad{esSerie && <span className="ml-2 text-xs text-blue-500 font-normal"> (forzado a 1)</span>}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={esSerie ? 1 : form.cantidad}
-                    onChange={(e) => !esSerie && setForm((f) => ({ ...f, cantidad: e.target.value }))}
-                    disabled={esSerie}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* Segmento de Red */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Segmento de Red</label>
-                  <SearchableSelect
-                    value={form.id_segmento ? String(form.id_segmento) : ''}
-                    onChange={(val) => {
-                      setForm((f) => ({ ...f, id_segmento: val }));
-                    }}
-                    options={(catalogos?.segmentos ?? []).map(u => ({ value: String(u.id_segmento), label: u.nombre || u.clave }))}
-                    placeholder="Sin segmento"
-                  />
-                </div>
-
-                {/* Unidad Física */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Unidad Física</label>
-                  <SearchableSelect
-                    value={form.clave_unidad_ref || ''}
-                    onChange={(val) => {
-                      setForm((f) => ({ ...f, clave_unidad_ref: val, id_ubicacion: '' }));
-                      setIsAddingUbicacion(false);
-                      setNewUbicacionName('');
-                    }}
-                    options={(catalogos?.unidades ?? []).map(i => ({ value: String(i.clave), label: i.desc_corta || i.descripcion || i.clave }))}
-                    placeholder="Sin unidad"
-                  />
-                </div>
-
-                {/* Ubicacion Física (Depende de Unidad Física) */}
-                {form.clave_unidad_ref && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Área / Ubicación Física</label>
-                    {isAddingUbicacion ? (
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newUbicacionName}
-                          onChange={e => setNewUbicacionName(e.target.value)}
-                          placeholder="Nombre de ubicación..."
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                          autoFocus
-                        />
-                        <button type="button" onClick={handleCreateUbicacion} disabled={creatingUbicacion || !newUbicacionName.trim()}
-                          className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
-                          Guardar
-                        </button>
-                        <button type="button" onClick={() => { setIsAddingUbicacion(false); setNewUbicacionName(''); }}
-                          className="px-3 py-2 border border-gray-200 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
-                          <X size={15} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <div className="flex-1 min-w-0">
-                          <SearchableSelect
-                            value={form.id_ubicacion ? String(form.id_ubicacion) : ''}
-                            onChange={(val) => setForm((f) => ({ ...f, id_ubicacion: val }))}
-                            options={ubicacionesUnidad.map(u => ({ value: String(u.id_ubicacion), label: u.nombre_ubicacion }))}
-                            placeholder="Seleccionar ubicación..."
-                          />
-                        </div>
-                        <button type="button" onClick={() => setIsAddingUbicacion(true)} title="Añadir nueva ubicación a la Unidad"
-                          className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors">
-                          <Plus size={15} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Usuario Resguardo */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Usuario en Resguardo</label>
-                  <SearchableSelect
-                    value={form.id_usuario_resguardo ? String(form.id_usuario_resguardo) : ''}
-                    onChange={(val) => setForm((f) => ({ ...f, id_usuario_resguardo: val }))}
-                    options={(catalogos?.usuarios ?? []).map(u => ({ value: String(u.id_usuario), label: `${u.nombre_completo} (${u.matricula})` }))}
-                    placeholder="Sin resguardo"
-                  />
-                </div>
-
-                {/* Fecha Adquisición */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha de Adquisición</label>
-                  <input
-                    type="date"
-                    value={form.fecha_adquisicion}
-                    onChange={(e) => setForm((f) => ({ ...f, fecha_adquisicion: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
-                </div>
-              </div>
-              )}
-
-              {/* ── Tab: Técnico ── */}
-              {formTab === 'tecnico' && (
-              <div className="space-y-4 fade-in">
-
-              {showTI && (
-                <div className="rounded-xl border border-blue-200 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setShowTI((v) => !v)}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 text-blue-700 text-xs font-semibold uppercase tracking-wide"
-                  >
-                    <span className="flex items-center gap-2"><Monitor size={14}/> Especificaciones TI</span>
-                    {showTI ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  {showTI && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                      {[
-                        { key: 'nombre_host',        label: 'Nombre de Host',       placeholder: 'PC-ADMIN', form: 'ti' },
-                        { key: 'cpu_info',           label: 'CPU',                  placeholder: 'Intel Core i5-12400', form: 'ti' },
-                        { key: 'ram_gb',             label: 'RAM (GB)',              placeholder: '8', type: 'number', form: 'ti' },
-                        { key: 'almacenamiento_gb',  label: 'Almacenamiento (GB)',   placeholder: '256', type: 'number', form: 'ti' },
-                        { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro', form: 'ti' },
-                        { key: 'version_office',     label: 'Versión de Office',     placeholder: 'Office 2021', form: 'ti' },
-                        { key: 'windows_serial',     label: 'Serial de Windows',     placeholder: 'XXXXX-XXXXX-XXXXX', form: 'ti' },
-                        { key: 'dir_ip',             label: 'Dirección IP',          placeholder: '192.168.1.100', form: 'ti' },
-                        { key: 'mac_address',        label: 'MAC Address',           placeholder: 'AA:BB:CC:DD:EE:FF', form: 'ti' },
-                        { key: 'dir_mac',            label: 'Dir. MAC Alt.',         placeholder: '—', form: 'ti' },
-                        { key: 'puerto_red',         label: 'Puerto de Red',         placeholder: 'Pto. 12', form: 'ti' },
-                        { key: 'switch_red',         label: 'Switch (IP/Nombre)',    placeholder: '10.28.X.X', form: 'ti' },
-                        { key: 'last_scan',          label: 'Último Escaneo',        placeholder: '', type: 'datetime-local', form: 'ti' },
-                      ].map(({ key, label, placeholder, type = 'text' }) => (
-                        <div key={key}>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>
-                          <input
-                            type={type}
-                            value={tiForm[key] ?? ''}
-                            onChange={(e) => setTiForm((f) => ({ ...f, [key]: e.target.value }))}
-                            placeholder={placeholder}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* — Cuentas PC (1:N) — */}
-                  {showTI && (
-                    <div className="border-t border-blue-100 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex items-center gap-1.5">
-                          <User size={13}/> Cuentas de Usuario PC
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setCuentasList(prev => [...prev, { _new: true, _editing: true, cuenta_windows: '', correo: '', tipo_user: '' }])}
-                          className="flex items-center gap-1 text-xs text-blue-600 font-semibold hover:text-blue-800 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
-                        >
-                          <Plus size={13}/> Agregar cuenta
-                        </button>
-                      </div>
-                      {cuentasList.length === 0 && (
-                        <p className="text-xs text-gray-400 italic text-center py-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">Sin cuentas — agrega una con el botón</p>
-                      )}
-                      <div className="space-y-3">
-                        {cuentasList.map((c, idx) => (
-                          <div key={c.id_cuenta ?? `new-${idx}`} className="rounded-lg border border-blue-100 overflow-hidden">
-                            {/* Header de cuenta */}
-                            <div className="flex items-center justify-between px-3 py-2 bg-blue-50">
-                              <span className="text-xs font-semibold text-blue-700">
-                                {c.cuenta_windows || `Cuenta ${idx + 1}`}
-                              </span>
-                              <div className="flex gap-1">
-                                <button type="button"
-                                  onClick={() => setCuentasList(prev => prev.map((x, i) => i === idx ? { ...x, _editing: !x._editing } : x))}
-                                  className="text-[10px] px-2 py-0.5 rounded bg-white border border-blue-200 text-blue-600 hover:bg-blue-100 font-semibold"
-                                >{c._editing ? 'Cerrar' : 'Editar'}</button>
-                                <button type="button"
-                                  onClick={() => {
-                                    if (c.id_cuenta && !c._new) { deleteCuentaPC({ id_cuenta: c.id_cuenta }); }
-                                    setCuentasList(prev => prev.filter((_, i) => i !== idx));
-                                  }}
-                                  className="text-[10px] px-2 py-0.5 rounded bg-white border border-red-200 text-red-500 hover:bg-red-50 font-semibold"
-                                >Eliminar</button>
-                              </div>
-                            </div>
-                            {/* Campos editables */}
-                            {c._editing && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white">
-                                {[
-                                  { key: 'cuenta_windows', label: 'Windows', placeholder: 'usuario.local' },
-                                  { key: 'correo',         label: 'Correo',  placeholder: 'usuario@imss.gob.mx', type: 'email' },
-                                  { key: 'tipo_user',      label: 'Tipo',    placeholder: 'Estándar' },
-                                ].map(({ key, label, placeholder, type = 'text' }) => (
-                                  <div key={key}>
-                                    <label className="block text-[10px] font-semibold text-gray-500 mb-0.5">{label}</label>
-                                    <input
-                                      type={type}
-                                      value={c[key] ?? ''}
-                                      onChange={e => setCuentasList(prev => prev.map((x, i) => i === idx ? { ...x, [key]: e.target.value } : x))}
-                                      placeholder={placeholder}
-                                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {/* Vista compacta cuando cerrado */}
-                            {!c._editing && (
-                              <div className="px-3 py-2 bg-white grid grid-cols-2 gap-1">
-                                {c.cuenta_windows && <span className="text-[10px] text-gray-600"><span className="font-semibold">Win:</span> {c.cuenta_windows}</span>}
-                                {c.correo && <span className="text-[10px] text-gray-600"><span className="font-semibold">Correo:</span> {c.correo}</span>}
-                                {c.tipo_user && <span className="text-[10px] text-gray-600"><span className="font-semibold">Tipo:</span> {c.tipo_user}</span>}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* — Sección Monitores (Solo PC y Laptop) — */}
-              {(deviceMode === 'PC' || deviceMode === 'LAPTOP') && (
-                <MonitoresSelector 
-                  idBienEquipo={modalForm?.id_bien} 
-                  isCreateMode={modalForm === 'create'} 
-                  asignados={modalForm === 'create' ? pendingMonitors : (modalForm?.monitores ?? [])}
-                  onAsignar={(vars) => {
-                    if (modalForm === 'create') {
-                      if (!pendingMonitors.some(p => p.id_monitor === vars.monitor.id_bien)) {
-                        setPendingMonitors(prev => [...prev, {
-                          id_bien_monitor: `temp-${Date.now()}`,
-                          id_monitor: vars.monitor.id_bien,
-                          monitor: vars.monitor
-                        }]);
-                      }
-                    } else {
-                      asignarMonitor(vars);
-                    }
-                  }}
-                  onDesasignar={(id) => {
-                    if (modalForm === 'create') {
-                      setPendingMonitors(prev => prev.filter(p => p.id_bien_monitor !== id));
-                    } else {
-                      desasignarMonitor({ id_bien_monitor: id });
-                    }
-                  }}
-                  asignando={asignando}
-                  desasignando={desasignando}
-                />
-              )}
-
-              {/* — Sección Atributos Técnicos — */}
-              {deviceMode === 'OTHER' && (
-                <div className="rounded-xl border border-purple-200 overflow-hidden mt-4">
-                  <div className="px-4 py-3 bg-purple-50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Tag size={14} className="text-purple-700" />
-                      <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Atributos Técnicos</span>
-                    </div>
-                    {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
-                      <button 
-                        onClick={() => setShowAtributosModal(true)}
-                        className="text-xs flex items-center gap-1 text-purple-600 hover:text-purple-800 bg-purple-100 hover:bg-purple-200 px-2 py-1 rounded transition-colors"
-                      >
-                        <Settings size={12} /> Configurar Catálogo
-                      </button>
-                    )}
-                  </div>
-                  <div className="p-4 bg-white">
-                    <BienAtributosPanel
-                      id_bien={modalForm !== 'create' ? modalForm?.id_bien : null}
-                      tipo_disp={(() => {
-                        // Obtener tipo_disp del modelo seleccionado
-                        if (modalForm !== 'create' && modalForm?.modelo?.tipo_disp) return modalForm.modelo.tipo_disp;
-                        // En modo creación, buscar por clave_modelo
-                        const mod = (catalogos?.modelos ?? []).find(m => m.clave_modelo === form.clave_modelo);
-                        return mod?.tipo_disp ?? null;
-                      })()}
-                      onValuesChange={modalForm === 'create' ? setPendingEavValues : undefined}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Sección de Garantía (Opcional) */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-2">
-                <div className="bg-gray-50 border-b border-gray-100 p-4 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-800 flex items-center">
-                    <Shield size={16} className="text-green-600 mr-2" />
-                    {garantiaForm.id_garantia ? 'Garantía Actual' : 'Asociar Garantía'}
-                  </h3>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={garantiaForm.show}
-                      onChange={(e) => setGarantiaForm(p => ({ ...p, show: e.target.checked }))}
-                      className="sr-only"
-                    />
-                    <div className={`relative w-10 h-5 transition-colors rounded-full ${garantiaForm.show ? 'bg-green-500' : 'bg-gray-300'}`}>
-                      <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform ${garantiaForm.show ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                  </label>
-                </div>
-                {garantiaForm.show && (
-                  <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-green-50/20">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Inicio</label>
-                      <input
-                        type="date"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                        value={garantiaForm.fecha_inicio}
-                        onChange={e => setGarantiaForm(p => ({ ...p, fecha_inicio: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Fin *</label>
-                      <input
-                        type="date"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                        value={garantiaForm.fecha_fin}
-                        onChange={e => setGarantiaForm(p => ({ ...p, fecha_fin: e.target.value }))}
-                      />
-                      <div className="flex gap-1 mt-1.5">
-                        <button type="button" onClick={() => handleAutoCalcGarantia(1)} className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded hover:bg-green-200">+1 Año</button>
-                        <button type="button" onClick={() => handleAutoCalcGarantia(2)} className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded hover:bg-green-200">+2 Años</button>
-                        <button type="button" onClick={() => handleAutoCalcGarantia(3)} className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border border-green-200 rounded hover:bg-green-200">+3 Años</button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Proveedor</label>
-                      <div className="flex gap-2">
-                        <select
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
-                          value={garantiaForm.id_proveedor}
-                          onChange={e => setGarantiaForm(p => ({ ...p, id_proveedor: e.target.value }))}
-                        >
-                          <option value="">-- Ninguno --</option>
-                          {proveedores.map(p => (
-                            <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddProveedorModal(true)}
-                          title="Agregar nuevo proveedor"
-                          className="px-3 py-2 border border-gray-200 text-gray-500 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0 bg-white"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      {showAddProveedorModal && (
-                        <ProveedorModal
-                          onClose={() => setShowAddProveedorModal(false)}
-                          onSuccess={(newId) => setGarantiaForm(p => ({ ...p, id_proveedor: String(newId) }))}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          </div>
-        )}
-      </Modal>
-      )}
-
-      {/* ════════════════════════════════════════════════════════════════════
-          MODAL: CONFIRMAR ELIMINACIÓN
-      ═══════════════════════════════════════════════════════════════════════ */}
-      {modalConfirmDel && (
-        <Modal onClose={() => setModalConfirmDel(null)} title="Confirmar Eliminación" subtitle="Esta acción es irreversible" small>
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertTriangle size={26} className="text-red-500" />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">¿Eliminar este bien?</p>
-              <p className="text-sm text-gray-500 mt-1">
-                <span className="font-mono font-semibold">{modalConfirmDel.equipo}</span>
-                {' '}— Serie: <span className="font-mono">{fmt(modalConfirmDel.numSerie)}</span>
-              </p>
-              <p className="text-xs text-red-500 mt-2 bg-red-50 rounded-lg px-3 py-2 border border-red-100">
-                Esta acción es irreversible. Si el bien tiene incidencias o movimientos asociados, la eliminación será bloqueada por el sistema.
-              </p>
-            </div>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => setModalConfirmDel(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => deleteBien(modalConfirmDel.id_bien)}
-                disabled={deleting}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 transition-colors"
-              >
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Mini-CRUD: catalogo de modelos */}
-      {showCatalogModal && modalForm && (
-        <ModeloCatalogModal
-          onClose={() => setShowCatalogModal(false)}
-          onSelectModelo={handleModeloChange}
-          modeloActual={form.clave_modelo}
-          catalogos={catalogos}
-        />
-      )}
-
-      {showAtributosModal && (
-        <AtributosCatalogModal onClose={() => setShowAtributosModal(false)} />
-      )}
-
+      <EditBienModal
+        isOpen={!!modalForm}
+        mode={modalForm === 'create' ? 'create' : 'edit'}
+        asset={modalForm !== 'create' ? modalForm : null}
+        catalogos={catalogos}
+        onClose={() => setModalForm(null)}
+        refetch={refetch}
+      />
     </div>
     <PrintStickerSheet items={printSelectedBienes} startOffset={printStartOffset} />
     </>

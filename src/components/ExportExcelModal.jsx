@@ -132,7 +132,7 @@ export function buildDescription({ activeTab, advFilters, filterStatus, search, 
   if (advFilters.con_notas_recientes) partes.push('con advertencia reciente');
 
   // Sin inventario
-  if (advFilters.sin_inventario) partes.push('sin número de inventario asignado');
+  if (advFilters.inconvenientes) partes.push('con inconvenientes (Sin inventario o IP Duplicada)');
 
   // Estatus
   const estatusMap = {

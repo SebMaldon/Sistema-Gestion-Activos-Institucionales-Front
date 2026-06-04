@@ -1,62 +1,11 @@
 import { gql } from 'graphql-request';
+import { BIEN_FIELDS } from './inventario.queries';
 
 export const GET_BIEN_BY_TERMINO = gql`
+  ${BIEN_FIELDS}
   query GetBienByTermino($termino: String!) {
     bienByTermino(termino: $termino) {
-      id_bien
-      num_serie
-      num_inv
-      qr_hash
-      estatus_operativo
-      cantidad
-      id_categoria
-      id_segmento
-      id_usuario_resguardo
-      clave_unidad_ref
-      categoria {
-        nombre_categoria
-      }
-      modelo {
-        descrip_disp
-      }
-      segmento {
-        nombre
-        clave
-      }
-      ubicacion {
-        id_ubicacion
-        nombre_ubicacion
-      }
-      unidad {
-        clave
-        descripcion
-      }
-      usuarioResguardo {
-        id_usuario
-        nombre_completo
-        matricula
-      }
-      fecha_actualizacion
-      fecha_adquisicion
-      especificacionTI {
-        cpu_info
-        ram_gb
-        almacenamiento_gb
-        mac_address
-        dir_ip
-        dir_mac
-        puerto_red
-        switch_red
-        modelo_so
-      }
-      notas {
-        id_nota
-        contenido_nota
-        fecha_creacion
-        usuarioAutor {
-          nombre_completo
-        }
-      }
+      ...BienFields
     }
   }
 `;

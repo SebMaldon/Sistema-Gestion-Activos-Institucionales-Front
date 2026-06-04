@@ -1,7 +1,7 @@
 import { gql } from 'graphql-request';
 
 // ─── Fragmento de Bien completo ──────────────────────────────────────────────
-const BIEN_FIELDS = gql`
+export const BIEN_FIELDS = gql`
   fragment BienFields on Bien {
     id_bien
     # CACHE BUSTER 3

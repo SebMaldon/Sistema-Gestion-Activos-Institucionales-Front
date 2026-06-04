@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_BIEN_BY_QR, UPDATE_BIEN, DELETE_BIEN, UPSERT_ESPEC_TI, CREATE_NOTA_BIEN } from '../api/escaner.queries';
 import { useAuthStore } from '../store/auth.store';
+import { mapBienNode } from './useBienes';
 
 export function useBienByQR(termino) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -12,41 +13,8 @@ export function useBienByQR(termino) {
       try {
         const data = await gqlClient.request(GET_BIEN_BY_QR, { termino });
         if (!data.bienByTermino) return null;
-        
         const node = data.bienByTermino;
-        return {
-          id: node.id_bien,
-          numSerie: node.num_serie || 'N/D',
-          qrHash: node.qr_hash,
-          cantidad: node.cantidad,
-          idCategoria: node.id_categoria,
-          idUnidad: node.id_unidad,
-          idUsuarioResguardo: node.usuarioResguardo?.id_usuario || node.id_usuario_resguardo || '',
-          claveInmuebleRef: node.clave_inmueble_ref,
-          equipo: node.modelo?.descrip_disp || node.categoria?.nombre_categoria || 'Sin especificar',
-          resguardo: node.usuarioResguardo?.nombre_completo || 'Sin resguardo',
-          usuario: node.usuarioResguardo?.nombre_completo || 'N/A',
-          matricula: node.usuarioResguardo?.matricula || 'N/A',
-          unidad: node.unidad?.nombre || 'N/A',
-          ubicacion: node.ubicacion?.nombre_ubicacion || node.unidad?.nombre || node.inmueble?.nombre_ubicacion || 'Sin ubicación',
-          idUbicacion: node.ubicacion?.id_ubicacion || '',
-          estatus: node.estatus_operativo || 'Activo',
-          actualizacion: node.fecha_actualizacion ? new Date(isNaN(Number(node.fecha_actualizacion)) ? node.fecha_actualizacion : Number(node.fecha_actualizacion)).toLocaleString('es-MX') : 'N/A',
-          adquisicion: node.fecha_adquisicion ? new Date(isNaN(Number(node.fecha_adquisicion)) ? node.fecha_adquisicion : Number(node.fecha_adquisicion)).toISOString().split('T')[0] : '',
-          specs: node.especificacionTI ? {
-            hasSpecs: true,
-            cpu: node.especificacionTI.cpu_info || '',
-            ram: node.especificacionTI.ram_gb || '',
-            almacenamiento: node.especificacionTI.almacenamiento_gb || '',
-            mac_wifi: node.especificacionTI.mac_address || '',
-            ip: node.especificacionTI.dir_ip || '',
-            mac_eth: node.especificacionTI.dir_mac || '',
-            puerto_red: node.especificacionTI.puerto_red || '',
-            switch_red: node.especificacionTI.switch_red || '',
-            os: node.especificacionTI.modelo_so || ''
-          } : { hasSpecs: false },
-          notas: node.notas || []
-        };
+        return mapBienNode(node);
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
         if (code === 'UNAUTHENTICATED') {

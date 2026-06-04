@@ -33,6 +33,7 @@ export function mapBienNode(node) {
     esCapitalizable: !!(node.categoria?.es_capitalizable && node.num_inv),
     tipo: (node.categoria?.es_capitalizable && node.num_inv) ? 'Capitalizable' : 'No Capitalizable',
     especificacionTI: node.especificacionTI || null,
+    inconvenientes: node.inconvenientes || [],
     garantias: node.garantias || [],
     notas: node.notas || [],
     monitores: node.monitores || [],
