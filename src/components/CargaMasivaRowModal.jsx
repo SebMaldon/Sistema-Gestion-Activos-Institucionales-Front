@@ -96,8 +96,13 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
     staleTime: 60000,
   });
 
-  const [isAddingModelo, setIsAddingModelo] = useState(false);
-  const [newModelo, setNewModelo] = useState({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
+  const [isAddingModelo, setIsAddingModelo] = useState(!!row.invalidModelo);
+  const [newModelo, setNewModelo] = useState({ 
+    clave_modelo: row.clave_modelo || '', 
+    descrip_disp: row.tmp_descrip || '', 
+    clave_marca: row.tmp_marca || '', 
+    tipo_disp: row.tmp_tipo || '' 
+  });
 
   const { mutate: createModelo, isPending: isCreatingModelo } = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_CAT_MODELO_MUTATION, vars),
@@ -122,7 +127,8 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
     clave_modelo: row.clave_modelo || '',
     id_usuario_resguardo: row.id_usuario_resguardo || '',
     fecha_adquisicion: row.fecha_adquisicion || '',
-    id_monitor: row.id_monitor || ''
+    id_monitor: row.id_monitor || '',
+    serie_monitor_asignado: row.serie_monitor_asignado || ''
   });
 
   const [specsData, setSpecsData] = useState({
@@ -135,6 +141,9 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
     puerto_red: row.especificacionTI?.puerto_red || '',
     switch_red: row.especificacionTI?.switch_red || '',
     modelo_so: row.especificacionTI?.modelo_so || '',
+    nombre_host: row.especificacionTI?.nombre_host || '',
+    version_office: row.especificacionTI?.version_office || '',
+    windows_serial: row.especificacionTI?.windows_serial || '',
   });
 
   const optsUsuarios = useMemo(() =>
@@ -289,14 +298,22 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
 
                   <div className="bg-gray-50/50 p-4 border border-gray-100 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Modelo del Bien</label>
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        Modelo del Bien
+                        {row.invalidModelo && <span className="ml-2 text-red-500 normal-case font-normal">(Modelo no registrado)</span>}
+                      </label>
                       <button type="button" onClick={() => setIsAddingModelo(!isAddingModelo)} className="text-xs text-green-600 font-semibold hover:text-green-700 flex items-center gap-1">
-                        {isAddingModelo ? 'Cancelar creación' : <><Plus size={12}/> Crear nuevo</>}
+                        {isAddingModelo ? 'Seleccionar existente' : <><Plus size={12}/> Crear nuevo</>}
                       </button>
                     </div>
 
                     {isAddingModelo ? (
                       <div className="space-y-4 fade-in bg-white p-4 rounded border border-green-100 shadow-sm">
+                        {row.invalidModelo && (
+                          <div className="p-3 bg-red-50 text-red-700 rounded-lg text-xs font-semibold mb-2">
+                            El modelo especificado en el Excel no existe. Por favor, revisa o completa la información para darlo de alta en el catálogo.
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className={labelCls}>Clave de Modelo <span className="text-red-500">*</span></label>
@@ -417,7 +434,7 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
                     <div>
                       <label className={labelCls}>RAM (GB)</label>
                       <input type="number" value={specsData.ram_gb} placeholder="8"
@@ -430,7 +447,28 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-gray-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
+                    <div>
+                      <label className={labelCls}>Nombre de Host</label>
+                      <input type="text" value={specsData.nombre_host} placeholder="Ej. PC-ADMIN"
+                        onChange={e => setSpecsData({ ...specsData, nombre_host: e.target.value })} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Versión de Office</label>
+                      <input type="text" value={specsData.version_office} placeholder="Ej. Office 2021"
+                        onChange={e => setSpecsData({ ...specsData, version_office: e.target.value })} className={inputCls} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
+                    <div>
+                      <label className={labelCls}>Serial de Windows</label>
+                      <input type="text" value={specsData.windows_serial} placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+                        onChange={e => setSpecsData({ ...specsData, windows_serial: e.target.value })} className={inputCls} />
+                    </div>
+                  </div>
+
+                  <div className="pt-3 mt-4 border-t border-gray-100">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Red y Conectividad</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div>
@@ -455,6 +493,23 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
                             className={`${inputCls} w-20`}
                             onChange={e => setSpecsData({ ...specsData, puerto_red: e.target.value })} />
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 border-t pt-4">
+                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Monitor Asignado</h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className={labelCls}>Serie Monitor Asignado (Opcional)</label>
+                        <input
+                          type="text"
+                          className={inputCls}
+                          value={formData.serie_monitor_asignado}
+                          onChange={e => setFormData({ ...formData, serie_monitor_asignado: e.target.value })}
+                          placeholder="Ej. S/N MONITOR"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">Si el monitor no existe, asegúrate de cargarlo también en el Excel antes que el CPU.</p>
                       </div>
                     </div>
                   </div>

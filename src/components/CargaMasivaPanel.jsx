@@ -39,25 +39,27 @@ export default function CargaMasivaPanel() {
   const handleDownloadTemplate = (type) => {
     let headers = [
       "Num. Serie (Texto)", "Num. Inventario (Texto)", "Cantidad (Número)", "Categoria (Nombre o ID - Texto/Num)", 
-      "Modelo (Texto)", "Estatus Operativo (Texto)", "Unidad Medida (Nombre o ID - Texto/Num)", 
+      "Modelo (Texto)", "Marca (Nombre o ID - Texto/Num)", "Tipo Dispositivo (Nombre o ID - Texto/Num)", "Descripción Modelo (Texto)",
+      "Estatus Operativo (Texto)", "Unidad Medida (Nombre o ID - Texto/Num)", 
       "Unidad Base (Clave - Texto)", "Ubicacion (Nombre o ID - Texto/Num)", 
       "Usuario Resguardo (Matricula o Nombre - Texto)", "Fecha Adquisicion (YYYY-MM-DD - Fecha)"
     ];
 
     let exampleData = [
       "SERIE123", "INV-001", 1, "Equipo de Computo", 
-      "MOD-X1", "ACTIVO", "Pieza", 
+      "LATITUDE-5420", "Dell", "Laptop", "Laptop 14 pulgadas",
+      "ACTIVO", "Pieza", 
       "UMF-1", "Sistemas", "12345678", "2024-01-01"
     ];
 
     if (type === 'computo') {
       headers = headers.concat([
         "Sistema Operativo (Texto)", "CPU (Texto)", "RAM (GB - Número)", "Almacenamiento (GB - Número)", 
-        "Direccion IP (Texto)", "MAC Address (Texto)", "Switch (Texto)", "Puerto Red (Texto)"
+        "Direccion IP (Texto)", "MAC Address (Texto)", "Switch (Texto)", "Puerto Red (Texto)", "Serie Monitor Asignado (Texto)"
       ]);
       exampleData = exampleData.concat([
         "Windows 11", "Intel Core i5", 16, 512, 
-        "192.168.1.100", "00:1B:44:11:3A:B7", "SW-Core", "FastEthernet0/1"
+        "192.168.1.100", "00:1B:44:11:3A:B7", "SW-Core", "FastEthernet0/1", "MON-SERIE-999"
       ]);
     }
 
@@ -80,6 +82,8 @@ export default function CargaMasivaPanel() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
+        const normalizeText = (text) => text ? String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
+
         const mappedRows = data.map((row, index) => {
           // Intentar mapear Categoría
           let id_categoria = null;
@@ -87,7 +91,7 @@ export default function CargaMasivaPanel() {
           if (catStr) {
             if (!isNaN(parseInt(catStr))) id_categoria = parseInt(catStr);
             else {
-              const match = catalogs?.catCategoriasActivo?.find(c => c.nombre_categoria.toLowerCase() === catStr.toLowerCase());
+              const match = catalogs?.catCategoriasActivo?.find(c => normalizeText(c.nombre_categoria) === normalizeText(catStr));
               if (match) id_categoria = match.id_categoria;
             }
           }
@@ -98,7 +102,7 @@ export default function CargaMasivaPanel() {
           if (umStr) {
             if (!isNaN(parseInt(umStr))) id_unidad_medida = parseInt(umStr);
             else {
-              const match = catalogs?.catUnidadesMedida?.find(u => u.nombre_unidad.toLowerCase() === umStr.toLowerCase() || u.abreviatura.toLowerCase() === umStr.toLowerCase());
+              const match = catalogs?.catUnidadesMedida?.find(u => normalizeText(u.nombre_unidad) === normalizeText(umStr) || normalizeText(u.abreviatura) === normalizeText(umStr));
               if (match) id_unidad_medida = parseInt(match.id_unidad_medida);
             }
           }
@@ -114,7 +118,44 @@ export default function CargaMasivaPanel() {
             }
           }
 
-          let clave_unidad_ref = String(row["Unidad Base (Clave - Texto)"] || row["Unidad Base (Clave)"] || "").trim() || null;
+          // Intentar mapear Marca
+          let id_marca = null;
+          const marcaStr = String(row["Marca (Nombre o ID - Texto/Num)"] || row["Marca"] || "").trim();
+          if (marcaStr) {
+            if (!isNaN(parseInt(marcaStr))) id_marca = parseInt(marcaStr);
+            else {
+              const match = catalogs?.marcas?.find(m => normalizeText(m.marca) === normalizeText(marcaStr));
+              if (match) id_marca = parseInt(match.clave_marca);
+            }
+          }
+
+          // Intentar mapear Tipo Dispositivo
+          let id_tipo_disp = null;
+          const tipoStr = String(row["Tipo Dispositivo (Nombre o ID - Texto/Num)"] || row["Tipo Dispositivo"] || "").trim();
+          if (tipoStr) {
+            if (!isNaN(parseInt(tipoStr))) id_tipo_disp = parseInt(tipoStr);
+            else {
+              const match = catalogs?.tiposDispositivo?.find(t => normalizeText(t.nombre_tipo) === normalizeText(tipoStr));
+              if (match) id_tipo_disp = parseInt(match.tipo_disp);
+            }
+          }
+
+          const descrip_modelo = String(row["Descripción Modelo (Texto)"] || row["Descripción Modelo"] || "").trim();
+
+          let clave_unidad_ref = null;
+          const unidadStr = String(row["Unidad Base (Clave - Texto)"] || row["Unidad Base (Clave)"] || "").trim();
+          if (unidadStr) {
+            const match = catalogs?.unidades?.find(u => 
+              normalizeText(u.clave) === normalizeText(unidadStr) || 
+              normalizeText(u.descripcion) === normalizeText(unidadStr) || 
+              normalizeText(u.desc_corta) === normalizeText(unidadStr)
+            );
+            if (match) {
+              clave_unidad_ref = match.clave;
+            } else {
+              clave_unidad_ref = unidadStr;
+            }
+          }
 
           // Intentar mapear Ubicación
           let id_ubicacion = null;
@@ -153,6 +194,8 @@ export default function CargaMasivaPanel() {
 
           const hasSpecs = Object.values(especificacionTI).some(v => v !== "" && v !== null);
 
+          const serie_monitor_asignado = String(row["Serie Monitor Asignado (Texto)"] || row["Serie Monitor Asignado"] || "").trim() || null;
+
           return {
             _tmpId: Date.now() + index, // Para key de React
             num_serie: String(row["Num. Serie (Texto)"] || row["Num Serie"] || "").trim(),
@@ -163,10 +206,14 @@ export default function CargaMasivaPanel() {
             id_unidad_medida,
             clave_modelo,
             invalidModelo,
+            tmp_marca: id_marca,
+            tmp_tipo: id_tipo_disp,
+            tmp_descrip: descrip_modelo,
             clave_unidad_ref,
             id_ubicacion,
             id_usuario_resguardo,
             fecha_adquisicion,
+            serie_monitor_asignado,
             especificacionTI: hasSpecs ? especificacionTI : null
           };
         });
@@ -219,15 +266,15 @@ export default function CargaMasivaPanel() {
     
     // Preparar el payload con conversión explícita a enteros para evitar errores en GraphQL
     const payload = rows.map(r => {
-      const { _tmpId, invalidModelo, ...data } = r;
+      const { _tmpId, invalidModelo, tmp_marca, tmp_tipo, tmp_descrip, isUpdate, ...data } = r;
       return {
         ...data,
         id_categoria: data.id_categoria ? parseInt(data.id_categoria) : null,
         id_unidad_medida: data.id_unidad_medida ? parseInt(data.id_unidad_medida) : null,
-        id_segmento: data.id_segmento ? parseInt(data.id_segmento) : null,
         id_ubicacion: data.id_ubicacion ? parseInt(data.id_ubicacion) : null,
         id_usuario_resguardo: data.id_usuario_resguardo ? parseInt(data.id_usuario_resguardo) : null,
         cantidad: data.cantidad ? parseFloat(data.cantidad) : 1,
+        id_monitor: (!data.id_monitor || String(data.id_monitor).trim() === '') ? null : data.id_monitor
       };
     });
 
