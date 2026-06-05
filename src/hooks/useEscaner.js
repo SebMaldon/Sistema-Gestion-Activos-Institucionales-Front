@@ -12,9 +12,8 @@ export function useBienByQR(termino) {
     queryFn: async () => {
       try {
         const data = await gqlClient.request(GET_BIEN_BY_QR, { termino });
-        if (!data.bienByTermino) return null;
-        const node = data.bienByTermino;
-        return mapBienNode(node);
+        if (!data.bienByTermino || data.bienByTermino.length === 0) return [];
+        return data.bienByTermino.map(mapBienNode);
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
         if (code === 'UNAUTHENTICATED') {

@@ -21,6 +21,7 @@ import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
 import Aprobaciones from './pages/Aprobaciones';
 import Correspondencia from './pages/Correspondencia';
+import SinAcceso from './pages/SinAcceso';
 import { useCurrentUser } from './hooks/useCurrentUser';
 
 
@@ -29,6 +30,7 @@ import { useCurrentUser } from './hooks/useCurrentUser';
 const ROL_ADMIN    = 2;
 const ROL_MAESTRO  = 1;
 const ROL_USUARIO  = 3;
+const ROL_SIN_ACCESO = 4;
 
 // ─── Guard: solo requiere sesión activa ─────────────────────────────────────
 function ProtectedRoute({ children }) {
@@ -39,6 +41,9 @@ function ProtectedRoute({ children }) {
   if (!isAuthenticated || !usuario) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  if (usuario.id_rol === ROL_SIN_ACCESO) {
+    return <Navigate to="/sin-acceso" replace />;
+  }
   return children;
 }
 
@@ -48,10 +53,13 @@ function RoleRoute({ allowedRoles, children }) {
   const usuario = useAuthStore((s) => s.usuario);
   const location = useLocation();
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !usuario) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  if (!allowedRoles.includes(usuario?.id_rol)) {
+  if (usuario.id_rol === ROL_SIN_ACCESO) {
+    return <Navigate to="/sin-acceso" replace />;
+  }
+  if (!allowedRoles.includes(usuario.id_rol)) {
     // Sesión válida pero rol insuficiente → Dashboard
     return <Navigate to="/dashboard" replace />;
   }
@@ -123,6 +131,11 @@ export default function App() {
           {/* Pública */}
           <Route path="/login" element={<LoginRoute />} />
           <Route path="/documentacion" element={<Documentacion />} />
+          <Route path="/sin-acceso" element={
+            <SinAccesoRoute>
+              <SinAcceso />
+            </SinAccesoRoute>
+          } />
 
           {/* Rutas accesibles para todos los roles autenticados (1,2,3) */}
           <Route path="/dashboard" element={
@@ -203,10 +216,29 @@ export default function App() {
 
 function LoginRoute() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />;
+  const usuario = useAuthStore((s) => s.usuario);
+  
+  if (isAuthenticated) {
+    if (usuario?.id_rol === ROL_SIN_ACCESO) return <Navigate to="/sin-acceso" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Login />;
+}
+
+function SinAccesoRoute({ children }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const usuario = useAuthStore((s) => s.usuario);
+  
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (usuario?.id_rol !== ROL_SIN_ACCESO) return <Navigate to="/dashboard" replace />;
+  return children;
 }
 
 function RootRedirect() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  const usuario = useAuthStore((s) => s.usuario);
+  
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (usuario?.id_rol === ROL_SIN_ACCESO) return <Navigate to="/sin-acceso" replace />;
+  return <Navigate to="/dashboard" replace />;
 }

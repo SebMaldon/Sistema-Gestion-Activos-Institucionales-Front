@@ -1643,7 +1643,7 @@ export default function Inventario() {
                 </select>
                 <button
                   onClick={() => { setAdvFilters(p => ({...p, con_notas_recientes: !p.con_notas_recientes})); setCursor(null); setCursors([]); }}
-                  className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
                     advFilters.con_notas_recientes
                       ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -1652,19 +1652,17 @@ export default function Inventario() {
                 >
                   <AlertTriangle size={14} className={advFilters.con_notas_recientes ? "text-amber-600" : "text-amber-500"} /> Notas Recientes
                 </button>
-                {activeTab === 'No Capitalizable' && (
-                  <button
-                    onClick={() => { setAdvFilters(p => ({...p, inconvenientes: !p.inconvenientes})); setCursor(null); setCursors([]); }}
-                    className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
-                      advFilters.inconvenientes
-                        ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                    title="Mostrar equipos sin número de inventario"
-                  >
-                    <AlertTriangle size={14} /> Sin Inventario
-                  </button>
-                )}
+                <button
+                  onClick={() => { setAdvFilters(p => ({...p, inconvenientes: !p.inconvenientes})); setCursor(null); setCursors([]); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
+                    advFilters.inconvenientes
+                      ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title="Mostrar equipos con inconvenientes (Sin número de inventario o IP duplicada)"
+                >
+                  <AlertTriangle size={14} /> Inconvenientes
+                </button>
                 <button
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${
@@ -2076,7 +2074,8 @@ export default function Inventario() {
                     const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
                     const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
                     const isConflictRow = (isPcOrLaptop && isMissingInv) || (bien.inconvenientes && bien.inconvenientes.length > 0);
-                    const hasWifiConflict = bien.inconvenientes?.some(i => i.includes('IP Duplicada'));
+                    const wifiConflictMsg = bien.inconvenientes?.find(i => i.startsWith('IP Repetida'));
+                    const hasWifiConflict = !!wifiConflictMsg;
                     
                     const hasRecentNotes = bien.notas?.some(n => {
                       const d = new Date(isNaN(Number(n.fecha_creacion)) ? n.fecha_creacion : Number(n.fecha_creacion));
@@ -2094,9 +2093,9 @@ export default function Inventario() {
                             </span>
                             <p className={`text-xs mt-0.5 truncate max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>Inv: {fmt(bien.numInv)}</p>
                             {hasWifiConflict && (
-                               <div className="flex items-center gap-1 mt-1 text-red-600 font-semibold text-[10px]" title="IP Duplicada">
+                               <div className="flex items-center gap-1 mt-1 text-red-600 font-semibold text-[10px]" title={wifiConflictMsg}>
                                  <Wifi size={12} className="animate-pulse" />
-                                 <span>IP Duplicada</span>
+                                 <span>{wifiConflictMsg}</span>
                                </div>
                             )}
                           </div>
@@ -2163,7 +2162,8 @@ export default function Inventario() {
               const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
               const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
               const isConflictRow = (isPcOrLaptop && isMissingInv) || (bien.inconvenientes && bien.inconvenientes.length > 0);
-              const hasWifiConflict = bien.inconvenientes?.some(i => i.includes('IP Duplicada'));
+              const wifiConflictMsg = bien.inconvenientes?.find(i => i.startsWith('IP Repetida'));
+              const hasWifiConflict = !!wifiConflictMsg;
               
               const hasRecentNotes = bien.notas?.some(n => {
                 const d = new Date(isNaN(Number(n.fecha_creacion)) ? n.fecha_creacion : Number(n.fecha_creacion));
@@ -2178,7 +2178,7 @@ export default function Inventario() {
                     <div className="flex items-center gap-2">
                       <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700' : 'text-gray-900'}`}>{bien.equipo}</p>
                       {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
-                      {hasWifiConflict && <Wifi size={14} className="text-red-600 animate-pulse" title="IP Duplicada" />}
+                      {hasWifiConflict && <Wifi size={14} className="text-red-600 animate-pulse" title={wifiConflictMsg} />}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
                     <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">

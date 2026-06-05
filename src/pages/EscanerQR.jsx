@@ -3,13 +3,14 @@ import { useApp } from '../context/AppContext';
 import { 
   QrCode, Search, Check, Loader2, Camera as CameraIcon, CameraOff, 
   Edit, Trash2, StickyNote, Hash, Package, Tag, Shield, MapPin, 
-  User, Calendar, Monitor, Cpu, HardDrive, Wifi, Server, Layers 
+  User, Calendar, Monitor, Cpu, HardDrive, Wifi, Server, Layers,
+  AlertTriangle, X, ChevronRight
 } from 'lucide-react';
 import { useBienByQR, useDeleteBien, useCreateNotaBien } from '../hooks/useEscaner';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { useAuthStore } from '../store/auth.store';
 import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
-import { EditBienModal } from '../components/EditBienModal';
+import { EditBienModal, Modal } from '../components/EditBienModal';
 import BienAtributosPanel from '../components/BienAtributosPanel';
 import { formatDate, formatDateTime } from '../lib/utils';
 
@@ -26,15 +27,22 @@ function getDeviceMode(nombreCategoria = null, hasSpecs = false) {
   return 'OTHER';
 }
 
-function InfoField({ label, value, icon, mono = false }) {
+function InfoField({ label, value, icon, mono = false, alert = null }) {
   return (
     <div>
       <p className="text-xs text-gray-400 flex items-center gap-1 mb-0.5">
         {icon}{label}
       </p>
-      <p className={`text-sm font-semibold text-gray-800 ${mono ? 'font-mono' : ''}`}>
-        {value ?? '—'}
-      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
+        <p className={`text-sm font-semibold text-gray-800 ${mono ? 'font-mono' : ''}`}>
+          {value ?? '—'}
+        </p>
+        {alert && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
+            <AlertTriangle size={10} /> {alert}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -141,39 +149,42 @@ export default function EscanerQR() {
   const puedeEditar   = [1, 2].includes(usuario?.id_rol);
   const puedeEliminar = usuario?.id_rol === 1;
 
-  const { data: foundAsset, isFetching, isError, refetch } = useBienByQR(activeHash);
+  const { data: foundAssets, isFetching, isError, refetch } = useBienByQR(activeHash);
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const { mutateAsync: deleteBien } = useDeleteBien();
   const { data: catalogos } = useCatalogosBienes();
   const { mutateAsync: createNotaBien, isLoading: isCreatingNota } = useCreateNotaBien();
 
   useEffect(() => {
     if (activeHash && !isFetching) {
-      if (foundAsset) {
-        if (prevIdRef.current !== foundAsset.id_bien) {
-          showToast(`Activo encontrado: ${foundAsset.equipo}`, 'success');
-          prevIdRef.current = foundAsset.id_bien;
-          
-          // Determinar si tiene info técnica para mostrarla por defecto
-          const fichaMode = getDeviceMode(foundAsset.categoria?.nombre_categoria, !!foundAsset.especificacionTI);
-          const isTICategory = CATEGORIAS_TI.includes(Number(foundAsset.idCategoria));
-          const hasTecnico = !!foundAsset.especificacionTI || isTICategory || fichaMode === 'OTHER' || (foundAsset.cuentasPC?.length > 0) || (foundAsset.monitores?.length > 0) || foundAsset.equipoAsignado || (foundAsset.garantias?.length > 0);
-          
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setFichaTabs('info');
+      if (foundAssets && foundAssets.length > 0) {
+        if (prevIdRef.current !== activeHash) {
+          prevIdRef.current = activeHash;
+          if (foundAssets.length === 1) {
+            setSelectedIndex(0);
+            showToast(`Activo encontrado: ${foundAssets[0].equipo}`, 'success');
+            setFichaTabs('info');
+          } else {
+            setSelectedIndex(null);
+            showToast(`Se encontraron ${foundAssets.length} coincidencias. Selecciona una.`, 'info');
+          }
         }
-      } else if (isError || !foundAsset) {
+      } else if (isError || !foundAssets || foundAssets.length === 0) {
         if (prevIdRef.current !== 'error-' + activeHash) {
            showToast('No se encontró ningún activo con ese identificador.', 'error');
            prevIdRef.current = 'error-' + activeHash;
         }
       }
     }
-  }, [activeHash, isFetching, foundAsset, isError]);
+  }, [activeHash, isFetching, foundAssets, isError]);
+
+  const foundAsset = foundAssets && selectedIndex !== null ? foundAssets[selectedIndex] : null;
 
   const handleSearch = () => {
     const q = manualInput.trim();
     if (!q) { showToast('Por favor captura o ingresa un identificador.', 'warning'); return; }
     setActiveHash(q);
+    setSelectedIndex(null);
   };
 
   const handleReset = () => {
@@ -181,6 +192,7 @@ export default function EscanerQR() {
     setManualInput('');
     setNotaText('');
     setIsCamEnabled(false);
+    setSelectedIndex(null);
     prevIdRef.current = null;
   };
 
@@ -211,6 +223,9 @@ export default function EscanerQR() {
   const isTICategory = foundAsset ? CATEGORIAS_TI.includes(Number(foundAsset.idCategoria)) : false;
   const hasTecnico = foundAsset && (!!foundAsset.especificacionTI || isTICategory || fichaMode === 'OTHER' || (foundAsset.cuentasPC?.length > 0) || (foundAsset.monitores?.length > 0) || foundAsset.equipoAsignado || (foundAsset.garantias?.length > 0));
 
+  const ipConflictMsg = foundAsset?.inconvenientes?.find(i => i.startsWith('IP Repetida'));
+  const hasNoInvMsg = foundAsset?.inconvenientes?.find(i => i.toLowerCase().includes('inventario')) ? 'Sin número de inventario' : null;
+
   return (
     <div className="p-4 sm:p-6 fade-in h-full flex flex-col overflow-hidden">
       <style>{`
@@ -240,6 +255,7 @@ export default function EscanerQR() {
                 onScan={(result) => {
                   if (result?.[0]?.rawValue) {
                     setActiveHash(result[0].rawValue);
+                    setSelectedIndex(null);
                     setIsCamEnabled(false);
                   }
                 }}
@@ -336,18 +352,81 @@ export default function EscanerQR() {
             </div>
           )}
 
-          {!isFetching && !foundAsset && activeHash && (
+          {!isFetching && (!foundAssets || foundAssets.length === 0) && activeHash && (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 text-center fade-in">
               <p className="text-gray-400 text-sm">No se encontró ningún activo con ese identificador.</p>
             </div>
           )}
 
-          {!isFetching && !foundAsset && !activeHash && (
+          {!isFetching && (!foundAssets || foundAssets.length === 0) && !activeHash && (
             <div className="hidden xl:flex bg-gray-50/50 rounded-2xl border border-dashed border-gray-300 p-14 flex-col items-center justify-center text-center h-full">
               <Package size={48} className="text-gray-300 mb-4" />
               <p className="text-gray-500 font-medium">Esperando escaneo</p>
               <p className="text-sm text-gray-400 mt-1">La información del bien aparecerá aquí</p>
             </div>
+          )}
+
+          {!isFetching && foundAssets && foundAssets.length > 1 && selectedIndex === null && (
+            <Modal
+              onClose={handleReset}
+              title={`Múltiples coincidencias (${foundAssets.length})`}
+              subtitle="Se encontraron varios bienes con el mismo identificador. Selecciona el que deseas consultar:"
+              footer={
+                <div className="flex justify-center w-full">
+                  <button onClick={handleReset} className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors px-4 py-2">
+                    Cancelar búsqueda
+                  </button>
+                </div>
+              }
+            >
+              <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar">
+                {foundAssets.map((asset, idx) => (
+                  <div 
+                    key={asset.id_bien} 
+                    onClick={() => {
+                      setSelectedIndex(idx);
+                      setFichaTabs('info');
+                    }}
+                    className="group relative flex flex-col p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50/40 hover:shadow-md cursor-pointer transition-all overflow-hidden"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="pr-8">
+                        <p className="font-bold text-gray-900 text-sm sm:text-base leading-snug group-hover:text-green-800 transition-colors">
+                          {asset.equipo}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                           <Package size={12} className="text-gray-400" />
+                           {asset.categoria?.nombre_categoria || 'Bien'}
+                        </p>
+                      </div>
+                      <div className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-300 group-hover:text-green-600 transition-transform group-hover:translate-x-1">
+                        <ChevronRight size={20} />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 mt-auto pt-3 border-t border-gray-100/80">
+                      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs">
+                        <span className="text-gray-400"><Hash size={13} /></span>
+                        <span className="text-gray-500 font-medium">S/N:</span>
+                        <span className="font-semibold text-gray-800 truncate">{asset.numSerie || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs">
+                        <span className="text-gray-400"><Tag size={13} /></span>
+                        <span className="text-gray-500 font-medium">Inv:</span>
+                        <span className="font-semibold text-gray-800 truncate">{asset.numInv || 'N/A'}</span>
+                      </div>
+                      {asset.especificacionTI?.dir_ip && (
+                        <div className="flex items-center gap-1.5 text-xs sm:col-span-2 mt-1">
+                          <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-100 font-bold tracking-wide shadow-sm">
+                            <Wifi size={12} /> IP: {asset.especificacionTI.dir_ip}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Modal>
           )}
 
           {!isFetching && foundAsset && (
@@ -365,6 +444,11 @@ export default function EscanerQR() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto w-full sm:w-auto justify-between sm:justify-end">
+                  {foundAsset.inconvenientes?.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700 animate-pulse border border-red-200">
+                      <AlertTriangle size={12} /> Inconvenientes
+                    </span>
+                  )}
                   <EstatusBadge estatus={foundAsset.estatusOperativo} />
                 </div>
               </div>
@@ -398,7 +482,7 @@ export default function EscanerQR() {
                   <div className="space-y-6 fade-in">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
                       <InfoField icon={<Tag size={14}/>}      label="No. Serie"          value={fmt(foundAsset.numSerie)} mono />
-                      <InfoField icon={<Tag size={14}/>}      label="No. Inventario"     value={fmt(foundAsset.numInv)} mono />
+                      <InfoField icon={<Tag size={14}/>}      label="No. Inventario"     value={fmt(foundAsset.numInv)} mono alert={hasNoInvMsg} />
                       <InfoField icon={<Shield size={14}/>}   label="Clave Presupuestal" value={fmt(foundAsset.clavePresupuestal)} mono />
                       <InfoField icon={<MapPin size={14}/>}   label="Ubicación"          value={fmt(foundAsset.ubicacion)} />
                       <InfoField icon={<User size={14}/>}     label="En Resguardo de"    value={fmt(foundAsset.resguardo) + (foundAsset.usuarioResguardo?.matricula ? ` (Mat: ${foundAsset.usuarioResguardo.matricula})` : '')} />
@@ -468,7 +552,7 @@ export default function EscanerQR() {
                           <InfoField icon={<Cpu size={13}/>}       label="CPU"            value={fmt(foundAsset.especificacionTI.cpu_info)} />
                           <InfoField icon={<Server size={13}/>}    label="RAM"            value={foundAsset.especificacionTI.ram_gb ? `${foundAsset.especificacionTI.ram_gb} GB` : '—'} />
                           <InfoField icon={<HardDrive size={13}/>} label="Almacenamiento" value={foundAsset.especificacionTI.almacenamiento_gb ? `${foundAsset.especificacionTI.almacenamiento_gb} GB` : '—'} />
-                          <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(foundAsset.especificacionTI.dir_ip)} mono />
+                          <InfoField icon={<Wifi size={13}/>}      label="Dirección IP"   value={fmt(foundAsset.especificacionTI.dir_ip)} mono alert={ipConflictMsg} />
                           <InfoField icon={<Wifi size={13}/>}      label="MAC Address"    value={fmt(foundAsset.especificacionTI.mac_address)} mono />
                           <InfoField icon={<Wifi size={13}/>}      label="Dir. MAC Alt"   value={fmt(foundAsset.especificacionTI.dir_mac)} mono />
                           <InfoField icon={<Monitor size={13}/>}   label="Sistema Op."    value={fmt(foundAsset.especificacionTI.modelo_so)} />
@@ -583,8 +667,8 @@ export default function EscanerQR() {
 
               {/* ── Footer de Acciones ── */}
               <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3 shrink-0">
-                <button onClick={handleReset} className="flex-1 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm">
-                  ← Escanear otro
+                <button onClick={() => { if (foundAssets?.length > 1) { setSelectedIndex(null); } else { handleReset(); } }} className="flex-1 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm">
+                  ← {foundAssets?.length > 1 ? 'Volver a la lista' : 'Escanear otro'}
                 </button>
                 {puedeEditar && (
                   <button onClick={() => setEditModalOpen(true)} className="flex-1 py-2 flex justify-center items-center gap-1.5 rounded-xl text-sm font-semibold text-green-700 bg-white border border-green-200 hover:bg-green-50 transition-colors shadow-sm">

@@ -133,10 +133,44 @@ export const BIEN_FIELDS = gql`
         nombre_completo
       }
     }
+    inconvenientes
   }
 `;
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
+
+export const GET_BIENES_REPORTE_QUERY = gql`
+  query GetBienesReporte($filter: BienesFilterInput, $pagination: PaginationInput) {
+    bienes(filter: $filter, pagination: $pagination) {
+      edges {
+        node {
+          id_bien
+          estatus_operativo
+          num_inv
+          inconvenientes
+          categoria {
+            es_capitalizable
+          }
+          modelo {
+            tipoDispositivo {
+              nombre_tipo
+            }
+          }
+          garantias {
+            fecha_fin
+          }
+          notas {
+            fecha_creacion
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
 
 export const GET_BIENES_QUERY = gql`
   ${BIEN_FIELDS}
@@ -218,6 +252,19 @@ export const CHECK_BIENES_EXIST_QUERY = gql`
   }
 `;
 
+export const CHECK_DUPLICATE_IP_QUERY = gql`
+  query CheckDuplicateIP($dir_ip: String!, $id_bien_exclude: ID) {
+    checkDuplicateIP(dir_ip: $dir_ip, id_bien_exclude: $id_bien_exclude) {
+      id_bien
+      num_serie
+      num_inv
+      modelo {
+        descrip_disp
+      }
+    }
+  }
+`;
+
 export const GET_CATALOGOS_BIENES_QUERY = gql`
   query GetCatalogosBienes {
     catCategoriasActivo {
@@ -273,6 +320,12 @@ export const GET_CATALOGOS_BIENES_QUERY = gql`
 `;
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
+
+export const CLEAR_IP_FROM_OTHER_BIENES_MUTATION = gql`
+  mutation ClearIpFromOtherBienes($dir_ip: String!, $id_bien_exclude: ID) {
+    clearIpFromOtherBienes(dir_ip: $dir_ip, id_bien_exclude: $id_bien_exclude)
+  }
+`;
 
 export const CREATE_BIEN_MUTATION = gql`
   ${BIEN_FIELDS}

@@ -25,7 +25,8 @@ import {
   GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
   CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
   GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION,
-  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION
+  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION,
+  CHECK_DUPLICATE_IP_QUERY, CLEAR_IP_FROM_OTHER_BIENES_MUTATION
 } from '../api/inventario.queries';
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA, CREATE_PROVEEDOR } from '../api/garantias.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
@@ -839,7 +840,7 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
   );
 }
 
-function Modal({ onClose, title, subtitle, children, footer, wide = false, small = false }) {
+export function Modal({ onClose, title, subtitle, children, footer, wide = false, small = false }) {
   return ReactDOM.createPortal(
     <div 
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" 
@@ -903,6 +904,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   
   // States
   const [formTab, setFormTab]           = useState('general'); // 'general' | 'tecnico'
+  const [inconveniencesWarning, setInconveniencesWarning] = useState(null);
   
   const [showTI, setShowTI]             = useState(false);
   const [deviceMode, setDeviceMode]     = useState(null); // 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
@@ -973,11 +975,21 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   });
 
   const { mutate: createBien, isPending: creating } = useCreateBien({
-    onSuccess: () => { closeForm(); showToast('Bien registrado correctamente.', 'success'); },
+    onSuccess: () => { 
+      closeForm(); 
+      onClose(); 
+      if (refetch) refetch(); 
+      showToast('Bien registrado correctamente.', 'success'); 
+    },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
   });
   const { mutate: updateBien, isPending: updating } = useUpdateBien({
-    onSuccess: () => { closeForm(); showToast('Bien actualizado correctamente.', 'success'); },
+    onSuccess: () => { 
+      closeForm(); 
+      onClose(); 
+      if (refetch) refetch(); 
+      showToast('Bien actualizado correctamente.', 'success'); 
+    },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar bien.', 'error'),
   });
 
@@ -1189,20 +1201,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   };
 
   // ── Enviar formulario ──────────────────────────────────────────────────────
-  const handleSubmit = async () => {
-    if (showTI && tiForm.dir_ip && tiForm.dir_ip.trim() !== '') {
-       const cleanIp = tiForm.dir_ip.replace(/\s/g, '');
-       const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
-       const dupIps = bienes.filter(b => b.id_bien !== currentId && b.especificacionTI?.dir_ip && b.especificacionTI.dir_ip.replace(/\s/g, '') === cleanIp);
-       if (dupIps.length > 0) {
-          const conf = window.confirm(`La IP ${tiForm.dir_ip} ya está asignada a otros ${dupIps.length} bien(es). ¿Deseas limpiarla de esos bienes y asignarla solo a este? Si cancelas, se guardará pero con el inconveniente de IP duplicada.`);
-          if (conf) {
-             try {
-                await limpiarIp({ ip: tiForm.dir_ip, id_bien_excluir: currentId || 'temp' });
-             } catch (e) { console.error(e); }
-          }
-       }
-    }
+  const executeSave = () => {
     if (!validate()) return;
     const vars = {
       id_categoria:      Number(form.id_categoria),
@@ -1350,9 +1349,114 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
       if (refetch) refetch();
   };
 
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    
+    let hasNoInv = false;
+    let ipConflict = null;
+
+    if ((deviceMode === 'PC' || deviceMode === 'LAPTOP') && (!form.num_inv || form.num_inv.trim() === '')) {
+      hasNoInv = true;
+    }
+
+    if (showTI && tiForm.dir_ip && tiForm.dir_ip.trim() !== '') {
+       const cleanIp = tiForm.dir_ip.replace(/\s/g, '');
+       const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
+       try {
+           const { checkDuplicateIP } = await gqlClient.request(CHECK_DUPLICATE_IP_QUERY, { dir_ip: cleanIp, id_bien_exclude: currentId });
+           if (checkDuplicateIP && checkDuplicateIP.length > 0) {
+               ipConflict = { ip: cleanIp, duplicates: checkDuplicateIP };
+           }
+       } catch (e) {
+           console.error("Error al checar IP duplicada:", e);
+       }
+    }
+
+    if (hasNoInv || ipConflict) {
+        setInconveniencesWarning({ hasNoInv, ipConflict });
+        return;
+    }
+
+    executeSave();
+  };
+
   return (
     <>
-            {modalForm && (
+      {inconveniencesWarning && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-gray-900/60 p-4 fade-in" onClick={() => {}}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50 shrink-0">
+              <div className="flex items-center gap-2 text-orange-700 font-bold">
+                <AlertTriangle size={18} /> Inconvenientes Detectados
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-gray-700 mb-4">
+                El equipo presenta los siguientes inconvenientes. ¿Deseas guardarlo de todas formas?
+              </p>
+              
+              <ul className="list-disc pl-5 mb-4 text-sm text-red-600 font-semibold space-y-1">
+                 {inconveniencesWarning.hasNoInv && <li>Falta Número de Inventario (requerido para PC/Laptop)</li>}
+                 {inconveniencesWarning.ipConflict && <li>Dirección IP Repetida</li>}
+              </ul>
+
+              {inconveniencesWarning.ipConflict && (
+                  <div className="mb-6">
+                      <p className="text-sm text-gray-700 mb-2">
+                        La dirección IP <span className="font-mono font-bold">{inconveniencesWarning.ipConflict.ip}</span> ya está asignada a {inconveniencesWarning.ipConflict.duplicates.length} equipo(s):
+                      </p>
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {inconveniencesWarning.ipConflict.duplicates.map(d => (
+                          <div key={d.id_bien} className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs flex flex-col gap-0.5">
+                            <p className="font-semibold text-gray-800">{d.modelo?.descrip_disp || 'Equipo'}</p>
+                            <p className="text-gray-500 font-mono">S/N: {d.num_serie || 'N/D'} | INV: {d.num_inv || 'N/D'}</p>
+                            {d.ubicacion?.nombre && <p className="text-gray-500 text-[10px]">Ubicación: {d.ubicacion.nombre}</p>}
+                          </div>
+                        ))}
+                      </div>
+                  </div>
+              )}
+
+              <div className="flex flex-col gap-3">
+                {inconveniencesWarning.ipConflict && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await gqlClient.request(CLEAR_IP_FROM_OTHER_BIENES_MUTATION, { dir_ip: inconveniencesWarning.ipConflict.ip, id_bien_exclude: modalForm !== 'create' ? modalForm.id_bien : null });
+                          setInconveniencesWarning(null);
+                          executeSave();
+                        } catch (e) {
+                          showToast('Error al quitar IP', 'error');
+                        }
+                      }}
+                      className="w-full py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow hover:opacity-90 flex items-center justify-center gap-2"
+                      style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}
+                    >
+                      <Wifi size={16} /> Quitar IP a los demás equipos y Guardar
+                    </button>
+                )}
+                
+                <button
+                  onClick={() => {
+                    setInconveniencesWarning(null);
+                    executeSave();
+                  }}
+                  className="w-full py-2.5 text-sm font-semibold border-2 border-red-200 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  Guardar con inconvenientes
+                </button>
+              </div>
+              <div className="mt-4 text-center">
+                <button onClick={() => setInconveniencesWarning(null)} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                  Cancelar Guardado
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {modalForm && (
         <Modal
           onClose={handleClose}
           title={modalForm === 'create' ? 'Registrar Nuevo Bien' : 'Editar Bien'}
@@ -1712,7 +1816,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                       ].map(({ key, label, placeholder, type = 'text' }) => (
                         <div key={key}>
                           <label className="block text-xs font-semibold text-gray-700 mb-1">{label}
-{key === 'dir_ip' && modalForm !== 'create' && modalForm?.inconvenientes?.some(i => i.includes('IP Duplicada')) && (<span className="ml-2 inline-flex items-center gap-1 text-red-600 text-[10px]" title="IP Duplicada en otro bien"><Wifi size={12} className="animate-pulse" /> Duplicada</span>)}
+{key === 'dir_ip' && modalForm !== 'create' && modalForm?.inconvenientes?.some(i => i.includes('IP Repetida')) && (<span className="ml-2 inline-flex items-center gap-1 text-red-600 text-[10px]" title="IP Repetida en otro bien"><Wifi size={12} className="animate-pulse" /> Repetida</span>)}
 </label>
                           <input
                             type={type}
