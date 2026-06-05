@@ -31,7 +31,7 @@ export function useDeleteBien() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id_bien) => {
-      await gqlClient.request(DELETE_BIEN, { id: id_bien });
+      await gqlClient.request(DELETE_BIEN, { id_bien });
     },
     onSuccess: (_, id_bien) => {
       queryClient.invalidateQueries({ queryKey: ['bienByQR'] });

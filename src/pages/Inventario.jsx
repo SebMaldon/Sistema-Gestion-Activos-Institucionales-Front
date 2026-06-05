@@ -2544,6 +2544,43 @@ export default function Inventario() {
         )}
 
         {/* ════════════════════════════════════════════════════════════════════
+          MODAL: ELIMINAR BIEN
+      ═══════════════════════════════════════════════════════════════════════ */}
+        {modalConfirmDel && (
+          <Modal onClose={() => setModalConfirmDel(null)} title="Eliminar Bien" subtitle="Esta acción no se puede deshacer" small>
+            <div className="flex flex-col gap-4 text-center">
+              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 mb-1">
+                <AlertTriangle size={28} />
+              </div>
+              <p className="text-sm text-gray-600">
+                ¿Estás seguro de que deseas eliminar permanentemente el bien <strong className="text-gray-900">{modalConfirmDel.equipo}</strong>?
+              </p>
+              <div className="bg-gray-50 p-3 rounded-lg text-left text-xs space-y-1 border border-gray-100">
+                <p><span className="text-gray-400">ID:</span> <span className="font-mono text-gray-700">{modalConfirmDel.id_bien || modalConfirmDel.id}</span></p>
+                <p><span className="text-gray-400">Serie:</span> <span className="font-mono text-gray-700">{modalConfirmDel.numSerie || 'S/N'}</span></p>
+                <p><span className="text-gray-400">Inv:</span> <span className="font-mono text-gray-700">{modalConfirmDel.numInv || 'S/N'}</span></p>
+              </div>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setModalConfirmDel(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => deleteBien(modalConfirmDel.id_bien || modalConfirmDel.id)}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════════
           MODAL: CREAR / EDITAR BIEN
       ═══════════════════════════════════════════════════════════════════════ */}
         <EditBienModal

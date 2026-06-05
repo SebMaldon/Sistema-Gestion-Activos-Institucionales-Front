@@ -141,6 +141,7 @@ export default function EscanerQR() {
   const [isCamEnabled, setIsCamEnabled] = useState(false);
   
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [modalConfirmDel, setModalConfirmDel] = useState(false);
   const [fichaTabs, setFichaTabs] = useState('info');
   const [notaText, setNotaText] = useState('');
   const prevIdRef = useRef(null);
@@ -205,11 +206,15 @@ export default function EscanerQR() {
     } catch { showToast('Error al guardar la nota', 'error'); }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(`¿Eliminar el activo "${foundAsset.equipo}"?`)) return;
+  const handleDelete = () => {
+    setModalConfirmDel(true);
+  };
+
+  const confirmDelete = async () => {
     try {
       await deleteBien(foundAsset.id_bien);
       showToast('Activo eliminado', 'success');
+      setModalConfirmDel(false);
       handleReset();
     } catch { showToast('Error al eliminar el activo', 'error'); }
   };
@@ -686,6 +691,39 @@ export default function EscanerQR() {
           )}
         </div>
       </div>
+
+      {modalConfirmDel && foundAsset && (
+        <Modal onClose={() => setModalConfirmDel(false)} title="Eliminar Bien" subtitle="Esta acción no se puede deshacer" small>
+          <div className="flex flex-col gap-4 text-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 mb-1">
+              <AlertTriangle size={28} />
+            </div>
+            <p className="text-sm text-gray-600">
+              ¿Estás seguro de que deseas eliminar permanentemente el bien <strong className="text-gray-900">{foundAsset.equipo}</strong>?
+            </p>
+            <div className="bg-gray-50 p-3 rounded-lg text-left text-xs space-y-1 border border-gray-100">
+              <p><span className="text-gray-400">ID:</span> <span className="font-mono text-gray-700">{foundAsset.id_bien || foundAsset.id}</span></p>
+              <p><span className="text-gray-400">Serie:</span> <span className="font-mono text-gray-700">{foundAsset.numSerie || 'S/N'}</span></p>
+              <p><span className="text-gray-400">Inv:</span> <span className="font-mono text-gray-700">{foundAsset.numInv || 'S/N'}</span></p>
+            </div>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setModalConfirmDel(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} />
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {editModalOpen && foundAsset && (
         <EditBienModal
