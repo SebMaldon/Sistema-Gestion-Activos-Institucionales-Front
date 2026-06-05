@@ -8,6 +8,7 @@ import Topbar from './components/Topbar';
 import Toast from './components/Toast';
 import FichaTecnica from './pages/FichaTecnica';
 import Login from './pages/Login';
+import Documentacion from './pages/Documentacion';
 import Dashboard from './pages/Dashboard';
 import Inventario from './pages/Inventario';
 import Incidencias from './pages/Incidencias';
@@ -121,6 +122,7 @@ export default function App() {
         <Routes>
           {/* Pública */}
           <Route path="/login" element={<LoginRoute />} />
+          <Route path="/documentacion" element={<Documentacion />} />
 
           {/* Rutas accesibles para todos los roles autenticados (1,2,3) */}
           <Route path="/dashboard" element={
