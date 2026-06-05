@@ -522,7 +522,7 @@ export default function Dashboard() {
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Total de Activos</p>
+              <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Total de Bienes Activos</p>
               <p className="text-3xl font-bold mt-1 text-gray-900">{totalActivos}</p>
               <p className="text-xs mt-1 text-green-700 font-medium">Activos y Préstamo</p>
             </div>
@@ -865,7 +865,7 @@ export default function Dashboard() {
                     <div className="flex flex-col min-w-0 pr-2">
                       <span className="truncate font-semibold">{u.jefatura}</span>
                       <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-green-600' : 'text-gray-400'}`}>
-                        {u.equipos} equipos en total
+                        {u.equipos} bienes en total
                       </span>
                     </div>
                     <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -889,7 +889,7 @@ export default function Dashboard() {
           <div className="flex-1 p-4 sm:p-6 relative flex flex-col min-h-[300px] lg:min-h-0 w-full overflow-hidden">
             <div className="flex items-center justify-between mb-5 gap-3">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Equipos Activos por Unidad</h2>
+                <h2 className="text-base font-bold text-gray-900">Bienes Activos por Unidad</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Clic en una barra para ver el desglose inferior</p>
               </div>
             </div>
