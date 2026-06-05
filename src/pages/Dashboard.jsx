@@ -15,6 +15,7 @@ import { GET_DASHBOARD_BIENES_QUERY } from '../api/inventario.queries';
 import { GET_DASHBOARD_INCIDENCIAS_QUERY } from '../api/incidencias.queries';
 import { GET_GARANTIAS } from '../api/garantias.queries';
 import { GET_BITACORA } from '../api/bitacora.queries';
+import AnimatedCounter from '../components/AnimatedCounter';
 
 const LOG_ICONS = {
   'CREACION': { icon: Plus, color: '#16a34a', bg: '#dcfce7' },
@@ -505,6 +506,13 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 fade-in pb-20">
+      <style>{`
+        @keyframes slideDownFade {
+          0% { opacity: 0; transform: translateY(-15px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-down { animation: slideDownFade 0.5s ease-out forwards; }
+      `}</style>
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Panel Principal</h1>
@@ -523,7 +531,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Total de Bienes Activos</p>
-              <p className="text-3xl font-bold mt-1 text-gray-900">{totalActivos}</p>
+              <p className="text-3xl font-bold mt-1 text-gray-900"><AnimatedCounter value={totalActivos} /></p>
               <p className="text-xs mt-1 text-green-700 font-medium">Activos y Préstamo</p>
             </div>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-green-100">
@@ -540,7 +548,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Incidencias Activas</p>
-              <p className="text-3xl font-bold mt-1 text-gray-900">{incidenciasActivas}</p>
+              <p className="text-3xl font-bold mt-1 text-gray-900"><AnimatedCounter value={incidenciasActivas} /></p>
               <p className="text-xs mt-1 text-red-600 font-medium">Activas y En Proceso</p>
             </div>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100">
@@ -558,7 +566,7 @@ export default function Dashboard() {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Garantías por Vencer</p>
-                <p className="text-3xl font-bold mt-1 text-gray-900">{garantiasVencer}</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900"><AnimatedCounter value={garantiasVencer} /></p>
                 <p className="text-xs mt-1 text-amber-600 font-medium">Próximos 2 meses</p>
               </div>
               <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-amber-100">
@@ -594,7 +602,7 @@ export default function Dashboard() {
               <div className="flex-1">
                 <p className="text-sm text-gray-500 font-medium group-hover:text-gray-700 transition-colors">Equipos Inactivos</p>
                 <div className="flex flex-col items-start gap-1.5 mt-1">
-                  <p className="text-3xl font-bold text-gray-900 leading-none">{inactivosCount}</p>
+                  <p className="text-3xl font-bold text-gray-900 leading-none"><AnimatedCounter value={inactivosCount} /></p>
                   <p className="text-[11px] text-blue-700 font-bold bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-100/50">{tasaDisponibilidad}% del total</p>
                 </div>
               </div>
@@ -710,21 +718,21 @@ export default function Dashboard() {
           <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
             <h3 className="text-sm font-semibold text-gray-500 mb-1">Equipos de Cómputo (PC y Laptop)</h3>
             <div className="flex items-end gap-2 mb-3">
-              <span className="text-3xl font-bold text-gray-900 leading-none">{metricComp.total}</span>
+              <span className="text-3xl font-bold text-gray-900 leading-none"><AnimatedCounter value={metricComp.total} /></span>
               <span className="text-xs text-gray-400 font-medium mb-1">total</span>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Activos</span>
-                <span className="text-sm font-semibold text-green-600">{metricComp.activos}</span>
+                <span className="text-sm font-semibold text-green-600"><AnimatedCounter value={metricComp.activos} /></span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Préstamo</span>
-                <span className="text-sm font-semibold text-blue-600">{metricComp.prestamo}</span>
+                <span className="text-sm font-semibold text-blue-600"><AnimatedCounter value={metricComp.prestamo} /></span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Inactivos</span>
-                <span className="text-sm font-semibold text-gray-500">{metricComp.inactivos}</span>
+                <span className="text-sm font-semibold text-gray-500"><AnimatedCounter value={metricComp.inactivos} /></span>
               </div>
             </div>
           </div>
@@ -733,21 +741,21 @@ export default function Dashboard() {
           <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
             <h3 className="text-sm font-semibold text-gray-500 mb-1">Impresoras</h3>
             <div className="flex items-end gap-2 mb-3">
-              <span className="text-3xl font-bold text-gray-900 leading-none">{metricImpresoras.total}</span>
+              <span className="text-3xl font-bold text-gray-900 leading-none"><AnimatedCounter value={metricImpresoras.total} /></span>
               <span className="text-xs text-gray-400 font-medium mb-1">total</span>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Activos</span>
-                <span className="text-sm font-semibold text-green-600">{metricImpresoras.activos}</span>
+                <span className="text-sm font-semibold text-green-600"><AnimatedCounter value={metricImpresoras.activos} /></span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Préstamo</span>
-                <span className="text-sm font-semibold text-blue-600">{metricImpresoras.prestamo}</span>
+                <span className="text-sm font-semibold text-blue-600"><AnimatedCounter value={metricImpresoras.prestamo} /></span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Inactivos</span>
-                <span className="text-sm font-semibold text-gray-500">{metricImpresoras.inactivos}</span>
+                <span className="text-sm font-semibold text-gray-500"><AnimatedCounter value={metricImpresoras.inactivos} /></span>
               </div>
             </div>
           </div>
@@ -756,21 +764,21 @@ export default function Dashboard() {
           <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
             <h3 className="text-sm font-semibold text-gray-500 mb-1">Redes (Switches)</h3>
             <div className="flex items-end gap-2 mb-3">
-              <span className="text-3xl font-bold text-gray-900 leading-none">{metricSwitches.total}</span>
+              <span className="text-3xl font-bold text-gray-900 leading-none"><AnimatedCounter value={metricSwitches.total} /></span>
               <span className="text-xs text-gray-400 font-medium mb-1">total</span>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Activos</span>
-                <span className="text-sm font-semibold text-green-600">{metricSwitches.activos}</span>
+                <span className="text-sm font-semibold text-green-600"><AnimatedCounter value={metricSwitches.activos} /></span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Préstamo</span>
-                <span className="text-sm font-semibold text-blue-600">{metricSwitches.prestamo}</span>
+                <span className="text-sm font-semibold text-blue-600"><AnimatedCounter value={metricSwitches.prestamo} /></span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-400">Inactivos</span>
-                <span className="text-sm font-semibold text-gray-500">{metricSwitches.inactivos}</span>
+                <span className="text-sm font-semibold text-gray-500"><AnimatedCounter value={metricSwitches.inactivos} /></span>
               </div>
             </div>
           </div>
@@ -782,21 +790,21 @@ export default function Dashboard() {
               {/* Tel IP */}
               <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
                 <div className="flex items-end gap-1 mb-2">
-                  <span className="text-xl font-bold text-gray-900 leading-none">{metricTelIP.total}</span>
+                  <span className="text-xl font-bold text-gray-900 leading-none"><AnimatedCounter value={metricTelIP.total} /></span>
                   <span className="text-[10px] text-gray-500 font-medium mb-0.5">Tel. IP</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between text-[10px]">
                     <span className="text-gray-400">Act:</span>
-                    <span className="font-semibold text-green-600">{metricTelIP.activos}</span>
+                    <span className="font-semibold text-green-600"><AnimatedCounter value={metricTelIP.activos} /></span>
                   </div>
                   <div className="flex justify-between text-[10px]">
                     <span className="text-gray-400">Prést:</span>
-                    <span className="font-semibold text-blue-600">{metricTelIP.prestamo}</span>
+                    <span className="font-semibold text-blue-600"><AnimatedCounter value={metricTelIP.prestamo} /></span>
                   </div>
                   <div className="flex justify-between text-[10px]">
                     <span className="text-gray-400">Inact:</span>
-                    <span className="font-semibold text-gray-500">{metricTelIP.inactivos}</span>
+                    <span className="font-semibold text-gray-500"><AnimatedCounter value={metricTelIP.inactivos} /></span>
                   </div>
                 </div>
               </div>
@@ -804,21 +812,21 @@ export default function Dashboard() {
               {/* Tel Normal */}
               <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
                 <div className="flex items-end gap-1 mb-2">
-                  <span className="text-xl font-bold text-gray-900 leading-none">{metricTelNorm.total}</span>
+                  <span className="text-xl font-bold text-gray-900 leading-none"><AnimatedCounter value={metricTelNorm.total} /></span>
                   <span className="text-[10px] text-gray-500 font-medium mb-0.5">Tel. Norm.</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between text-[10px]">
                     <span className="text-gray-400">Act:</span>
-                    <span className="font-semibold text-green-600">{metricTelNorm.activos}</span>
+                    <span className="font-semibold text-green-600"><AnimatedCounter value={metricTelNorm.activos} /></span>
                   </div>
                   <div className="flex justify-between text-[10px]">
                     <span className="text-gray-400">Prést:</span>
-                    <span className="font-semibold text-blue-600">{metricTelNorm.prestamo}</span>
+                    <span className="font-semibold text-blue-600"><AnimatedCounter value={metricTelNorm.prestamo} /></span>
                   </div>
                   <div className="flex justify-between text-[10px]">
                     <span className="text-gray-400">Inact:</span>
-                    <span className="font-semibold text-gray-500">{metricTelNorm.inactivos}</span>
+                    <span className="font-semibold text-gray-500"><AnimatedCounter value={metricTelNorm.inactivos} /></span>
                   </div>
                 </div>
               </div>
@@ -959,7 +967,7 @@ export default function Dashboard() {
               const Icon = conf.icon;
               const desc = formatDetails(log);
               return (
-                <div key={log.id_bitacora} className="flex items-start gap-4 px-6 py-3 hover:bg-gray-50 transition-colors">
+                <div key={log.id_bitacora} className="flex items-start gap-4 px-6 py-3 hover:bg-gray-50 transition-colors animate-slide-down">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: conf.bg }}>
                     <Icon size={14} style={{ color: conf.color }} />
                   </div>
