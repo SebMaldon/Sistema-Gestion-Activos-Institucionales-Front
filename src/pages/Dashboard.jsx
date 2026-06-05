@@ -137,7 +137,7 @@ function DeviceTypeBar({ drilldownData, selectedDrilldownUnit }) {
                     width: `${typePct}%`,
                     minWidth: typePct > 0 ? '4px' : '0',
                     display: 'flex',
-                    transition: 'filter 0.15s',
+                    transition: 'filter 0.15s, width 1s cubic-bezier(0.4, 0, 0.2, 1)',
                     filter: isHov ? 'brightness(1.12) drop-shadow(0 0 3px rgba(0,0,0,0.25))' : 'brightness(1)',
                     position: 'relative',
                   }}
@@ -145,7 +145,7 @@ function DeviceTypeBar({ drilldownData, selectedDrilldownUnit }) {
                   {/* Sub-bloque ACTIVO */}
                   {item.activo > 0 && (
                     <div
-                      style={{ width: `${activoPct}%`, backgroundColor: baseColor, minWidth: '2px' }}
+                      style={{ width: `${activoPct}%`, backgroundColor: baseColor, minWidth: '2px', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
                       className="flex items-center justify-center overflow-hidden"
                     >
                       {activoPct >= 10 && typePct >= 8 && (
@@ -162,6 +162,7 @@ function DeviceTypeBar({ drilldownData, selectedDrilldownUnit }) {
                         width: `${prestamoPct}%`,
                         minWidth: '2px',
                         background: `repeating-linear-gradient(45deg, ${baseColor} 0px, ${baseColor} 3px, ${lightColor} 3px, ${lightColor} 9px)`,
+                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)'
                       }}
                       className="flex items-center justify-center overflow-hidden"
                     >
@@ -258,7 +259,41 @@ function DeviceTypeBar({ drilldownData, selectedDrilldownUnit }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const usuario = useAuthStore(s => s.usuario);
+  const { usuario } = useAuthStore();
+  const [scrollYVelocity, setScrollYVelocity] = useState(0);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+    let velocityTimeout;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          const velocity = currentScrollY - lastScrollY;
+          // Dampen and limit velocity para un efecto de scroll suave y controlado
+          const limitedVelocity = Math.max(-60, Math.min(60, velocity));
+          setScrollYVelocity(limitedVelocity);
+          lastScrollY = currentScrollY;
+          
+          clearTimeout(velocityTimeout);
+          velocityTimeout = setTimeout(() => {
+            setScrollYVelocity(0);
+          }, 150);
+          
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(velocityTimeout);
+    };
+  }, []);
   const idRol = usuario?.id_rol ?? 3;
   const isMaestro = idRol === 1;
   const isAdmin = idRol === 2;
@@ -902,7 +937,10 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <div className="w-full h-[250px] lg:h-[300px]">
+            <div 
+              className="w-full h-[250px] lg:h-[300px] transition-transform duration-200 ease-out origin-bottom"
+              style={{ transform: `scaleY(${1 + scrollYVelocity * 0.0015})` }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f8" vertical={false} />
