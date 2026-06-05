@@ -206,6 +206,7 @@ export const GET_DASHBOARD_BIENES_QUERY = gql`
           }
           modelo {
             tipoDispositivo {
+              tipo_disp
               nombre_tipo
             }
           }

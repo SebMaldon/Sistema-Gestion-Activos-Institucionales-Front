@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   Package, AlertTriangle, ShieldAlert, TrendingUp, Activity,
-  CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X,
+  CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X, ChevronDown,
   LogIn, LogOut, Edit3, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
@@ -305,7 +305,10 @@ export default function Dashboard() {
   const activosList = useMemo(() => {
     return bienes.filter(b => {
       const st = (b.estatus_operativo || '').toUpperCase();
-      return st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+      const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+      const td = b.modelo?.tipoDispositivo;
+      const isMonitor = String(td?.tipo_disp) === '12' || (td?.nombre_tipo || '').toUpperCase().includes('MONITOR');
+      return isActive && !isMonitor;
     });
   }, [bienes]);
   const totalActivos = activosList.length;
@@ -376,6 +379,67 @@ export default function Dashboard() {
   const normalizeStr = (str) => {
     return (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   };
+
+  const [metricsSelectedUnit, setMetricsSelectedUnit] = useState(null);
+  const [metricsDropdownOpen, setMetricsDropdownOpen] = useState(false);
+  const [metricsSearchInput, setMetricsSearchInput] = useState('');
+
+  const metricsBienes = useMemo(() => {
+    if (!metricsSelectedUnit) return bienes;
+    return bienes.filter(b => {
+      const u = b.unidad?.desc_corta || b.unidad?.descripcion || 'Sin Unidad';
+      return u === metricsSelectedUnit;
+    });
+  }, [bienes, metricsSelectedUnit]);
+
+  const filteredMetricsUnits = useMemo(() => {
+    if (!metricsSearchInput.trim()) return allUnits;
+    const term = normalizeStr(metricsSearchInput);
+    return allUnits.filter(u => normalizeStr(u.jefatura).includes(term));
+  }, [allUnits, metricsSearchInput]);
+
+  const getCardMetrics = (tipoCondition) => {
+    const matched = metricsBienes.filter(tipoCondition);
+    const total = matched.length;
+    const activos = matched.filter(b => {
+      const st = (b.estatus_operativo || '').toUpperCase();
+      return st === 'ACTIVO';
+    }).length;
+    const prestamo = matched.filter(b => {
+      const st = (b.estatus_operativo || '').toUpperCase();
+      return st === 'PRESTAMO' || st === 'PRÉSTAMO';
+    }).length;
+    const inactivos = matched.filter(b => {
+      const st = (b.estatus_operativo || '').toUpperCase();
+      return st === 'INACTIVO';
+    }).length;
+    return { total, activos, prestamo, inactivos };
+  };
+
+  const metricComp = useMemo(() => getCardMetrics(b => {
+    const n = (b.modelo?.tipoDispositivo?.nombre_tipo || '').toUpperCase();
+    return n.includes('PC') || n.includes('LAPTOP');
+  }), [metricsBienes]);
+
+  const metricImpresoras = useMemo(() => getCardMetrics(b => {
+    const td = b.modelo?.tipoDispositivo;
+    return String(td?.tipo_disp) === '1' || (td?.nombre_tipo || '').toUpperCase().includes('IMPRESORA');
+  }), [metricsBienes]);
+
+  const metricSwitches = useMemo(() => getCardMetrics(b => {
+    const td = b.modelo?.tipoDispositivo;
+    return String(td?.tipo_disp) === '9' || (td?.nombre_tipo || '').toUpperCase().includes('SWITCH');
+  }), [metricsBienes]);
+
+  const metricTelIP = useMemo(() => getCardMetrics(b => {
+    const td = b.modelo?.tipoDispositivo;
+    return String(td?.tipo_disp) === '25' || (td?.nombre_tipo || '').toUpperCase().includes('IP');
+  }), [metricsBienes]);
+
+  const metricTelNorm = useMemo(() => getCardMetrics(b => {
+    const td = b.modelo?.tipoDispositivo;
+    return String(td?.tipo_disp) === '26' || ((td?.nombre_tipo || '').toUpperCase().includes('TEL') && !(td?.nombre_tipo || '').toUpperCase().includes('IP'));
+  }), [metricsBienes]);
 
   const filteredAllUnits = useMemo(() => {
     if (!configSearch) return allUnits;
@@ -558,8 +622,213 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Advanced Filter and 4 New Metric Cards */}
+      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col gap-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Métricas Detalladas por Equipo</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Desglose de inventario para la unidad seleccionada</p>
+          </div>
+          <div className="relative w-full md:w-80">
+            <button
+              onClick={() => {
+                setMetricsDropdownOpen(!metricsDropdownOpen);
+                if (!metricsDropdownOpen) setMetricsSearchInput('');
+              }}
+              className="w-full flex items-center justify-between px-4 py-2 text-sm bg-white border border-gray-200 hover:border-green-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 shadow-sm transition-all text-gray-700"
+            >
+              <span className="truncate pr-2">
+                {metricsSelectedUnit || "Todas las unidades"}
+              </span>
+              <div className="flex items-center gap-1">
+                {metricsSelectedUnit && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMetricsSelectedUnit(null);
+                    }}
+                    className="p-0.5 hover:bg-gray-100 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </div>
+                )}
+                <ChevronDown size={16} className="text-gray-400" />
+              </div>
+            </button>
+
+            {metricsDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden flex flex-col max-h-72">
+                <div className="p-2 border-b border-gray-100 relative">
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar unidad..."
+                    value={metricsSearchInput}
+                    onChange={e => setMetricsSearchInput(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  />
+                </div>
+                <div className="overflow-y-auto scrollbar-thin p-1">
+                  <button
+                    onClick={() => {
+                      setMetricsSelectedUnit(null);
+                      setMetricsDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors ${
+                      !metricsSelectedUnit ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    Todas las unidades
+                  </button>
+                  {filteredMetricsUnits.map((u) => (
+                    <button
+                      key={u.jefatura}
+                      onClick={() => {
+                        setMetricsSelectedUnit(u.jefatura);
+                        setMetricsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors truncate mt-0.5 ${
+                        metricsSelectedUnit === u.jefatura ? 'bg-green-50 text-green-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {u.jefatura}
+                    </button>
+                  ))}
+                  {filteredMetricsUnits.length === 0 && (
+                    <div className="px-3 py-4 text-center text-xs text-gray-500">
+                      No se encontraron resultados
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Computadoras */}
+          <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-500 mb-1">Equipos de Cómputo (PC y Laptop)</h3>
+            <div className="flex items-end gap-2 mb-3">
+              <span className="text-3xl font-bold text-gray-900 leading-none">{metricComp.total}</span>
+              <span className="text-xs text-gray-400 font-medium mb-1">total</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Activos</span>
+                <span className="text-sm font-semibold text-green-600">{metricComp.activos}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Préstamo</span>
+                <span className="text-sm font-semibold text-blue-600">{metricComp.prestamo}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Inactivos</span>
+                <span className="text-sm font-semibold text-gray-500">{metricComp.inactivos}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Impresoras */}
+          <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-500 mb-1">Impresoras</h3>
+            <div className="flex items-end gap-2 mb-3">
+              <span className="text-3xl font-bold text-gray-900 leading-none">{metricImpresoras.total}</span>
+              <span className="text-xs text-gray-400 font-medium mb-1">total</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Activos</span>
+                <span className="text-sm font-semibold text-green-600">{metricImpresoras.activos}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Préstamo</span>
+                <span className="text-sm font-semibold text-blue-600">{metricImpresoras.prestamo}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Inactivos</span>
+                <span className="text-sm font-semibold text-gray-500">{metricImpresoras.inactivos}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Switches */}
+          <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-500 mb-1">Redes (Switches)</h3>
+            <div className="flex items-end gap-2 mb-3">
+              <span className="text-3xl font-bold text-gray-900 leading-none">{metricSwitches.total}</span>
+              <span className="text-xs text-gray-400 font-medium mb-1">total</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-50">
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Activos</span>
+                <span className="text-sm font-semibold text-green-600">{metricSwitches.activos}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Préstamo</span>
+                <span className="text-sm font-semibold text-blue-600">{metricSwitches.prestamo}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-400">Inactivos</span>
+                <span className="text-sm font-semibold text-gray-500">{metricSwitches.inactivos}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Telefonía (Combined) */}
+          <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 flex flex-col justify-between">
+            <h3 className="text-sm font-semibold text-gray-500 mb-2">Telefonía</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Tel IP */}
+              <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-end gap-1 mb-2">
+                  <span className="text-xl font-bold text-gray-900 leading-none">{metricTelIP.total}</span>
+                  <span className="text-[10px] text-gray-500 font-medium mb-0.5">Tel. IP</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">Act:</span>
+                    <span className="font-semibold text-green-600">{metricTelIP.activos}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">Prést:</span>
+                    <span className="font-semibold text-blue-600">{metricTelIP.prestamo}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">Inact:</span>
+                    <span className="font-semibold text-gray-500">{metricTelIP.inactivos}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Tel Normal */}
+              <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-end gap-1 mb-2">
+                  <span className="text-xl font-bold text-gray-900 leading-none">{metricTelNorm.total}</span>
+                  <span className="text-[10px] text-gray-500 font-medium mb-0.5">Tel. Norm.</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">Act:</span>
+                    <span className="font-semibold text-green-600">{metricTelNorm.activos}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">Prést:</span>
+                    <span className="font-semibold text-blue-600">{metricTelNorm.prestamo}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-400">Inact:</span>
+                    <span className="font-semibold text-gray-500">{metricTelNorm.inactivos}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Charts */}
-      <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="flex flex-col gap-5 sm:gap-6 mt-2">
         {/* Main Bar Chart with Sidebar */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full overflow-hidden flex flex-col lg:flex-row lg:h-[420px]">
           
