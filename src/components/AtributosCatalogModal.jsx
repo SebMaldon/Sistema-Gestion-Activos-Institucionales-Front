@@ -31,7 +31,7 @@ export default function AtributosCatalogModal({ onClose }) {
   const tipos = mtData?.tiposDispositivo ?? [];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={onClose}>
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
