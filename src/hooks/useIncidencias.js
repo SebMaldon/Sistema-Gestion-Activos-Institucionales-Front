@@ -166,7 +166,7 @@ export function useBienPorTermino(termino) {
         const data = await gqlClient.request(GET_BIEN_BY_TERMINO_QUERY, {
           termino: termino.trim(),
         });
-        return data.bienByTermino || null;
+        return data.bienByTermino?.[0] || null;
       } catch (error) {
         const code = error?.response?.errors?.[0]?.extensions?.code;
         if (code === 'UNAUTHENTICATED') clearAuth();
