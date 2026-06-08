@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { useApp } from '../context/AppContext';
@@ -10,39 +11,58 @@ import {
   CREATE_GARANTIA,
   UPDATE_GARANTIA,
   DELETE_GARANTIA,
-  GET_BIEN_BY_SERIE,
-  GET_BIEN_BY_INV,
+  GET_BIEN_BY_TERMINO,
 } from '../api/garantias.queries';
 import {
-  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box
+  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
 
 // ─── Componentes reusables de vista ──────────────────────────────────────────
 
-function ModalOverlay({ children, onClose }) {
+function EstatusBadge({ estatus }) {
+  const map = {
+    'VIGENTE': { bg: '#dcfce7', color: '#15803d', label: 'Vigente' },
+    'VENCIDA': { bg: '#fee2e2', color: '#b91c1c', label: 'Vencida' },
+  };
+  const s = map[estatus] ?? { bg: '#f3f4f6', color: '#374151', label: estatus };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+      style={{ backgroundColor: s.bg, color: s.color }}>
+      {s.label}
+    </span>
   );
 }
 
-function ModalHeader({ title, onClose }) {
-  return (
-    <div className="flex items-center justify-between p-5 border-b border-gray-100">
-      <h2 className="font-bold text-gray-900 text-lg">{title}</h2>
-      <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
-        <X size={18} />
-      </button>
-    </div>
+function Modal({ onClose, title, subtitle, children, wide = false, small = false }) {
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'}`}>
+        {/* Header */}
+        <div className="bg-[#00472e] px-5 sm:px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
+          <div>
+            <h3 className="text-xl font-bold">{title}</h3>
+            {subtitle && <p className="text-sm text-green-100 mt-0.5">{subtitle}</p>}
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        {/* Body scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -65,6 +85,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   const [selectedBien, setSelectedBien] = useState(garantia?.bien ?? null);
   const [isSearching, setIsSearching] = useState(false);
   const [showAddProveedorModal, setShowAddProveedorModal] = useState(false);
+  const [multipleMatches, setMultipleMatches] = useState([]);
 
   const createMut = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
@@ -93,23 +114,20 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   const handleSearchBien = async () => {
     if (!searchValue) return;
     setIsSearching(true);
+    setMultipleMatches([]);
     try {
-      const [resSerie, resInv] = await Promise.allSettled([
-        gqlClient.request(GET_BIEN_BY_SERIE, { num_serie: searchValue }),
-        gqlClient.request(GET_BIEN_BY_INV, { num_inv: searchValue })
-      ]);
+      const res = await gqlClient.request(GET_BIEN_BY_TERMINO, { termino: searchValue.trim() });
+      const foundBienes = res.bienByTermino || [];
 
-      const bienSerie = resSerie.status === 'fulfilled' ? resSerie.value.bienByNumSerie : null;
-      const bienInv = resInv.status === 'fulfilled' ? resInv.value.bienByNumInv : null;
-
-      const foundBien = bienSerie || bienInv;
-
-      if (foundBien) {
+      if (foundBienes.length === 1) {
+        const foundBien = foundBienes[0];
         setSelectedBien(foundBien);
         setForm(p => ({ ...p, id_bien: foundBien.id_bien }));
         showToast('Bien encontrado', 'success');
+      } else if (foundBienes.length > 1) {
+        setMultipleMatches(foundBienes);
       } else {
-        showToast('No se encontró ningún bien con ese número de serie o inventario', 'error');
+        showToast('No se encontró ningún bien con ese número de serie, inventario o IP', 'error');
         setSelectedBien(null);
         setForm(p => ({ ...p, id_bien: '' }));
       }
@@ -136,6 +154,19 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
       showToast('El bien y la fecha de fin son obligatorios', 'warning');
       return;
     }
+
+    if (form.fecha_inicio && form.fecha_fin) {
+      const partsI = form.fecha_inicio.split('-');
+      const startLocal = new Date(partsI[0], partsI[1] - 1, partsI[2]);
+      const partsF = form.fecha_fin.split('-');
+      const endLocal = new Date(partsF[0], partsF[1] - 1, partsF[2]);
+
+      if (startLocal > endLocal) {
+        showToast('La fecha de inicio no puede ser posterior a la fecha de fin', 'warning');
+        return;
+      }
+    }
+
     if (isEdit) {
       updateMut.mutate({
         id_garantia: garantia.id_garantia,
@@ -159,9 +190,9 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
   const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
   return (
-    <ModalOverlay onClose={onClose}>
-      <ModalHeader title={isEdit ? 'Editar Garantía' : 'Nueva Garantía'} onClose={onClose} />
-      <div className="p-5 max-h-[80vh] overflow-y-auto">
+    <>
+      <Modal onClose={onClose} title={isEdit ? 'Editar Garantía' : 'Registrar Garantía'} subtitle="Dar de alta una nueva garantía o póliza">
+        <div className="flex flex-col gap-5">
         {/* Buscador de Bien (Sólo activo en creación) */}
         {!isEdit && (
           <div className="mb-5 bg-gray-50 border border-gray-200 rounded-xl p-4">
@@ -172,7 +203,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
             <div className="flex gap-2 w-full">
               <input
                 type="text"
-                placeholder="Buscar por No. Serie o Inventario..."
+                placeholder="Buscar por No. Serie, Inventario o IP..."
                 className={`${inputCls} flex-1 text-base py-3`}
                 value={searchValue}
                 onChange={e => setSearchValue(e.target.value)}
@@ -280,7 +311,72 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
           </div>
         </form>
       </div>
-    </ModalOverlay>
+    </Modal>
+
+    {multipleMatches.length > 0 && (
+      <Modal 
+        onClose={() => setMultipleMatches([])} 
+        title={`Múltiples coincidencias (${multipleMatches.length})`} 
+        subtitle="Se encontraron varios bienes con el mismo identificador. Selecciona el que deseas consultar:" 
+      >
+        <div className="space-y-4">
+          {multipleMatches.map(b => (
+            <div 
+              key={b.id_bien} 
+              onClick={() => { 
+                setSelectedBien(b); 
+                setForm(p => ({ ...p, id_bien: b.id_bien })); 
+                setMultipleMatches([]); 
+                showToast('Bien seleccionado', 'success');
+              }} 
+              className="p-4 bg-white border border-gray-200 rounded-2xl hover:border-green-500 hover:shadow-md cursor-pointer transition-all flex flex-col gap-3 group"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-gray-900 text-base">{b.modelo?.marca?.marca} {b.modelo?.descrip_disp || 'Dispositivo sin modelo'}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                    <Box size={14} className="text-gray-400" /> 
+                    {b.modelo?.tipoDispositivo?.nombre_tipo || 'Equipo'}
+                  </p>
+                </div>
+                <ChevronRight className="text-gray-300 group-hover:text-green-500 transition-colors" size={20} />
+              </div>
+              
+              <div className="flex items-center gap-6 mt-1 text-sm text-gray-600">
+                 <div className="flex items-center gap-1.5">
+                   <Hash size={14} className="text-gray-400" />
+                   <span className="text-gray-500">S/N:</span> 
+                   <span className="font-bold text-gray-800">{b.num_serie || 'N/D'}</span>
+                 </div>
+                 <div className="flex items-center gap-1.5">
+                   <Tag size={14} className="text-gray-400" />
+                   <span className="text-gray-500">Inv:</span> 
+                   <span className="font-bold text-gray-800">{b.num_inv || 'N/D'}</span>
+                 </div>
+              </div>
+
+              {b.especificacionTI?.dir_ip && (
+                 <div className="mt-1">
+                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-lg border border-blue-100">
+                     <Wifi size={13} /> IP: {b.especificacionTI.dir_ip}
+                   </span>
+                 </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 pt-4 border-t border-gray-100 text-center">
+          <button 
+            type="button" 
+            onClick={() => setMultipleMatches([])} 
+            className="text-gray-500 hover:text-gray-700 font-semibold text-sm transition-colors"
+          >
+            Cancelar búsqueda
+          </button>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -301,9 +397,8 @@ function ConfirmEliminarModal({ garantia, onClose }) {
   });
 
   return (
-    <ModalOverlay onClose={onClose}>
-      <ModalHeader title="Eliminar Registro de Garantía" onClose={onClose} />
-      <div className="p-5 space-y-4">
+    <Modal onClose={onClose} title="Eliminar Registro de Garantía" subtitle="Esta acción es permanente">
+      <div className="space-y-4">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col items-center text-center">
             <AlertCircle size={40} className="text-red-500 mb-3" />
             <h3 className="text-red-800 font-bold mb-1">¿Estás seguro de eliminar esta garantía?</h3>
@@ -325,7 +420,7 @@ function ConfirmEliminarModal({ garantia, onClose }) {
             </button>
         </div>
       </div>
-    </ModalOverlay>
+    </Modal>
   );
 }
 
@@ -339,10 +434,13 @@ export default function Garantias() {
   const isAdministrador = idRol === 2;
 
   const [searchFilter, setSearchFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [showPorVencer, setShowPorVencer] = useState(location.state?.filterPorVencer || false);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   useEffect(() => {
     if (location.state?.filterPorVencer) {
@@ -363,10 +461,30 @@ export default function Garantias() {
     select: d => d.proveedores ?? [],
   });
 
-  const garantias = data || [];
   const proveedores = proveedoresData || [];
 
+  const garantias = (data || []).map(g => {
+    let estado = g.estado_garantia;
+    if (g.fecha_fin) {
+      const parts = g.fecha_fin.split('-');
+      let finLocal = new Date(g.fecha_fin);
+      if (parts.length >= 3) {
+         finLocal = new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+      }
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0);
+      if (finLocal < hoy) {
+        estado = 'VENCIDA';
+      }
+    }
+    return { ...g, estado_garantia: estado };
+  });
+
   const filteredGarantias = garantias.filter(g => {
+    // Status Filter
+    if (statusFilter === 'VIGENTE' && g.estado_garantia !== 'VIGENTE') return false;
+    if (statusFilter === 'VENCIDA' && g.estado_garantia === 'VIGENTE') return false;
+
     // Por Vencer Filter
     if (showPorVencer) {
       if (!g.fecha_fin || g.estado_garantia !== 'VIGENTE') return false;
@@ -385,135 +503,156 @@ export default function Garantias() {
     return proveedorMatch || serieMatch || invMatch;
   });
 
-  const getEstatusStyle = (estatus) => {
-    if (estatus === 'VIGENTE') return 'bg-green-100 text-green-800 border border-green-200';
-    if (estatus === 'VENCIDA') return 'bg-red-100 text-red-800 border border-red-200';
-    return 'bg-gray-100 text-gray-800 border border-gray-200';
-  };
+  const totalPages = Math.ceil(filteredGarantias.length / PAGE_SIZE) || 1;
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [filteredGarantias.length, currentPage, totalPages]);
+
+  const paginatedGarantias = filteredGarantias.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 fade-in min-h-full">
+    <div className="h-full flex flex-col p-4 sm:p-5 space-y-4 fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center">
-            <ShieldCheck className="text-green-600 mr-3" size={28} />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
+            <ShieldCheck className="text-green-600 mr-2" size={24} />
             Control de Garantías
           </h1>
-          <p className="text-sm text-gray-500 mt-1 pl-10">Administración de pólizas y resguardos de proveedores</p>
+          <p className="text-sm text-gray-500 mt-1 pl-8">Administración de pólizas y resguardos de proveedores</p>
         </div>
         
-        {/* Administrador y Maestro pueden crear */}
-        {(isMaestro || isAdministrador) && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setModalCrear(true)}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-md group"
-            style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
-            <Plus size={18} className="transition-transform group-hover:scale-110" /> Agregar Garantía
+            onClick={() => refetch()}
+            title="Refrescar"
+            className="w-9 h-9 rounded-xl flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
           </button>
-        )}
+          {/* Administrador y Maestro pueden crear */}
+          {(isMaestro || isAdministrador) && (
+            <button
+              onClick={() => setModalCrear(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+              style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+              <Plus size={16} />
+              <span className="hidden sm:inline">Agregar Garantía</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setStatusFilter('ALL')}
+            className={`rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${statusFilter === 'ALL' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 hover:border-blue-200'}`}
+          >
               <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total de Garantías</p>
-                  <h3 className="text-2xl font-black mt-1 text-gray-900">{garantias.length}</h3>
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${statusFilter === 'ALL' ? 'text-blue-700' : 'text-gray-500'}`}>Total de Garantías</p>
+                  <h3 className={`text-2xl font-black mt-1 ${statusFilter === 'ALL' ? 'text-blue-900' : 'text-gray-900'}`}>{garantias.length}</h3>
               </div>
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-colors ${statusFilter === 'ALL' ? 'bg-blue-100 text-blue-700' : 'bg-blue-50 text-blue-600'}`}>
                  <ShieldCheck />
               </div>
           </div>
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setStatusFilter(statusFilter === 'VIGENTE' ? 'ALL' : 'VIGENTE')}
+            className={`rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${statusFilter === 'VIGENTE' ? 'bg-emerald-50 border-emerald-200 ring-2 ring-emerald-500/20' : 'bg-white border-gray-100 hover:border-emerald-200'}`}
+          >
               <div>
-                  <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Vigentes</p>
-                  <h3 className="text-2xl font-black mt-1 text-emerald-900">
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${statusFilter === 'VIGENTE' ? 'text-emerald-700' : 'text-emerald-600'}`}>Vigentes</p>
+                  <h3 className={`text-2xl font-black mt-1 text-emerald-900`}>
                     {garantias.filter(g => g.estado_garantia === 'VIGENTE').length}
                   </h3>
               </div>
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-colors ${statusFilter === 'VIGENTE' ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-50 text-emerald-600'}`}>
                  <CalendarClock />
               </div>
           </div>
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center justify-between">
+          <div 
+            onClick={() => setStatusFilter(statusFilter === 'VENCIDA' ? 'ALL' : 'VENCIDA')}
+            className={`rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${statusFilter === 'VENCIDA' ? 'bg-red-50 border-red-200 ring-2 ring-red-500/20' : 'bg-white border-gray-100 hover:border-red-200'}`}
+          >
               <div>
-                  <p className="text-xs font-semibold text-red-500 uppercase tracking-wide">Vencidas / Anuladas</p>
-                  <h3 className="text-2xl font-black mt-1 text-red-900">
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${statusFilter === 'VENCIDA' ? 'text-red-700' : 'text-red-500'}`}>Vencidas / Anuladas</p>
+                  <h3 className={`text-2xl font-black mt-1 text-red-900`}>
                     {garantias.filter(g => g.estado_garantia !== 'VIGENTE').length}
                   </h3>
               </div>
-              <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-xl">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-colors ${statusFilter === 'VENCIDA' ? 'bg-red-100 text-red-700' : 'bg-red-50 text-red-600'}`}>
                  <AlertCircle />
               </div>
           </div>
       </div>
 
       {/* Control Actions & Search */}
-      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-                type="text"
-                placeholder="Buscar por equipo, proveedor o número de serie..."
-                value={searchFilter}
-                onChange={e => setSearchFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all shadow-inner"
+              type="text"
+              placeholder="Buscar por equipo, proveedor o número de serie..."
+              value={searchFilter}
+              onChange={e => setSearchFilter(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
             />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowPorVencer(!showPorVencer)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showPorVencer ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              title="Filtrar garantías por vencer (próximos 2 meses)"
+            >
+              <AlertCircle size={14} className={showPorVencer ? "text-amber-600" : "text-amber-500"} />
+              <span className="hidden sm:inline">{showPorVencer ? 'Por Vencer (Activo)' : 'Por Vencer'}</span>
+            </button>
+          </div>
         </div>
-        <button
-            onClick={() => setShowPorVencer(!showPorVencer)}
-            className={`p-3 text-sm font-semibold rounded-xl border transition-colors flex-shrink-0 flex items-center gap-2 ${showPorVencer ? 'bg-amber-100 border-amber-200 text-amber-800' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-            title="Filtrar garantías por vencer (próximos 2 meses)"
-        >
-            <AlertCircle size={18} />
-            {showPorVencer ? 'Por Vencer (Activo)' : 'Por Vencer'}
-        </button>
-        <button onClick={() => refetch()} className="p-3 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-green-700 transition-colors bg-white shadow-sm flex-shrink-0" title="Refrescar">
-            <RefreshCw size={18} />
-        </button>
       </div>
 
       {/* Table Data */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-green-700">
-            <RefreshCw className="animate-spin mb-4" size={32} />
-            <p className="text-sm font-semibold animate-pulse">Consultando el historial de garantías...</p>
+          <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+            <Loader2 size={22} className="animate-spin" />
+            <span className="text-sm">Consultando el historial de garantías...</span>
           </div>
         ) : filteredGarantias.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100 shadow-sm">
-                <Box size={32} className="text-gray-300" />
-            </div>
-            <p className="text-gray-500 font-medium">No se encontraron registros de garantías.</p>
+          <div className="text-center py-14 text-gray-400 text-sm">
+            <Box size={32} className="mx-auto mb-2 opacity-30" />
+            No se encontraron registros de garantías con los filtros aplicados.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
+          <div className="flex-1 overflow-auto relative">
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
                 <tr>
-                  <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Equipo Asociado</th>
-                  <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Periodo de Cobertura</th>
-                  <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Proveedor</th>
-                  <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase">Estado</th>
+                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipo Asociado</th>
+                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Periodo de Cobertura</th>
+                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Proveedor</th>
+                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
                   {(isMaestro || isAdministrador) && (
-                      <th className="px-6 py-4 font-bold tracking-wider text-xs uppercase text-right">Acciones</th>
+                      <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 focus-within:ring-2 focus-within:ring-green-500">
-                {filteredGarantias.map(garantia => (
-                  <tr key={garantia.id_garantia} className="hover:bg-green-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-900 group-hover:text-green-800 transition-colors">
+              <tbody className="divide-y divide-gray-50">
+                {paginatedGarantias.map(garantia => (
+                  <tr key={garantia.id_garantia} className="hover:bg-gray-50/70 transition-colors group">
+                    <td className="px-4 py-3.5 relative">
+                      <p className="font-semibold text-gray-900 text-sm">
                         {garantia.bien ? (garantia.bien.modelo?.marca?.marca + " " + garantia.bien.modelo?.descrip_disp) : 'Bien Extraviado/No Asignado'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1 bg-gray-100 px-2 py-0.5 rounded-md inline-block">
-                        <strong>S/N: </strong> {garantia.bien?.num_serie || 'N/A'}
-                      </p>
+                      <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-block mt-0.5 truncate max-w-full">
+                        S/N: {garantia.bien?.num_serie || 'N/A'}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5">
                       <div className="flex flex-col text-xs text-gray-600 gap-1">
                           <span className="flex items-center"><span className="w-12 text-gray-400 font-semibold">Inicio:</span> 
                             {formatDate(garantia.fecha_inicio)}
@@ -523,20 +662,18 @@ export default function Garantias() {
                           </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-medium text-gray-700">
+                    <td className="px-4 py-3.5 text-xs text-gray-600">
                         {garantia.proveedorObj?.nombre_proveedor || '--'}
                     </td>
-                    <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${getEstatusStyle(garantia.estado_garantia)} shadow-sm`}>
-                            {garantia.estado_garantia}
-                        </span>
+                    <td className="px-4 py-3.5">
+                        <EstatusBadge estatus={garantia.estado_garantia} />
                     </td>
                     {(isMaestro || isAdministrador) && (
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => setModalEditar(garantia)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
                               title="Editar"
                             >
                               <Edit size={14} />
@@ -545,7 +682,7 @@ export default function Garantias() {
                             {isMaestro && (
                                 <button
                                     onClick={() => setModalEliminar(garantia)}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                     title="Eliminar permanentemente"
                                 >
                                 <Trash2 size={14} />
@@ -558,6 +695,34 @@ export default function Garantias() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Paginación */}
+        {!isLoading && filteredGarantias.length > 0 && (
+          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0">
+            <p className="text-xs text-gray-500 font-medium">
+              Mostrando <span className="text-gray-900 font-bold">{(currentPage - 1) * PAGE_SIZE + 1}</span> a <span className="text-gray-900 font-bold">{Math.min(currentPage * PAGE_SIZE, filteredGarantias.length)}</span> de <span className="text-gray-900 font-bold">{filteredGarantias.length}</span> registros.
+            </p>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:text-green-700 hover:border-green-300 disabled:opacity-50 disabled:hover:text-gray-600 disabled:hover:border-gray-200 transition-all"
+              >
+                Anterior
+              </button>
+              <span className="text-xs font-semibold px-2 text-gray-600">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:text-green-700 hover:border-green-300 disabled:opacity-50 disabled:hover:text-gray-600 disabled:hover:border-gray-200 transition-all"
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         )}
       </div>

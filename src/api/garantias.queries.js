@@ -73,6 +73,29 @@ export const GET_BIEN_BY_INV = gql`
   }
 `;
 
+export const GET_BIEN_BY_TERMINO = gql`
+  query GetBienByTermino($termino: String!) {
+    bienByTermino(termino: $termino) {
+      id_bien
+      num_serie
+      num_inv
+      clave_modelo
+      modelo {
+        descrip_disp
+        marca {
+          marca
+        }
+        tipoDispositivo {
+          nombre_tipo
+        }
+      }
+      especificacionTI {
+        dir_ip
+      }
+    }
+  }
+`;
+
 // ─── Mutaciones ──────────────────────────────────────────────
 
 export const CREATE_GARANTIA = gql`
