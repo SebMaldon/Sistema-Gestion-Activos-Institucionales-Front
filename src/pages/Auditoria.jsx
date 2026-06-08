@@ -266,7 +266,7 @@ export default function Auditoria() {
       after: cursor ?? undefined,
     }),
     select: d => d.bitacora,
-    refetchInterval: 15000, // Auto-refrescar cada 15 segundos
+    refetchInterval: 10000, // Auto-refrescar cada 10 segundos
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     staleTime: 0,
@@ -292,6 +292,13 @@ export default function Auditoria() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
+      <style>{`
+        @keyframes slideDownFade {
+          0% { opacity: 0; transform: translateY(-15px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-down { animation: slideDownFade 0.5s ease-out forwards; }
+      `}</style>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bitácora de Auditoría</h1>
@@ -491,7 +498,7 @@ export default function Auditoria() {
                   const conf = ACTION_CONFIG[log.accion] || ACTION_CONFIG.LECTURA;
                   const Icon = conf.icon;
                   return (
-                    <tr key={log.id_bitacora} className="hover:bg-gray-50/80 transition-colors group">
+                    <tr key={log.id_bitacora} className="hover:bg-gray-50/80 transition-colors group animate-slide-down">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="font-mono text-[11px] font-semibold text-gray-500">{formatDateTime(log.fecha_movimiento)}</span>
                       </td>
@@ -557,7 +564,7 @@ export default function Auditoria() {
             const conf = ACTION_CONFIG[log.accion] || ACTION_CONFIG.LECTURA;
             const Icon = conf.icon;
             return (
-              <div key={log.id_bitacora} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+              <div key={log.id_bitacora} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 relative overflow-hidden animate-slide-down">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: conf.bg }}>
                     <Icon size={18} style={{ color: conf.color }} />

@@ -16,20 +16,27 @@ export default function Aprobaciones() {
   const [selectedSolicitud, setSelectedSolicitud] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchSolicitudes = useCallback(async () => {
-    setLoading(true);
+  const fetchSolicitudes = useCallback(async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const data = await gqlClient.request(GET_SOLICITUDES_PENDIENTES);
       setSolicitudes(data.obtenerSolicitudesPendientes || []);
     } catch (err) {
       showToast?.('Error cargando solicitudes: ' + err.message, 'error');
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }, [showToast]);
 
   useEffect(() => {
-    fetchSolicitudes();
+    fetchSolicitudes(true);
+    
+    // Auto-refresh cada 10 segundos en background
+    const intervalId = setInterval(() => {
+      fetchSolicitudes(false);
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, [fetchSolicitudes]);
 
   const handleAprobar = async (solicitudId, camposAprobados = null) => {
@@ -40,7 +47,7 @@ export default function Aprobaciones() {
       });
       showToast?.('Cambio aprobado exitosamente.', 'success');
       setSelectedSolicitud(null);
-      fetchSolicitudes();
+      fetchSolicitudes(true);
     } catch (err) {
       showToast?.('Error al aprobar: ' + err.message, 'error');
     }
@@ -54,7 +61,7 @@ export default function Aprobaciones() {
       });
       showToast?.('Cambio rechazado.', 'success');
       setSelectedSolicitud(null);
-      fetchSolicitudes();
+      fetchSolicitudes(true);
     } catch (err) {
       showToast?.('Error al rechazar: ' + err.message, 'error');
     }
@@ -80,6 +87,13 @@ export default function Aprobaciones() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <style>{`
+        @keyframes slideDownFade {
+          0% { opacity: 0; transform: translateY(-15px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-down { animation: slideDownFade 0.5s ease-out forwards; }
+      `}</style>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
@@ -106,7 +120,7 @@ export default function Aprobaciones() {
           />
         </div>
         <button
-          onClick={fetchSolicitudes}
+          onClick={() => fetchSolicitudes(true)}
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
         >
@@ -146,7 +160,7 @@ export default function Aprobaciones() {
                 const datosP = typeof sol.datos_nuevos === 'string' ? JSON.parse(sol.datos_nuevos) : sol.datos_nuevos;
                 const esCreacion = datosP._esCreacion === true;
                 return (
-                  <tr key={sol.id} className="border-b border-gray-50 hover:bg-green-50/30 transition-colors">
+                  <tr key={sol.id} className="border-b border-gray-50 hover:bg-green-50/30 transition-colors animate-slide-down">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Clock className="w-3.5 h-3.5 text-gray-400" />
