@@ -1691,7 +1691,9 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
                 {/* Segmento de Red */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Segmento de Red</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Segmento de Red <span className="ml-2 text-[10px] text-blue-500 font-normal">(Auto-asignado por IP)</span>
+                  </label>
                   <SearchableSelect
                     value={form.id_segmento ? String(form.id_segmento) : ''}
                     onChange={(val) => {
@@ -1699,6 +1701,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                     }}
                     options={(catalogos?.segmentos ?? []).map(u => ({ value: String(u.id_segmento), label: u.nombre || u.clave }))}
                     placeholder="Sin segmento"
+                    disabled={true}
                   />
                 </div>
 
