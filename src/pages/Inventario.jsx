@@ -41,6 +41,7 @@ import CargaMasivaPanel from '../components/CargaMasivaPanel';
 import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO } from '../api/atributos.queries';
 import ExportExcelModal from '../components/ExportExcelModal';
 import { EditBienModal } from '../components/EditBienModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 import ReportePanel from '../components/ReportePanel';
 
@@ -993,6 +994,7 @@ export default function Inventario() {
   const [deviceMode, setDeviceMode] = useState(null); // 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [showAtributosModal, setShowAtributosModal] = useState(false);
+  const [showConfirmSyncAll, setShowConfirmSyncAll] = useState(false);
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [form, setForm] = useState(FORM_EMPTY);
@@ -1542,16 +1544,7 @@ export default function Inventario() {
             )}
             {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
               <button
-                onClick={async () => {
-                  if (window.confirm('¿Desea forzar la sincronización de todos los equipos en la red local?')) {
-                    try {
-                      await gqlClient.request(SET_SYNC_PENDING_ALL_MUTATION);
-                      showToast('Sincronización masiva programada', 'success');
-                    } catch (e) {
-                      showToast('Error al programar sincronización', 'error');
-                    }
-                  }
-                }}
+                onClick={() => setShowConfirmSyncAll(true)}
                 title="Forzar Escaneo de Todos"
                 className="w-9 h-9 sm:w-auto sm:px-4 sm:py-2.5 rounded-xl flex items-center justify-center gap-2 text-white text-sm font-semibold transition-all hover:opacity-90 bg-amber-600 shadow-sm"
               >
@@ -2590,6 +2583,29 @@ export default function Inventario() {
           catalogos={catalogos}
           onClose={() => setModalForm(null)}
           refetch={refetch}
+        />
+
+        {showAtributosModal && (
+          <AtributosCatalogModal onClose={() => setShowAtributosModal(false)} />
+        )}
+
+        <ConfirmModal
+          isOpen={showConfirmSyncAll}
+          onClose={() => setShowConfirmSyncAll(false)}
+          onConfirm={async () => {
+            setShowConfirmSyncAll(false);
+            try {
+              await gqlClient.request(SET_SYNC_PENDING_ALL_MUTATION);
+              showToast('Sincronización masiva programada', 'success');
+            } catch (e) {
+              showToast('Error al programar sincronización', 'error');
+            }
+          }}
+          title="Forzar Sincronización Masiva"
+          message="¿Desea forzar la sincronización de todos los equipos en la red local? Esto puede tomar tiempo y consumir recursos de red."
+          confirmText="Sí, forzar sincronización"
+          cancelText="Cancelar"
+          type="warning"
         />
       </div>
       <PrintStickerSheet items={printSelectedBienes} startOffset={printStartOffset} />
