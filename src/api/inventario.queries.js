@@ -162,6 +162,14 @@ export const GET_BIENES_REPORTE_QUERY = gql`
           notas {
             fecha_creacion
           }
+          unidad {
+            clave
+            descripcion
+            desc_corta
+          }
+          ubicacion {
+            nombre_ubicacion
+          }
         }
       }
       pageInfo {
