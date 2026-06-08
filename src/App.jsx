@@ -163,6 +163,11 @@ export default function App() {
               <AppLayout page="unidades"><Unidades /></AppLayout>
             </ProtectedRoute>
           } />
+          <Route path="/configuracion" element={
+            <ProtectedRoute>
+              <AppLayout page="configuracion"><Configuracion /></AppLayout>
+            </ProtectedRoute>
+          } />
 
           {/* Rutas restringidas: Admin (1) y Maestro (2) */}
           <Route path="/garantias" element={
@@ -195,11 +200,6 @@ export default function App() {
           <Route path="/auditoria" element={
             <RoleRoute allowedRoles={[ROL_MAESTRO]}>
               <AppLayout page="auditoria"><Auditoria /></AppLayout>
-            </RoleRoute>
-          } />
-          <Route path="/configuracion" element={
-            <RoleRoute allowedRoles={[ROL_MAESTRO]}>
-              <AppLayout page="configuracion"><Configuracion /></AppLayout>
             </RoleRoute>
           } />
 

@@ -15,7 +15,7 @@ import {
   Server, Monitor, Cpu, HardDrive, Wifi, Save,
   Package, Shield, Calendar, MapPin, User, Tag,
   ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings,
-  SlidersHorizontal, FilterX
+  SlidersHorizontal, FilterX, Network
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
@@ -1605,7 +1605,7 @@ export default function Inventario() {
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Buscar por serie, inventario, IP o clave..."
+                    placeholder="Buscar por serie, inventario, IP, cuenta o correo..."
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCursor(null); setCursors([]); }}
                     className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
@@ -2072,6 +2072,19 @@ export default function Inventario() {
                                       {fmt(bien.numSerie)}
                                     </span>
                                     <p className={`text-xs mt-0.5 truncate max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>Inv: {fmt(bien.numInv)}</p>
+                                    
+                                    {(() => {
+                                      const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
+                                      if (ips.length === 0 || hasWifiConflict) return null;
+                                      return (
+                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 w-fit" title={`IP(s): ${ips.join(', ')}`}>
+                                          <Network size={11} className="text-emerald-600" />
+                                          <span>{ips[0]}</span>
+                                          {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5">+{ips.length - 1}</span>}
+                                        </div>
+                                      );
+                                    })()}
+
                                     {hasWifiConflict && (
                                       <div className="flex items-center gap-1 mt-1 text-red-600 font-semibold text-[10px]" title={wifiConflictMsg}>
                                         <Wifi size={12} className="animate-pulse" />
@@ -2089,6 +2102,24 @@ export default function Inventario() {
                               <td className="px-4 py-3.5">
                                 <p className="font-semibold text-gray-900 text-sm">{bien.equipo}</p>
                                 <p className="text-xs text-gray-400">{bien.categoria?.nombre_categoria}</p>
+                                {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
+                                  <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-md p-1.5 flex flex-col gap-0.5 w-fit shadow-sm">
+                                    <div className="flex items-center gap-1.5 text-xs text-indigo-900" title={`Cuenta: ${bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}`}>
+                                      <div className="bg-indigo-200 text-indigo-700 p-0.5 rounded flex items-center justify-center shrink-0">
+                                        <User size={11} strokeWidth={2.5} />
+                                      </div>
+                                      <span className="font-bold whitespace-nowrap">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
+                                      {bien.cuentasPC.length > 1 && (
+                                        <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
+                                      )}
+                                    </div>
+                                    {bien.cuentasPC[0].correo && (
+                                      <div className="text-[10px] text-indigo-600 pl-6 font-semibold whitespace-nowrap" title={`Correo: ${bien.cuentasPC[0].correo}`}>
+                                        {bien.cuentasPC[0].correo}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-3.5 text-xs min-w-[200px]">
                                 <p className="font-semibold text-gray-900 text-[13px] break-words">{fmt(bien.unidadFisica)}</p>
@@ -2161,9 +2192,40 @@ export default function Inventario() {
                               {hasWifiConflict && <Wifi size={14} className="text-red-600 animate-pulse" title={wifiConflictMsg} />}
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
-                            <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded mt-1 inline-block">
-                              {fmt(bien.numSerie)}
-                            </span>
+                            {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
+                              <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-md p-1.5 flex flex-col gap-0.5 w-fit max-w-full shadow-sm">
+                                <div className="flex items-center gap-1.5 text-xs text-indigo-900">
+                                  <div className="bg-indigo-200 text-indigo-700 p-0.5 rounded flex items-center justify-center shrink-0">
+                                    <User size={11} strokeWidth={2.5} />
+                                  </div>
+                                  <span className="font-bold whitespace-nowrap">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
+                                  {bien.cuentasPC.length > 1 && (
+                                    <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0">+{bien.cuentasPC.length - 1}</span>
+                                  )}
+                                </div>
+                                {bien.cuentasPC[0].correo && (
+                                  <div className="text-[10px] text-indigo-600 pl-6 font-semibold whitespace-nowrap">
+                                    {bien.cuentasPC[0].correo}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                              <span className="font-mono text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                Serie: {fmt(bien.numSerie)}
+                              </span>
+                              {(() => {
+                                const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
+                                if (ips.length === 0 || hasWifiConflict) return null;
+                                return (
+                                  <div className="flex items-center gap-1 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                                    <Network size={10} className="text-emerald-600" />
+                                    <span>{ips[0]}</span>
+                                    {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5">+{ips.length - 1}</span>}
+                                  </div>
+                                );
+                              })()}
+                            </div>
                           </div>
                           <EstatusBadge estatus={bien.estatusOperativo} />
                         </div>

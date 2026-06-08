@@ -34,6 +34,7 @@ const NAV_BY_ROL = {
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Administración' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Administración' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
+    { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },
   ],
   3: [ // Usuario Estándar (solo consulta)
     { path: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, group: 'Principal' },
@@ -41,6 +42,7 @@ const NAV_BY_ROL = {
     { path: '/incidencias', label: 'Mis Incidencias', icon: AlertTriangle, group: 'Consulta' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Consulta' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Consulta' },
+    { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },
   ],
   4: [], // Sin Acceso — no debería llegar aquí
 };
