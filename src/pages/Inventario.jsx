@@ -2070,7 +2070,7 @@ export default function Inventario() {
                           </th>
                           <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                             <button onClick={() => toggleSort('modelo_categoria')} className="group flex items-center gap-1 hover:text-gray-700">
-                              Modelo / Categoría {getSortIcon('modelo_categoria')}
+                              Host / Modelo {getSortIcon('modelo_categoria')}
                             </button>
                           </th>
                           <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -2148,8 +2148,8 @@ export default function Inventario() {
                                 </div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <p className="font-semibold text-gray-900 text-sm">{bien.equipo}</p>
-                                <p className="text-xs text-gray-400">{bien.categoria?.nombre_categoria}</p>
+                                <p className="font-semibold text-gray-900 text-sm">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
+                                <p className="text-xs text-gray-400">{bien.equipo}</p>
                                 {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
                                   <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-md p-1.5 flex flex-col gap-0.5 w-fit shadow-sm">
                                     <div className="flex items-center gap-1.5 text-xs text-indigo-900" title={`Cuenta: ${bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}`}>
@@ -2235,11 +2235,11 @@ export default function Inventario() {
                         <div className="flex items-start justify-between gap-3 mb-3 pl-1">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700' : 'text-gray-900'}`}>{bien.equipo}</p>
+                              <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700' : 'text-gray-900'}`}>{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
                               {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
                               {hasWifiConflict && <Wifi size={14} className="text-red-600 animate-pulse" title={wifiConflictMsg} />}
                             </div>
-                            <p className="text-xs text-gray-400 mt-0.5">{bien.categoria?.nombre_categoria}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{bien.equipo}</p>
                             {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
                               <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-md p-1.5 flex flex-col gap-0.5 w-fit max-w-full shadow-sm">
                                 <div className="flex items-center gap-1.5 text-xs text-indigo-900">
