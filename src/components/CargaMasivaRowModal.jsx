@@ -268,7 +268,7 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
                     <div>
                       <label className={labelCls}>Estatus Operativo <span className="text-red-500">*</span></label>
                       <select value={formData.estatus_operativo} onChange={e => setFormData({ ...formData, estatus_operativo: e.target.value })} className={selectCls}>
-                        <option value="ALTA">ALTA</option>
+                        <option value="ACTIVO">ACTIVO</option>
                         <option value="BAJA">BAJA</option>
                         <option value="DAÑADO">DAÑADO</option>
                         <option value="DEVOLUCIÓN">DEVOLUCIÓN</option>

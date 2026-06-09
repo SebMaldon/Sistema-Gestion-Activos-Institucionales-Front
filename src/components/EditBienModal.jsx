@@ -1671,7 +1671,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                     onChange={(e) => setForm((f) => ({ ...f, estatus_operativo: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
                   >
-                    <option value="ALTA">Alta</option>
+                    <option value="ACTIVO">Activo</option>
                     <option value="BAJA">Baja</option>
                     <option value="DAÑADO">Dañado</option>
                     <option value="DEVOLUCIÓN">Devolución</option>
