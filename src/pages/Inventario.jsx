@@ -1643,17 +1643,9 @@ export default function Inventario() {
                     className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
                   >
                     <option value="">Todos los estatus</option>
-                    <option value="ALTA">Alta</option>
-                    <option value="BAJA">Baja</option>
-                    <option value="DAÑADO">Dañado</option>
-                    <option value="DEVOLUCIÓN">Devolución</option>
-                    <option value="OTRO">Otro</option>
-                    <option value="P_BAJA">Pre-Baja</option>
-                    <option value="PRESTAMO">Préstamo</option>
-                    <option value="SINIESTRADO">Siniestrado</option>
-                    <option value="SUSTITUIDO">Sustituido</option>
-                    <option value="TRASPASO OOAD">Traspaso OOAD</option>
-                    <option value="TRASPASO_FORANEO">Traspaso Foráneo</option>
+                    {catalogos?.catEstatusBienes?.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
                   </select>
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, con_notas_recientes: !p.con_notas_recientes })); setCursor(null); setCursors([]); }}

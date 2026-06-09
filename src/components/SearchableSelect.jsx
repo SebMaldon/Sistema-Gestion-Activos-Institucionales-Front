@@ -11,7 +11,8 @@ export default function SearchableSelect({
   disabled = false,
   className = "",
   error = false,
-  isLoading = false
+  isLoading = false,
+  allowCustom = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -44,13 +45,25 @@ export default function SearchableSelect({
       return 0;
     });
 
+    if (allowCustom && query && query.trim() !== '') {
+       const exactMatch = safeOptions.find(o => o.label?.toLowerCase() === query.trim().toLowerCase() || o.value?.toLowerCase() === query.trim().toLowerCase());
+       if (!exactMatch) {
+         result.unshift({ value: query.trim(), label: `Usar "${query.trim()}"`, isCustom: true });
+       }
+    }
+
     return result.slice(0, 100);
-  }, [options, query, value, onInputChange]);
+  }, [options, query, value, onInputChange, allowCustom]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         if (event.target.closest('.searchable-select-portal-menu')) return;
+        
+        if (allowCustom && query.trim() !== '') {
+          onChange(query.trim());
+        }
+        
         setIsOpen(false);
         setQuery('');
         if (onInputChange) onInputChange('');
@@ -58,7 +71,7 @@ export default function SearchableSelect({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onInputChange]);
+  }, [onInputChange, allowCustom, query, onChange]);
 
   useEffect(() => {
     if (isOpen && containerRef.current) {
@@ -109,7 +122,7 @@ export default function SearchableSelect({
       ? "border-red-300 focus:ring-red-500 hover:border-red-400" 
       : "border-gray-200 focus:ring-green-500 hover:border-green-400";
 
-  const displayValue = isOpen ? query : (selectedOption ? selectedOption.label : '');
+  const displayValue = isOpen ? query : (selectedOption ? selectedOption.label : (allowCustom ? value : ''));
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
@@ -130,7 +143,20 @@ export default function SearchableSelect({
             setQuery(''); 
             if (onInputChange) onInputChange('');
           }}
-          className={`w-full border rounded-lg pl-3 pr-8 py-2 text-sm bg-white transition-colors focus:outline-none focus:ring-1 ${stateClasses} ${!selectedOption && !isOpen ? 'text-gray-500' : 'text-gray-900'}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (allowCustom && query.trim() !== '') {
+                const exactMatch = (options || []).find(o => o.label?.toLowerCase() === query.trim().toLowerCase() || o.value?.toLowerCase() === query.trim().toLowerCase());
+                if (exactMatch) {
+                  handleSelect(exactMatch.value);
+                } else {
+                  handleSelect(query.trim());
+                }
+              }
+            }
+          }}
+          className={`w-full border rounded-lg pl-3 pr-8 py-2 text-sm bg-white transition-colors focus:outline-none focus:ring-1 ${stateClasses} ${!selectedOption && !isOpen && (!allowCustom || !value) ? 'text-gray-500' : 'text-gray-900'}`}
         />
         <button 
           type="button"

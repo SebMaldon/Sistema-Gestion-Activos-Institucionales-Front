@@ -11,13 +11,14 @@ import {
 import { GET_USUARIOS } from '../api/usuarios.queries';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
+import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
 import {
   FileText, Trash2, Loader2, Download, Eye, Check,
   Hash, Edit2, X, Printer, ChevronRight, AlertCircle,
   UserCheck, Plus, Upload, HelpCircle, MonitorUp
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFName } from 'pdf-lib';
 import * as XLSX from 'xlsx';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -38,6 +39,7 @@ export default function SalidasForm() {
   const usuario   = useAuthStore((s) => s.usuario);
   const isMaestro = usuario?.id_rol === ROLES_MAP.MAESTRO;
   const queryClient = useQueryClient();
+  const { data: catalogos } = useCatalogosBienes();
 
   // ─── Formulario ────────────────────────────────────────────
   const [form, setForm] = useState({
@@ -136,12 +138,12 @@ export default function SalidasForm() {
     },
   });
 
-  // ─── Efectos ──────────────────────────────────────────────
+  // ── Efectos ──
   useEffect(() => {
-    if (usuario?.nombre_completo && !form.responsable) {
-      setForm((p) => ({ ...p, responsable: usuario.nombre_completo }));
+    if (!form.responsable) {
+      setForm((p) => ({ ...p, responsable: 'GONZALEZ CERVANTES ANA LUISA' }));
     }
-  }, [usuario]);
+  }, []);
 
   useEffect(() => {
     const u = usuarioMatData?.usuarioPorMatricula;
@@ -192,9 +194,9 @@ export default function SalidasForm() {
         const nat = (bien.num_inv && bien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
         updated.push({
           id_bien:     bien.id_bien,
-          cantidad:    bien.num_serie || '1',
+          cantidad:    '1',
           naturaleza:  nat,
-          descripcion: `${bien.modelo?.descrip_disp || ''}${bien.num_inv ? ` - INV: ${bien.num_inv}` : ''}`,
+          descripcion: `${bien.modelo?.descrip_disp || ''}${bien.num_serie ? ` - S/N: ${bien.num_serie}` : ''}${bien.num_inv ? ` - INV: ${bien.num_inv}` : ''}`,
           originalData: bien,
         });
 
@@ -205,9 +207,9 @@ export default function SalidasForm() {
               const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
               updated.push({
                 id_bien:     monitorBien.id_bien,
-                cantidad:    monitorBien.num_serie || '1',
+                cantidad:    '1',
                 naturaleza:  natMon,
-                descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
+                descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_serie ? ` - S/N: ${monitorBien.num_serie}` : ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
                 originalData: monitorBien,
               });
             }
@@ -216,6 +218,19 @@ export default function SalidasForm() {
         return updated;
       });
     }
+  };
+
+  const handleAddManualBien = () => {
+    setBienesSeleccionados((p) => [
+      ...p,
+      {
+        id_bien: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        cantidad: '1',
+        naturaleza: 'BMNC',
+        descripcion: '',
+        originalData: null,
+      }
+    ]);
   };
 
   const handleUpdateBien = (idx, field, value) => {
@@ -506,16 +521,29 @@ export default function SalidasForm() {
       pageBytesList.push(await fillDoc(pageGroups[i], i + 1, i === 0));
     }
 
-    // Si es solo 1 página, devolver directo
-    if (pageBytesList.length === 1) return pageBytesList[0];
-
-    // Combinar páginas en un único documento
+    // Combinar páginas y escalarlas para aprovechar los márgenes
     const finalDoc = await PDFDocument.create();
     for (const bytes of pageBytesList) {
-      const src    = await PDFDocument.load(bytes);
-      const [page] = await finalDoc.copyPages(src, [0]);
-      finalDoc.addPage(page);
+      // Usar embedPdf permite re-dibujar la página aplanada a otra escala
+      const [embeddedPage] = await finalDoc.embedPdf(bytes, [0]);
+      
+      const scale = 1.15; // 15% más grande
+      const originalWidth = 612; // Letter
+      const originalHeight = 792;
+      const page = finalDoc.addPage([originalWidth, originalHeight]);
+      
+      // Centrar después de escalar
+      const x = (originalWidth - (originalWidth * scale)) / 2;
+      const y = (originalHeight - (originalHeight * scale)) / 2;
+
+      page.drawPage(embeddedPage, {
+        x: x,
+        y: y,
+        xScale: scale,
+        yScale: scale
+      });
     }
+
     return finalDoc.save();
   };
 
@@ -806,8 +834,13 @@ export default function SalidasForm() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Adscrito a</label>
-              <input type="text" name="adscripcion" value={form.adscripcion} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              <SearchableSelect
+                value={form.adscripcion}
+                onChange={(val) => setForm(p => ({ ...p, adscripcion: val }))}
+                options={catalogos?.unidades?.map(u => ({ value: u.descripcion || u.desc_corta, label: u.descripcion || u.desc_corta })) || []}
+                placeholder="Seleccionar o escribir..."
+                allowCustom={true}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Trabajador de</label>
@@ -928,7 +961,17 @@ export default function SalidasForm() {
 
           {/* Selector */}
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Buscar y Agregar Bien (Manual)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-gray-600">Buscar y Agregar Bien (Manual)</label>
+              <button
+                type="button"
+                onClick={handleAddManualBien}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded font-semibold transition-colors"
+                title="Añadir una fila vacía para un bien que no está registrado en el sistema"
+              >
+                <Plus size={12} /> Agregar Bien No Registrado
+              </button>
+            </div>
             <SearchableSelect
               value=""
               onChange={handleAddBien}

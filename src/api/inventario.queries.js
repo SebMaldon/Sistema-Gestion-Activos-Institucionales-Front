@@ -276,6 +276,7 @@ export const CHECK_DUPLICATE_IP_QUERY = gql`
 
 export const GET_CATALOGOS_BIENES_QUERY = gql`
   query GetCatalogosBienes {
+    catEstatusBienes
     catCategoriasActivo {
       id_categoria
       nombre_categoria
