@@ -8,7 +8,6 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    basicSsl(),
     obfuscator({
       include: ['src/**/*.js', 'src/**/*.jsx'],
       exclude: [/node_modules/],
@@ -46,9 +45,6 @@ export default defineConfig({
       }
     }),
   ],
-  server: {
-    host: true,
-  },
   build: {
     sourcemap: false,
     minify: 'terser',
