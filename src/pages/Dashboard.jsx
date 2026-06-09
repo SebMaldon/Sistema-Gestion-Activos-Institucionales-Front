@@ -369,7 +369,7 @@ export default function Dashboard() {
   const garantiasVencer = garantiasVencerList.length;
 
   const inactivosCount = useMemo(() => {
-    return bienes.filter(b => (b.estatus_operativo || '').toUpperCase() === 'INACTIVO').length;
+    return bienes.filter(b => (b.estatus_operativo || '').toUpperCase() === 'BAJA').length;
   }, [bienes]);
 
   const tasaDisponibilidad = useMemo(() => {
@@ -447,7 +447,7 @@ export default function Dashboard() {
     }).length;
     const inactivos = matched.filter(b => {
       const st = (b.estatus_operativo || '').toUpperCase();
-      return st === 'INACTIVO';
+      return st === 'BAJA';
     }).length;
     return { total, activos, prestamo, inactivos };
   };
@@ -630,7 +630,7 @@ export default function Dashboard() {
         {/* Card 4: Tasa Disponibilidad o Sustituto */}
         {isPrivileged ? (
           <div 
-            onClick={() => navigate('/inventario', { state: { filterStatus: 'INACTIVO' } })}
+            onClick={() => navigate('/inventario', { state: { filterStatus: 'BAJA' } })}
             className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
           >
             <div className="flex items-start justify-between">

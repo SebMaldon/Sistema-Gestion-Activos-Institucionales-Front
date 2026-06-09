@@ -8,7 +8,7 @@ import { GET_CATALOGOS_BIENES_QUERY } from '../api/inventario.queries';
  */
 export function useCatalogosBienes() {
   return useQuery({
-    queryKey: ['catalogos-bienes'],
+    queryKey: ['catalogos-bienes', 'v2'],
     queryFn: async () => {
       const data = await gqlClient.request(GET_CATALOGOS_BIENES_QUERY);
       return {
@@ -26,6 +26,8 @@ export function useCatalogosBienes() {
         ubicaciones:   data.ubicaciones ?? [],
         // Usuarios activos para resguardo
         usuarios:       data.usuarios?.edges?.map((e) => e.node) ?? [],
+        // Estatus operativos
+        catEstatusBienes: data.catEstatusBienes ?? [],
       };
     },
     staleTime: 5 * 60 * 1000,
