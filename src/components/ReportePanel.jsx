@@ -207,7 +207,7 @@ export default function ReportePanel({ serverFilter, activeTab, onClose }) {
 
     // Estatus
     const estatusMap = {
-      'ALTA':          { label: 'Alta', color: '#15803D' },
+      'ACTIVO':          { label: 'Activo', color: '#15803D' },
       'BAJA':          { label: 'Baja', color: '#B91C1C' },
       'DAÑADO':        { label: 'Dañado', color: '#D97706' },
       'DEVOLUCIÓN':    { label: 'Devolución', color: '#7E22CE' },

@@ -73,7 +73,7 @@ function fmt(v) { return v || '—'; }
 // ─── Badge de Estatus ─────────────────────────────────────────────────────────
 function EstatusBadge({ estatus }) {
   const map = {
-    'ALTA':          { bg: '#dcfce7', color: '#15803d', label: 'Alta' },
+    'ACTIVO':          { bg: '#dcfce7', color: '#15803d', label: 'Activo' },
     'BAJA':          { bg: '#fee2e2', color: '#b91c1c', label: 'Baja' },
     'DAÑADO':        { bg: '#fef3c7', color: '#d97706', label: 'Dañado' },
     'DEVOLUCIÓN':    { bg: '#f3e8ff', color: '#7e22ce', label: 'Devolución' },
@@ -103,7 +103,7 @@ const FORM_EMPTY = {
   num_serie: '',
   num_inv: '',
   cantidad: 1,
-  estatus_operativo: 'ALTA',
+  estatus_operativo: 'ACTIVO',
   clave_unidad_ref: '',
   clave_modelo: '',
   id_usuario_resguardo: '',
@@ -1076,7 +1076,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
       num_serie:          bien.numSerie === 'N/D' ? '' : (bien.numSerie ?? ''),
       num_inv:            bien.numInv === 'N/D' ? '' : (bien.numInv ?? ''),
       cantidad:           bien.cantidad ?? 1,
-      estatus_operativo:  bien.estatusOperativo ?? 'ALTA',
+      estatus_operativo:  bien.estatusOperativo ?? 'ACTIVO',
       clave_unidad_ref:   bien.claveUnidadRef ?? '',
       clave_modelo:       bien.claveModelo ?? '',
       id_usuario_resguardo: bien.idUsuarioResguardo ?? '',

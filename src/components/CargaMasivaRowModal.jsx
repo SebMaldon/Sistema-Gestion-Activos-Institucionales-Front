@@ -119,7 +119,7 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
     num_serie: row.num_serie || '',
     num_inv: row.num_inv || '',
     cantidad: row.cantidad || 1,
-    estatus_operativo: row.estatus_operativo || 'ALTA',
+    estatus_operativo: row.estatus_operativo || 'ACTIVO',
     id_categoria: row.id_categoria || '',
     id_unidad_medida: row.id_unidad_medida || '',
     clave_unidad_ref: row.clave_unidad_ref || '',

@@ -341,7 +341,7 @@ export default function Dashboard() {
   const activosList = useMemo(() => {
     return bienes.filter(b => {
       const st = (b.estatus_operativo || '').toUpperCase();
-      const isActive = st === 'ALTA' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+      const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
       const td = b.modelo?.tipoDispositivo;
       const isMonitor = String(td?.tipo_disp) === '12' || (td?.nombre_tipo || '').toUpperCase().includes('MONITOR');
       return isActive && !isMonitor;
@@ -439,7 +439,7 @@ export default function Dashboard() {
     const total = matched.length;
     const activos = matched.filter(b => {
       const st = (b.estatus_operativo || '').toUpperCase();
-      return st === 'ALTA';
+      return st === 'ACTIVO';
     }).length;
     const prestamo = matched.filter(b => {
       const st = (b.estatus_operativo || '').toUpperCase();
