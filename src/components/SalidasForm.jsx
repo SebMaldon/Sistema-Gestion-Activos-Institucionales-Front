@@ -929,22 +929,17 @@ export default function SalidasForm() {
           {/* Selector */}
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
             <label className="block text-xs font-semibold text-gray-600 mb-1">Buscar y Agregar Bien (Manual)</label>
-            {isLoadingBienes ? (
-              <div className="flex items-center text-xs text-gray-500">
-                <Loader2 size={14} className="animate-spin mr-2" /> Cargando inventario…
-              </div>
-            ) : (
-              <SearchableSelect
-                value=""
-                onChange={handleAddBien}
-                onInputChange={setBienesSearch}
-                options={bienesList.map((b) => ({
-                  value: b.id_bien,
-                  label: `${b.modelo?.descrip_disp || 'Desconocido'} — S/N: ${b.num_serie || 'N/A'}`,
-                }))}
-                placeholder="Escribe el modelo, serie o inventario..."
-              />
-            )}
+            <SearchableSelect
+              value=""
+              onChange={handleAddBien}
+              onInputChange={setBienesSearch}
+              options={bienesList.map((b) => ({
+                value: b.id_bien,
+                label: `${b.modelo?.descrip_disp || 'Desconocido'} — S/N: ${b.num_serie || 'N/A'}`,
+              }))}
+              placeholder="Escribe el modelo, serie o inventario..."
+              isLoading={isLoadingBienes}
+            />
           </div>
 
           {/* Lista */}
