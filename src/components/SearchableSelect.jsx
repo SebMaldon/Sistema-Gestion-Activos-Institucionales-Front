@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 export default function SearchableSelect({ 
   value, 
   onChange, 
+  onInputChange,
   options, 
   placeholder = "Seleccionar...", 
   disabled = false,
@@ -24,7 +25,7 @@ export default function SearchableSelect({
   const filteredOptions = useMemo(() => {
     const safeOptions = options || [];
     let result = safeOptions;
-    if (query) {
+    if (query && !onInputChange) {
       const lowercaseQuery = query.toLowerCase();
       result = safeOptions.filter(opt => {
         if (!opt) return false;
@@ -43,22 +44,20 @@ export default function SearchableSelect({
     });
 
     return result.slice(0, 100);
-  }, [options, query, value]);
+  }, [options, query, value, onInputChange]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Ignoramos clics si estamos haciendo clic dentro del propio dropdown (el portal) o el input.
-      // Le añadiremos un id o clase especial al dropdown para evitar cerrarlo al dar clic dentro de él.
       if (containerRef.current && !containerRef.current.contains(event.target)) {
-        // También asegurarnos que no dimos clic en el propio menú que está en el portal
         if (event.target.closest('.searchable-select-portal-menu')) return;
         setIsOpen(false);
         setQuery('');
+        if (onInputChange) onInputChange('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [onInputChange]);
 
   useEffect(() => {
     if (isOpen && containerRef.current) {
@@ -99,6 +98,7 @@ export default function SearchableSelect({
     onChange(val);
     setIsOpen(false);
     setQuery('');
+    if (onInputChange) onInputChange('');
     inputRef.current?.blur();
   };
 
@@ -121,11 +121,13 @@ export default function SearchableSelect({
           value={displayValue}
           onChange={(e) => {
             setQuery(e.target.value);
+            if (onInputChange) onInputChange(e.target.value);
             if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => {
             setIsOpen(true);
             setQuery(''); 
+            if (onInputChange) onInputChange('');
           }}
           className={`w-full border rounded-lg pl-3 pr-8 py-2 text-sm bg-white transition-colors focus:outline-none focus:ring-1 ${stateClasses} ${!selectedOption && !isOpen ? 'text-gray-500' : 'text-gray-900'}`}
         />

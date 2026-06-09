@@ -11,27 +11,39 @@ export const GET_ARCHIVOS = gql`
 `;
 
 export const GET_MESA_CORRESPONDENCIAS = gql`
-  query GetMesaCorrespondencias($filter: CorrespondenciaFilterInput) {
-    getMesaCorrespondencias(filter: $filter) {
-      Folio
-      NoOficio
-      FechaRecepcion
-      FechaOficio
-      Remitente
-      Descripcion
-      Tipo
-      Archivo
-      unidad {
-        clave
-        descripcion
+  query GetMesaCorrespondencias($filter: CorrespondenciaFilterInput, $pagination: PaginationInput) {
+    getMesaCorrespondencias(filter: $filter, pagination: $pagination) {
+      edges {
+        cursor
+        node {
+          Folio
+          NoOficio
+          FechaRecepcion
+          FechaOficio
+          Remitente
+          Descripcion
+          Tipo
+          Archivo
+          unidad {
+            clave
+            descripcion
+          }
+          ubicacion {
+            id_ubicacion
+            nombre_ubicacion
+          }
+          archivo_ref {
+            ID
+            Archivo
+          }
+        }
       }
-      ubicacion {
-        id_ubicacion
-        nombre_ubicacion
-      }
-      archivo_ref {
-        ID
-        Archivo
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+        totalCount
       }
     }
   }
@@ -51,8 +63,8 @@ export const getArchivos = async () => {
   return getArchivos;
 };
 
-export const getMesaCorrespondencias = async (filter) => {
-  const { getMesaCorrespondencias } = await gqlClient.request(GET_MESA_CORRESPONDENCIAS, { filter });
+export const getMesaCorrespondencias = async (filter, pagination) => {
+  const { getMesaCorrespondencias } = await gqlClient.request(GET_MESA_CORRESPONDENCIAS, { filter, pagination });
   return getMesaCorrespondencias;
 };
 

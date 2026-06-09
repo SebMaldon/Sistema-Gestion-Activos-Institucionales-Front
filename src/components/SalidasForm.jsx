@@ -59,6 +59,14 @@ export default function SalidasForm() {
   const [bienesSeleccionados, setBienesSeleccionados] = useState([]);
   const fileInputRef = useRef(null);
   const [incluirMonitores, setIncluirMonitores] = useState(false);
+  const [bienesSearch, setBienesSearch] = useState('');
+  const [debouncedBienesSearch, setDebouncedBienesSearch] = useState('');
+
+  // Debounce para bienes
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedBienesSearch(bienesSearch), 400);
+    return () => clearTimeout(timer);
+  }, [bienesSearch]);
 
   // ─── Flujo PDF ─────────────────────────────────────────────
   const [etapa, setEtapa]                 = useState('formulario'); // 'formulario'|'preview'|'confirmado'
@@ -85,10 +93,10 @@ export default function SalidasForm() {
   });
 
   const { data: bienesData, isLoading: isLoadingBienes } = useQuery({
-    queryKey: ['bienes', { estatus_operativo: 'ALTA' }],
+    queryKey: ['bienes', 'TODOS', debouncedBienesSearch],
     queryFn:  () => gqlClient.request(GET_BIENES_QUERY, {
-      filter: { estatus_operativo: 'ALTA' },
-      pagination: { first: 1000 },
+      filter: { search: debouncedBienesSearch },
+      pagination: { first: 20 },
     }),
   });
 
@@ -482,10 +490,12 @@ export default function SalidasForm() {
         setTextField(pdfRowField(row, 3), bien.descripcion || '');
       });
 
-      // Hacer campos de solo lectura
+      // Hacer campos de solo lectura y acoplar al documento
       pdfForm.getFields().forEach((f) => {
         try { f.enableReadOnly(); } catch { /* campo ya eliminado */ }
       });
+
+      pdfForm.flatten();
 
       return doc.save();
     };
@@ -927,11 +937,12 @@ export default function SalidasForm() {
               <SearchableSelect
                 value=""
                 onChange={handleAddBien}
+                onInputChange={setBienesSearch}
                 options={bienesList.map((b) => ({
                   value: b.id_bien,
                   label: `${b.modelo?.descrip_disp || 'Desconocido'} — S/N: ${b.num_serie || 'N/A'}`,
                 }))}
-                placeholder="Escribe el modelo o S/N…"
+                placeholder="Escribe el modelo, serie o inventario..."
               />
             )}
           </div>

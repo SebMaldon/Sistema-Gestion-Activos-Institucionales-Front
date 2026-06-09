@@ -41,10 +41,44 @@ export default function Correspondencia() {
   });
   const [activeFilters, setActiveFilters] = useState({});
 
-  const { data: correspondencias = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ['mesaCorrespondencias', activeFilters],
-    queryFn: () => getMesaCorrespondencias(Object.keys(activeFilters).length > 0 ? activeFilters : undefined),
+  const [cursor, setCursor] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  const { data: correspondenciasData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['mesaCorrespondencias', activeFilters, cursor],
+    queryFn: () => getMesaCorrespondencias(
+      Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+      { first: 30, after: cursor }
+    ),
   });
+
+  const correspondencias = correspondenciasData?.edges?.map(e => e.node) || [];
+  const pageInfo = correspondenciasData?.pageInfo;
+
+  // Handlers Paginación
+  const handleNextPage = () => {
+    if (pageInfo?.hasNextPage) {
+      setHistory(prev => [...prev, cursor]);
+      setCursor(pageInfo.endCursor);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (history.length > 0) {
+      const newHistory = [...history];
+      const prevCursor = newHistory.pop();
+      setHistory(newHistory);
+      setCursor(prevCursor);
+    } else {
+      setCursor(null);
+    }
+  };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCursor(null);
+    setHistory([]);
+  }, [activeFilters]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -162,108 +196,139 @@ export default function Correspondencia() {
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
 
         {/* Tabla de Resultados */}
-        <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-w-0">
-          <div className="flex-1 overflow-auto">
+        <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-w-0 h-full overflow-hidden">
+          <div className="flex-1 overflow-x-auto overflow-y-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-full min-h-[300px]">
                 <div className="flex flex-col items-center gap-3 text-gray-400">
                   <Loader2 size={36} className="animate-spin text-blue-500" />
                   <p className="text-sm font-medium">Cargando oficios...</p>
                 </div>
               </div>
             ) : isError ? (
-              <div className="flex items-center justify-center h-full text-red-500 flex-col gap-2">
+              <div className="flex items-center justify-center h-full text-red-500 flex-col gap-2 min-h-[300px]">
                 <AlertTriangle size={32} />
                 <p>Error al cargar la correspondencia</p>
               </div>
             ) : correspondencias.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-400 flex-col gap-2">
+              <div className="flex items-center justify-center h-full text-gray-400 flex-col gap-2 min-h-[300px]">
                 <FileText size={32} className="opacity-50" />
                 <p>No se encontraron registros</p>
               </div>
             ) : (
-              <table className="w-full text-left text-xs table-fixed">
-                <colgroup>
-                  <col style={{width: '2.5rem'}} />
-                  <col style={{width: '3.5rem'}} />
-                  <col style={{width: '5rem'}} />
-                  <col style={{width: '7.5rem'}} />
-                  <col style={{width: '7.5rem'}} />
-                  <col style={{width: '8rem'}} />
-                  <col style={{width: '8rem'}} />
-                  <col style={{width: '8rem'}} />
-                  <col />
-                  <col style={{width: '4.5rem'}} />
-                  <col style={{width: '7rem'}} />
-                </colgroup>
-                <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10 uppercase tracking-wider font-bold shadow-sm">
-                  <tr>
-                    <th className="px-4 py-3 text-center w-12"></th>
-                    <th className="px-4 py-3">Folio</th>
-                    <th className="px-4 py-3">NoOficio</th>
-                    <th className="px-4 py-3">FechaRecepcion</th>
-                    <th className="px-4 py-3">FechaOficio</th>
-                    <th className="px-4 py-3">Remitente</th>
-                    <th className="px-4 py-3">Unidad</th>
-                    <th className="px-4 py-3">Ubicación</th>
-                    <th className="px-4 py-3 w-64">Descripcion</th>
-                    <th className="px-4 py-3 text-center">Tipo</th>
-                    <th className="px-4 py-3 text-center">Archivo</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {correspondencias.map(corr => (
-                    <tr key={corr.Folio} className="hover:bg-gray-50/80 transition-colors group">
-                      <td className="px-4 py-3 text-center">
-                        <CheckCircle size={18} className="text-green-500 inline-block" />
-                      </td>
-                      <td className="px-4 py-3 font-bold text-gray-800">{corr.Folio}</td>
-                      <td className="px-4 py-3 text-blue-600 font-semibold">
-                        <HighlightText text={corr.NoOficio || '—'} highlight={activeFilters.NoOficio || activeFilters.PalabraClave} />
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaRecepcion)}</td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaOficio)}</td>
-                      <td className="px-4 py-3 text-gray-800 font-medium">
-                        <HighlightText text={corr.Remitente || '—'} highlight={activeFilters.PalabraClave} />
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 align-top leading-snug">
-                        {corr.unidad?.descripcion || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 align-top leading-snug">
-                        {corr.ubicacion?.nombre_ubicacion || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 align-top">
-                        <div className={`break-words whitespace-pre-wrap ${expandedDesc[corr.Folio] ? '' : 'line-clamp-3'}`}>
-                          <HighlightText text={corr.Descripcion} highlight={activeFilters.PalabraClave} />
-                        </div>
-                        {corr.Descripcion && corr.Descripcion.length > 80 && (
-                          <button onClick={() => toggleDesc(corr.Folio)} className="text-blue-500 hover:underline text-[10px] mt-1 font-semibold block">
-                            {expandedDesc[corr.Folio] ? 'Ver menos' : 'Ver más'}
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {corr.Tipo === 1 ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md">
-                            <ArrowUpCircle size={12} /> Env.
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-md">
-                            <ArrowDownCircle size={12} /> Rec.
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center font-semibold text-gray-700">
-                        {corr.archivo_ref?.Archivo || '—'}
-                      </td>
+              <div className="min-w-[1000px]">
+                <table className="w-full text-left text-xs table-fixed">
+                  <colgroup>
+                    <col style={{width: '2.5rem'}} />
+                    <col style={{width: '3.5rem'}} />
+                    <col style={{width: '5rem'}} />
+                    <col style={{width: '7.5rem'}} />
+                    <col style={{width: '7.5rem'}} />
+                    <col style={{width: '8rem'}} />
+                    <col style={{width: '8rem'}} />
+                    <col style={{width: '8rem'}} />
+                    <col />
+                    <col style={{width: '4.5rem'}} />
+                    <col style={{width: '7rem'}} />
+                  </colgroup>
+                  <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10 uppercase tracking-wider font-bold shadow-sm">
+                    <tr>
+                      <th className="px-4 py-3 text-center w-12"></th>
+                      <th className="px-4 py-3">Folio</th>
+                      <th className="px-4 py-3">NoOficio</th>
+                      <th className="px-4 py-3">FechaRecepcion</th>
+                      <th className="px-4 py-3">FechaOficio</th>
+                      <th className="px-4 py-3">Remitente</th>
+                      <th className="px-4 py-3">Unidad</th>
+                      <th className="px-4 py-3">Ubicación</th>
+                      <th className="px-4 py-3 w-64">Descripcion</th>
+                      <th className="px-4 py-3 text-center">Tipo</th>
+                      <th className="px-4 py-3 text-center">Archivo</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {correspondencias.map(corr => (
+                      <tr key={corr.Folio} className="hover:bg-gray-50/80 transition-colors group">
+                        <td className="px-4 py-3 text-center">
+                          <CheckCircle size={18} className="text-green-500 inline-block" />
+                        </td>
+                        <td className="px-4 py-3 font-bold text-gray-800">{corr.Folio}</td>
+                        <td className="px-4 py-3 text-blue-600 font-semibold">
+                          <HighlightText text={corr.NoOficio || '—'} highlight={activeFilters.NoOficio || activeFilters.PalabraClave} />
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaRecepcion)}</td>
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaOficio)}</td>
+                        <td className="px-4 py-3 text-gray-800 font-medium">
+                          <HighlightText text={corr.Remitente || '—'} highlight={activeFilters.PalabraClave} />
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 align-top leading-snug">
+                          {corr.unidad?.descripcion || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 align-top leading-snug">
+                          {corr.ubicacion?.nombre_ubicacion || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 align-top">
+                          <div className={`break-words whitespace-pre-wrap ${expandedDesc[corr.Folio] ? '' : 'line-clamp-3'}`}>
+                            <HighlightText text={corr.Descripcion} highlight={activeFilters.PalabraClave} />
+                          </div>
+                          {corr.Descripcion && corr.Descripcion.length > 80 && (
+                            <button onClick={() => toggleDesc(corr.Folio)} className="text-blue-500 hover:underline text-[10px] mt-1 font-semibold block">
+                              {expandedDesc[corr.Folio] ? 'Ver menos' : 'Ver más'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {corr.Tipo === 1 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md">
+                              <ArrowUpCircle size={12} /> Env.
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-md">
+                              <ArrowDownCircle size={12} /> Rec.
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center font-semibold text-gray-700">
+                          {corr.archivo_ref?.Archivo || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        </div>
 
+          {/* Controles de Paginación */}
+          {pageInfo && (
+            <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-4 border-t border-gray-100 flex-shrink-0 gap-4">
+              <div className="flex flex-col items-start text-xs text-gray-500 gap-1">
+                <span className="font-medium">
+                  Total: <strong className="text-gray-800 text-sm">{pageInfo.totalCount}</strong> unidades registradas.
+                </span>
+                <span className="font-bold tracking-wider uppercase text-[10px] text-gray-400">
+                  PÁGINA {history.length + 1} DE {Math.max(1, Math.ceil(pageInfo.totalCount / 30))}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={history.length === 0}
+                  className="px-5 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={handleNextPage}
+                  disabled={!pageInfo.hasNextPage}
+                  className="px-5 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <FormCorrespondenciaModal 
