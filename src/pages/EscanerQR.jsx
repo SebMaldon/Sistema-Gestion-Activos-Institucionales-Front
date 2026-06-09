@@ -235,7 +235,7 @@ export default function EscanerQR() {
   const hasNoInvMsg = foundAsset?.inconvenientes?.find(i => i.toLowerCase().includes('inventario')) ? 'Sin número de inventario' : null;
 
   return (
-    <div className="p-4 sm:p-6 fade-in h-full flex flex-col overflow-hidden">
+    <div className="p-4 sm:p-6 fade-in xl:h-full flex flex-col xl:overflow-hidden">
       <style>{`
         @keyframes scanGlow {
           0%   { transform: translateY(-100%); opacity: 0; }
@@ -252,7 +252,7 @@ export default function EscanerQR() {
       </div>
 
       {/* ── Grid de 2 columnas en desktop, apilado en móvil ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch flex-1 min-h-0 overflow-y-auto xl:overflow-hidden pb-10 xl:pb-0">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start xl:items-stretch flex-1 min-h-0 xl:overflow-hidden pb-10 xl:pb-0">
         
         {/* ═══ COLUMNA IZQUIERDA: Escáner ═══ */}
         <div className="xl:col-span-4 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col shrink-0">
@@ -351,7 +351,7 @@ export default function EscanerQR() {
         </div>
 
         {/* ═══ COLUMNA DERECHA: Resultado Detallado ═══ */}
-        <div className="xl:col-span-8 flex flex-col h-full min-h-0 shrink-0">
+        <div className="xl:col-span-8 flex flex-col xl:h-full min-h-0 shrink-0">
           
           {isFetching && (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-14 flex flex-col items-center gap-3">
@@ -438,7 +438,7 @@ export default function EscanerQR() {
           )}
 
           {!isFetching && foundAsset && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden fade-in flex flex-col h-full min-h-0">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden fade-in flex flex-col xl:h-full min-h-0">
               
               {/* ── Encabezado del Bien ── */}
               <div className="p-5 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 bg-gradient-to-br from-green-50/80 to-emerald-50/80 border-b border-green-100">
@@ -483,7 +483,7 @@ export default function EscanerQR() {
               </div>
 
               {/* ── Contenido de Pestañas ── */}
-              <div className="flex-1 overflow-y-auto p-5 min-h-0">
+              <div className="flex-1 xl:overflow-y-auto p-4 sm:p-5 min-h-0">
                 
                 {/* TAB: Información */}
                 {fichaTabs === 'info' && (
