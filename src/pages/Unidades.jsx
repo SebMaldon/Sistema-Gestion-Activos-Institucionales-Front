@@ -340,6 +340,16 @@ export default function Unidades() {
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-gray-800 break-words" title={node.descripcion}>{node.descripcion || 'Sin descripción'}</p>
                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{node.clave}</p>
+                        {(() => {
+                          const refs = [...new Set((node.segmentos || []).map(s => s.no_ref).filter(Boolean))];
+                          if (refs.length === 0) return null;
+                          return (
+                            <p className="text-[10px] font-bold text-gray-500 mt-0.5">
+                              {refs.length === 1 ? 'REF: ' : 'REFS: '}
+                              <span className="text-gray-700">{refs.join(', ')}</span>
+                            </p>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 max-w-[200px]">
