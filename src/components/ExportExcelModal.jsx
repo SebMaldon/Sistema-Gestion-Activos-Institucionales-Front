@@ -136,8 +136,11 @@ export function buildDescription({ activeTab, advFilters, filterStatus, search, 
 
   // Estatus
   const estatusMap = {
-    ACTIVO: 'Activo', EN_REPARACION: 'En Reparación', BAJA: 'Baja',
-    INACTIVO: 'Inactivo', PRESTAMO: 'Préstamo',
+    'ALTA': 'Alta', 'BAJA': 'Baja', 'DAÑADO': 'Dañado',
+    'DEVOLUCIÓN': 'Devolución', 'OTRO': 'Otro', 'P_BAJA': 'Pre-Baja',
+    'PRESTAMO': 'Préstamo', 'SINIESTRADO': 'Siniestrado',
+    'SUSTITUIDO': 'Sustituido', 'TRASPASO OOAD': 'Traspaso OOAD',
+    'TRASPASO_FORANEO': 'Traspaso Foráneo'
   };
   if (filterStatus) partes.push(`estatus: ${estatusMap[filterStatus] || filterStatus}`);
 
@@ -406,8 +409,8 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
       // Resaltar columna Estatus (col 14 en el nuevo layout)
       if (c === 14) {
         const v = String(ws[cellAddr].v || '');
-        const colorMap = { ACTIVO: '15803D', BAJA: 'B91C1C', EN_REPARACION: 'A16207', PRESTAMO: '1D4ED8', INACTIVO: '6B7280' };
-        const bgMap   = { ACTIVO: 'DCFCE7', BAJA: 'FEE2E2', EN_REPARACION: 'FEF9C3', PRESTAMO: 'DBEAFE', INACTIVO: 'F3F4F6' };
+        const colorMap = { 'ALTA': '15803D', 'BAJA': 'B91C1C', 'DAÑADO': 'D97706', 'DEVOLUCIÓN': '7E22CE', 'OTRO': '374151', 'P_BAJA': 'C2410C', 'PRESTAMO': '1D4ED8', 'SINIESTRADO': '991B1B', 'SUSTITUIDO': '4338CA', 'TRASPASO OOAD': '0F766E', 'TRASPASO_FORANEO': '0369A1' };
+        const bgMap   = { 'ALTA': 'DCFCE7', 'BAJA': 'FEE2E2', 'DAÑADO': 'FEF3C7', 'DEVOLUCIÓN': 'F3E8FF', 'OTRO': 'F3F4F6', 'P_BAJA': 'FFEDD5', 'PRESTAMO': 'DBEAFE', 'SINIESTRADO': 'FEF2F2', 'SUSTITUIDO': 'E0E7FF', 'TRASPASO OOAD': 'CCFBF1', 'TRASPASO_FORANEO': 'CFFAFE' };
         ws[cellAddr].s.font.color.rgb = colorMap[v] || COLOR_TEXT;
         ws[cellAddr].s.fill.fgColor.rgb = bgMap[v] || baseFill;
         ws[cellAddr].s.font.bold = true;
@@ -421,10 +424,10 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
   XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
 
   // ─── Hoja 2: Resumen ──────────────────────────────────────────────────────
-  const estatusMap = { ACTIVO: 'Activo', EN_REPARACION: 'En Reparación', BAJA: 'Baja', PRESTAMO: 'Préstamo', INACTIVO: 'Inactivo' };
+  const estatusMap2 = { 'ALTA': 'Alta', 'BAJA': 'Baja', 'DAÑADO': 'Dañado', 'DEVOLUCIÓN': 'Devolución', 'OTRO': 'Otro', 'P_BAJA': 'Pre-Baja', 'PRESTAMO': 'Préstamo', 'SINIESTRADO': 'Siniestrado', 'SUSTITUIDO': 'Sustituido', 'TRASPASO OOAD': 'Traspaso OOAD', 'TRASPASO_FORANEO': 'Traspaso Foráneo' };
   const byEstatus = {};
   bienes.forEach(b => {
-    const key = estatusMap[b.estatusOperativo] || b.estatusOperativo || 'Desconocido';
+    const key = estatusMap2[b.estatusOperativo] || b.estatusOperativo || 'Desconocido';
     byEstatus[key] = (byEstatus[key] || 0) + 1;
   });
 

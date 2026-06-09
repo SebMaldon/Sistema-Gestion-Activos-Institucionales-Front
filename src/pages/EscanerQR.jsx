@@ -115,14 +115,17 @@ function SoftwareTable({ programas }) {
 
 function EstatusBadge({ estatus }) {
   const map = {
-    'ACTIVO':        { bg: '#dcfce7', color: '#15803d', label: 'Activo' },
-    'Activo':        { bg: '#dcfce7', color: '#15803d', label: 'Activo' },
-    'EN_REPARACION': { bg: '#fef9c3', color: '#a16207', label: 'En Reparación' },
-    'En Reparación': { bg: '#fef9c3', color: '#a16207', label: 'En Reparación' },
+    'ALTA':          { bg: '#dcfce7', color: '#15803d', label: 'Alta' },
     'BAJA':          { bg: '#fee2e2', color: '#b91c1c', label: 'Baja' },
-    'Baja':          { bg: '#fee2e2', color: '#b91c1c', label: 'Baja' },
+    'DAÑADO':        { bg: '#fef3c7', color: '#d97706', label: 'Dañado' },
+    'DEVOLUCIÓN':    { bg: '#f3e8ff', color: '#7e22ce', label: 'Devolución' },
+    'OTRO':          { bg: '#f3f4f6', color: '#374151', label: 'Otro' },
+    'P_BAJA':        { bg: '#ffedd5', color: '#c2410c', label: 'Pre-Baja' },
     'PRESTAMO':      { bg: '#dbeafe', color: '#1d4ed8', label: 'Préstamo' },
-    'Préstamo':      { bg: '#dbeafe', color: '#1d4ed8', label: 'Préstamo' },
+    'SINIESTRADO':   { bg: '#fef2f2', color: '#991b1b', label: 'Siniestrado' },
+    'SUSTITUIDO':    { bg: '#e0e7ff', color: '#4338ca', label: 'Sustituido' },
+    'TRASPASO OOAD': { bg: '#ccfbf1', color: '#0f766e', label: 'Traspaso OOAD' },
+    'TRASPASO_FORANEO': { bg: '#cffafe', color: '#0369a1', label: 'Traspaso Foráneo' },
   };
   const s = map[estatus] ?? { bg: '#f3f4f6', color: '#374151', label: estatus };
   return (

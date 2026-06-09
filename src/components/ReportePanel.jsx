@@ -207,11 +207,17 @@ export default function ReportePanel({ serverFilter, activeTab, onClose }) {
 
     // Estatus
     const estatusMap = {
-      ACTIVO: { label: 'Activo', color: '#15803D' },
-      EN_REPARACION: { label: 'En Reparación', color: '#A16207' },
-      BAJA: { label: 'Baja', color: '#B91C1C' },
-      PRESTAMO: { label: 'Préstamo', color: '#1D4ED8' },
-      INACTIVO: { label: 'Inactivo', color: '#6B7280' },
+      'ALTA':          { label: 'Alta', color: '#15803D' },
+      'BAJA':          { label: 'Baja', color: '#B91C1C' },
+      'DAÑADO':        { label: 'Dañado', color: '#D97706' },
+      'DEVOLUCIÓN':    { label: 'Devolución', color: '#7E22CE' },
+      'OTRO':          { label: 'Otro', color: '#374151' },
+      'P_BAJA':        { label: 'Pre-Baja', color: '#C2410C' },
+      'PRESTAMO':      { label: 'Préstamo', color: '#1D4ED8' },
+      'SINIESTRADO':   { label: 'Siniestrado', color: '#991B1B' },
+      'SUSTITUIDO':    { label: 'Sustituido', color: '#4338CA' },
+      'TRASPASO OOAD': { label: 'Traspaso OOAD', color: '#0F766E' },
+      'TRASPASO_FORANEO': { label: 'Traspaso Foráneo', color: '#0369A1' },
     };
     const byEstatus = {};
     const byTipoDetalle = {};

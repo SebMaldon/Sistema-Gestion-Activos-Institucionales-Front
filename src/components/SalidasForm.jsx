@@ -85,9 +85,9 @@ export default function SalidasForm() {
   });
 
   const { data: bienesData, isLoading: isLoadingBienes } = useQuery({
-    queryKey: ['bienes', { estatus_operativo: 'ACTIVO' }],
+    queryKey: ['bienes', { estatus_operativo: 'ALTA' }],
     queryFn:  () => gqlClient.request(GET_BIENES_QUERY, {
-      filter: { estatus_operativo: 'ACTIVO' },
+      filter: { estatus_operativo: 'ALTA' },
       pagination: { first: 1000 },
     }),
   });

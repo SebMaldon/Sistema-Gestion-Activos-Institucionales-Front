@@ -119,7 +119,7 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
     num_serie: row.num_serie || '',
     num_inv: row.num_inv || '',
     cantidad: row.cantidad || 1,
-    estatus_operativo: row.estatus_operativo || 'ACTIVO',
+    estatus_operativo: row.estatus_operativo || 'ALTA',
     id_categoria: row.id_categoria || '',
     id_unidad_medida: row.id_unidad_medida || '',
     clave_unidad_ref: row.clave_unidad_ref || '',
@@ -268,9 +268,17 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
                     <div>
                       <label className={labelCls}>Estatus Operativo <span className="text-red-500">*</span></label>
                       <select value={formData.estatus_operativo} onChange={e => setFormData({ ...formData, estatus_operativo: e.target.value })} className={selectCls}>
-                        <option value="ACTIVO">ACTIVO</option>
+                        <option value="ALTA">ALTA</option>
                         <option value="BAJA">BAJA</option>
-                        <option value="EN_REPARACION">EN REPARACION</option>
+                        <option value="DAÑADO">DAÑADO</option>
+                        <option value="DEVOLUCIÓN">DEVOLUCIÓN</option>
+                        <option value="OTRO">OTRO</option>
+                        <option value="P_BAJA">PRE-BAJA</option>
+                        <option value="PRESTAMO">PRÉSTAMO</option>
+                        <option value="SINIESTRADO">SINIESTRADO</option>
+                        <option value="SUSTITUIDO">SUSTITUIDO</option>
+                        <option value="TRASPASO OOAD">TRASPASO OOAD</option>
+                        <option value="TRASPASO_FORANEO">TRASPASO FORÁNEO</option>
                       </select>
                     </div>
                   </div>

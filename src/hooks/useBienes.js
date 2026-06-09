@@ -13,7 +13,7 @@ export function mapBienNode(node) {
     qrHash: node.qr_hash,
     clavePresupuestal: node.clave_presupuestal || '—',
     cantidad: node.cantidad,
-    estatusOperativo: node.estatus_operativo || 'ACTIVO',
+    estatusOperativo: node.estatus_operativo || 'ALTA',
     claveInmuebleRef: node.clave_inmueble_ref,
     claveModelo: node.clave_modelo,
     idCategoria: node.id_categoria,

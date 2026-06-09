@@ -75,14 +75,17 @@ function fmt(v) { return v || '—'; }
 // ─── Badge de Estatus ─────────────────────────────────────────────────────────
 function EstatusBadge({ estatus }) {
   const map = {
-    'ACTIVO': { bg: '#dcfce7', color: '#15803d', label: 'Activo' },
-    'Activo': { bg: '#dcfce7', color: '#15803d', label: 'Activo' },
-    'EN_REPARACION': { bg: '#fef9c3', color: '#a16207', label: 'En Reparación' },
-    'En Reparación': { bg: '#fef9c3', color: '#a16207', label: 'En Reparación' },
+    'ALTA': { bg: '#dcfce7', color: '#15803d', label: 'Alta' },
     'BAJA': { bg: '#fee2e2', color: '#b91c1c', label: 'Baja' },
-    'Baja': { bg: '#fee2e2', color: '#b91c1c', label: 'Baja' },
+    'DAÑADO': { bg: '#fef3c7', color: '#d97706', label: 'Dañado' },
+    'DEVOLUCIÓN': { bg: '#f3e8ff', color: '#7e22ce', label: 'Devolución' },
+    'OTRO': { bg: '#f3f4f6', color: '#374151', label: 'Otro' },
+    'P_BAJA': { bg: '#ffedd5', color: '#c2410c', label: 'Pre-Baja' },
     'PRESTAMO': { bg: '#dbeafe', color: '#1d4ed8', label: 'Préstamo' },
-    'Préstamo': { bg: '#dbeafe', color: '#1d4ed8', label: 'Préstamo' },
+    'SINIESTRADO': { bg: '#fef2f2', color: '#991b1b', label: 'Siniestrado' },
+    'SUSTITUIDO': { bg: '#e0e7ff', color: '#4338ca', label: 'Sustituido' },
+    'TRASPASO OOAD': { bg: '#ccfbf1', color: '#0f766e', label: 'Traspaso OOAD' },
+    'TRASPASO_FORANEO': { bg: '#cffafe', color: '#0369a1', label: 'Traspaso Foráneo' },
   };
   const s = map[estatus] ?? { bg: '#f3f4f6', color: '#374151', label: estatus };
   return (
@@ -102,7 +105,7 @@ const FORM_EMPTY = {
   num_serie: '',
   num_inv: '',
   cantidad: 1,
-  estatus_operativo: 'ACTIVO',
+  estatus_operativo: 'ALTA',
   clave_unidad_ref: '',
   clave_modelo: '',
   id_usuario_resguardo: '',
@@ -853,6 +856,9 @@ export default function Inventario() {
 
   const [filterStatus, setFilterStatus] = useState(location.state?.filterStatus || '');
   const [filterUbicacion, setFilterUbicacion] = useState('');
+  
+  const [sortBy, setSortBy] = useState('');
+  const [sortDir, setSortDir] = useState('');
 
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]); // historial para retroceder
@@ -947,6 +953,8 @@ export default function Inventario() {
     const f = {};
     if (search) f.search = search;
     if (filterStatus) f.estatus_operativo = filterStatus;
+    if (sortBy) f.sort_by = sortBy;
+    if (sortDir) f.sort_dir = sortDir;
 
     if (activeTab === 'Capitalizable') {
       f.es_capitalizable = true;
@@ -981,7 +989,7 @@ export default function Inventario() {
     if (advFilters.con_notas_recientes) f.con_notas_recientes = true;
     if (advFilters.inconvenientes) f.inconvenientes = true;
     return f;
-  }, [debouncedSearch, filterStatus, activeTab, advFilters]);
+  }, [debouncedSearch, filterStatus, activeTab, advFilters, sortBy, sortDir]);
 
   // ── Modales ────────────────────────────────────────────────────────────────
   const [modalQR, setModalQR] = useState(null);
@@ -1041,6 +1049,23 @@ export default function Inventario() {
     const prevCursor = prev.pop() ?? null;
     setCursors(prev);
     setCursor(prevCursor);
+  };
+
+  const toggleSort = (col) => {
+    if (sortBy === col) {
+      if (sortDir === 'ASC') setSortDir('DESC');
+      else { setSortBy(''); setSortDir(''); }
+    } else {
+      setSortBy(col);
+      setSortDir('ASC');
+    }
+    setCursor(null);
+    setCursors([]);
+  };
+
+  const getSortIcon = (col) => {
+    if (sortBy !== col) return <span className="opacity-0 group-hover:opacity-30">↕</span>;
+    return sortDir === 'ASC' ? <span>↑</span> : <span>↓</span>;
   };
 
   // Fetch all bienes with current filter (max 180 per backend limit, multiple of 30 for sheets)
@@ -1618,11 +1643,17 @@ export default function Inventario() {
                     className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
                   >
                     <option value="">Todos los estatus</option>
-                    <option value="ACTIVO">Activo</option>
-                    <option value="EN_REPARACION">En Reparación</option>
+                    <option value="ALTA">Alta</option>
                     <option value="BAJA">Baja</option>
-                    <option value="INACTIVO">Inactivo</option>
+                    <option value="DAÑADO">Dañado</option>
+                    <option value="DEVOLUCIÓN">Devolución</option>
+                    <option value="OTRO">Otro</option>
+                    <option value="P_BAJA">Pre-Baja</option>
                     <option value="PRESTAMO">Préstamo</option>
+                    <option value="SINIESTRADO">Siniestrado</option>
+                    <option value="SUSTITUIDO">Sustituido</option>
+                    <option value="TRASPASO OOAD">Traspaso OOAD</option>
+                    <option value="TRASPASO_FORANEO">Traspaso Foráneo</option>
                   </select>
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, con_notas_recientes: !p.con_notas_recientes })); setCursor(null); setCursors([]); }}
@@ -2035,11 +2066,36 @@ export default function Inventario() {
                     <table className="w-full text-sm text-left">
                       <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
                         <tr>
-                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / Serie</th>
-                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Modelo / Categoría</th>
-                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unidad / Ubicación</th>
-                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Resguardo</th>
-                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estatus</th>
+                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => toggleSort('id_serie')} className="group flex items-center gap-1 hover:text-gray-700">
+                                ID / Serie {getSortIcon('id_serie')}
+                              </button>
+                              <button onClick={() => toggleSort('ip')} title="Ordenar por IP" className="ml-1 p-0.5 rounded text-[10px] bg-gray-100 hover:bg-gray-200 border border-gray-200 group flex items-center">
+                                IP <span className="ml-0.5">{sortBy === 'ip' ? (sortDir === 'ASC' ? '↑' : '↓') : '↕'}</span>
+                              </button>
+                            </div>
+                          </th>
+                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <button onClick={() => toggleSort('modelo_categoria')} className="group flex items-center gap-1 hover:text-gray-700">
+                              Modelo / Categoría {getSortIcon('modelo_categoria')}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <button onClick={() => toggleSort('unidad_ubicacion')} className="group flex items-center gap-1 hover:text-gray-700">
+                              Unidad / Ubicación {getSortIcon('unidad_ubicacion')}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <button onClick={() => toggleSort('resguardo')} className="group flex items-center gap-1 hover:text-gray-700">
+                              Resguardo {getSortIcon('resguardo')}
+                            </button>
+                          </th>
+                          <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            <button onClick={() => toggleSort('estatus')} className="group flex items-center gap-1 hover:text-gray-700">
+                              Estatus {getSortIcon('estatus')}
+                            </button>
+                          </th>
                           <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
                         </tr>
                       </thead>
