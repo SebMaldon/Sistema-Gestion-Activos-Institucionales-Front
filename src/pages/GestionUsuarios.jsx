@@ -563,7 +563,9 @@ export default function GestionUsuarios() {
   const [filterUnidadesFisicas, setFilterUnidadesFisicas] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [cursors, setCursors] = useState([]);
+  const [pageInput, setPageInput] = useState('');
   const PAGE_SIZE = 15;
+  const currentPage = cursors.length + 1;
 
   // Debounce search
   const handleSearch = useCallback((val) => {
@@ -634,6 +636,7 @@ export default function GestionUsuarios() {
 
   const pageInfo = usuariosData?.pageInfo;
   const totalCount = pageInfo?.totalCount ?? 0;
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : 1;
 
   const handleNextPage = () => {
     if (pageInfo?.hasNextPage && pageInfo.endCursor) {
@@ -649,6 +652,18 @@ export default function GestionUsuarios() {
     setCursor(prevCursor);
   };
 
+  // Ir a página: solo páginas ya visitadas (cursors[0..currentPage-1])
+  const handleJumpToPage = (e) => {
+    e.preventDefault();
+    const p = parseInt(pageInput, 10);
+    if (isNaN(p) || p < 1 || p > currentPage) { setPageInput(''); return; }
+    if (p === currentPage) { setPageInput(''); return; }
+    const targetCursor = p === 1 ? null : cursors[p - 1];
+    setCursors(cursors.slice(0, p - 1));
+    setCursor(targetCursor ?? null);
+    setPageInput('');
+  };
+
   const qc = useQueryClient();
 
   const isAdmin = idRol <= 2;
@@ -659,7 +674,9 @@ export default function GestionUsuarios() {
   const sortedRoles = [...catRoles].sort((a, b) => (roleOrder[a.id_rol] || 99) - (roleOrder[b.id_rol] || 99));
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
+    <div className="flex flex-col p-4 sm:p-6 gap-5 fade-in
+      min-h-[calc(100dvh-70px)] overflow-y-auto
+      sm:h-[calc(100vh-70px)] sm:overflow-hidden sm:min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -986,26 +1003,74 @@ export default function GestionUsuarios() {
         </div>
 
         {/* Paginación */}
-        {(pageInfo?.hasNextPage || cursors.length > 0) && (
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{totalCount || 0}</span> usuarios registrados.</p>
-              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                Página {cursors.length + 1} {totalCount > 0 && ` de ${Math.ceil(totalCount / PAGE_SIZE)}`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={handlePrevPage} disabled={cursors.length === 0}
-                className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
-                Anterior
-              </button>
-              <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
-                className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
-                Siguiente
-              </button>
-            </div>
+        <div className="bg-gray-50 border-t border-gray-100 p-3 flex flex-col gap-2 flex-shrink-0">
+          {/* Info total */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-gray-700">
+              Total: <strong>{totalCount || 0}</strong> usuarios registrados.
+            </span>
+            <span className="font-bold text-gray-400 uppercase tracking-wider">
+              Pág. {currentPage}/{totalPages}
+            </span>
           </div>
-        )}
+
+          {/* Botones de paginación */}
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            <button onClick={handlePrevPage} disabled={cursors.length === 0}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
+              <ChevronLeft size={15} />
+            </button>
+
+            {/* Páginas numeradas usando historial de cursors */}
+            {currentPage > 2 && (
+              <button onClick={() => { setCursors([]); setCursor(null); }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
+                1
+              </button>
+            )}
+            {currentPage > 3 && <span className="px-1 text-gray-400 text-xs">...</span>}
+            {currentPage > 1 && (
+              <button onClick={handlePrevPage}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
+                {currentPage - 1}
+              </button>
+            )}
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0">
+              {currentPage}
+            </button>
+            {pageInfo?.hasNextPage && (
+              <button onClick={handleNextPage}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
+                {currentPage + 1}
+              </button>
+            )}
+            {currentPage < totalPages - 2 && <span className="px-1 text-gray-400 text-xs">...</span>}
+            {currentPage < totalPages - 1 && totalPages > 1 && (
+              <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">{totalPages}</span>
+            )}
+
+            <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
+              <ChevronRight size={15} />
+            </button>
+
+            {/* Ir a página (solo páginas visitadas) */}
+            <form onSubmit={handleJumpToPage} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+              <input
+                type="number" min="1" max={currentPage}
+                value={pageInput}
+                onChange={e => setPageInput(e.target.value)}
+                placeholder="Ir a..."
+                title={`Páginas visitadas: 1 a ${currentPage}`}
+                className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+              />
+              <button type="submit" disabled={!pageInput}
+                className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors">
+                Ir
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
 
       {/* ── MODALES ──────────────────────────────────────────────────────── */}
