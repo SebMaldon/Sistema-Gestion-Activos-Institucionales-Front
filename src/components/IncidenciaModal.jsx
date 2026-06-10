@@ -175,7 +175,6 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
 
   const validate = () => {
     const newErrors = {};
-    if (!equipoEncontrado) newErrors.equipment = 'Debe buscar y seleccionar un equipo válido';
     if (!tipoIncidencia) newErrors.type = 'Seleccione el tipo de incidencia';
     if (!descripcion.trim()) newErrors.description = 'La descripción es obligatoria';
     else if (descripcion.trim().length < 5) newErrors.description = 'Descripción demasiado corta';
@@ -211,7 +210,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
     try {
       // 1) Crear la incidencia
       const result = await createIncidencia.mutateAsync({
-        id_bien: equipoEncontrado.id_bien,
+        id_bien: equipoEncontrado?.id_bien || undefined,
         id_tipo_incidencia: parseInt(tipoIncidencia),
         descripcion_falla: descripcion,
         id_unidad: unidadId || undefined,
@@ -269,7 +268,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
             <section className="space-y-4">
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b pb-2">
                 <span className="w-6 h-6 rounded bg-blue-100 text-blue-700 flex items-center justify-center text-xs">1</span>
-                Identificación del Equipo
+                Identificación del Equipo (Opcional)
               </h3>
 
               <div className="flex gap-4 items-end">
@@ -532,7 +531,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
           <button
             type="submit"
             form="incidencia-form"
-            disabled={!equipoEncontrado || isSaving}
+            disabled={isSaving}
             className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
