@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import fs from 'fs';
 
 async function run() {
-  const fileBytes = fs.readFileSync('c:/Users/carpa/OneDrive/Escritorio/IMSS/Sistema-Gestion-Activos-Institucionales-Front/public/Formatos/FormatoRellenableSalidaBienes.pdf');
+  const fileBytes = fs.readFileSync('C:/Users/carpa/OneDrive/Escritorio/IMSS/Sistema-Gestion-Activos-Institucionales-Front/Formatos/FormatoRellenableSalidaBienes.pdf');
   const pdfDoc = await PDFDocument.load(fileBytes);
   const form = pdfDoc.getForm();
   const fields = form.getFields();
