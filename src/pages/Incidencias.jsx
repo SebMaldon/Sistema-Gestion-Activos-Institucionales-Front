@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/auth.store';
 import {
   AlertTriangle, Clock, CheckCircle, User, Calendar,
   Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft,
-  Hash, FileText, MapPin
+  Hash, FileText, MapPin, Copy
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
@@ -103,6 +103,7 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 const IncidenciaCard = memo(function IncidenciaCard({
   inc, onStatusChange, onEdit, onDelete, onAddNota, canEdit, canDelete, isMoving
 }) {
+  const { showToast } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const cardRef = useRef(null);
@@ -146,38 +147,55 @@ const IncidenciaCard = memo(function IncidenciaCard({
           )}
         </div>
 
-        {(canEdit || canDelete) && (
-          <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
-              className={`p-1.5 rounded-xl transition-all duration-200 ${menuOpen ? 'bg-gray-100 text-gray-900 scale-110' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+        <div className="flex items-center gap-2 shrink-0">
+          {inc.requerimiento && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(inc.requerimiento);
+                showToast('Requerimiento copiado', 'success');
+              }}
+              className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-all cursor-pointer shadow-sm"
+              title="Copiar Requerimiento"
             >
-              <MoreVertical size={18} />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 fade-in overflow-hidden ring-4 ring-black/5">
-                {canEdit && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
-                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 transition-colors"
-                  >
-                    <div className="p-1 bg-amber-100 rounded-lg text-amber-600"><Edit2 size={14} /></div>
-                    Editar Registro
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
-                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
-                  >
-                    <div className="p-1 bg-red-100 rounded-lg text-red-600"><Trash2 size={14} /></div>
-                    Eliminar
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+              <span>REQ: {inc.requerimiento}</span>
+              <Copy size={12} className="shrink-0" />
+            </div>
+          )}
+
+          {(canEdit || canDelete) && (
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
+                className={`p-1.5 rounded-xl transition-all duration-200 ${menuOpen ? 'bg-gray-100 text-gray-900 scale-110' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+              >
+                <MoreVertical size={18} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 fade-in overflow-hidden ring-4 ring-black/5">
+                  {canEdit && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="p-1 bg-amber-100 rounded-lg text-amber-600"><Edit2 size={14} /></div>
+                      Editar Registro
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="p-1 bg-red-100 rounded-lg text-red-600"><Trash2 size={14} /></div>
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Contenido Principal */}
@@ -295,6 +313,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
 // ─── Componente Tabla Histórico ────────────────────────────────────────────────
 
 function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) {
+  const { showToast } = useApp();
   const [estatusFiltro, setEstatusFiltro] = useState('');
   const [fechaFiltroTipo, setFechaFiltroTipo] = useState(''); // 'creacion' o 'resolucion'
   const [fechaDesde, setFechaDesde] = useState('');
@@ -486,7 +505,26 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-gray-600 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
-                  <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{inc.requerimiento || '—'}</td>
+                  <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">
+                    {inc.requerimiento ? (
+                      <div className="flex items-center gap-1.5">
+                        <span>{inc.requerimiento}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(inc.requerimiento);
+                            showToast('Requerimiento copiado', 'success');
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors cursor-pointer shrink-0"
+                          title="Copiar Requerimiento"
+                        >
+                          <Copy size={11} />
+                        </button>
+                      </div>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className="px-3 py-2.5 text-gray-600 font-medium whitespace-nowrap">{inc.fecha}</td>
                   <td className="px-3 py-2.5 text-green-700 font-medium whitespace-nowrap">
                     {inc.fechaResolucion || '—'}

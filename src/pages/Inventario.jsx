@@ -2119,11 +2119,11 @@ export default function Inventario() {
                                   <div className="min-w-0">
                                     <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-flex items-center gap-1.5 max-w-full">
                                       <span className="truncate">{fmt(bien.numSerie)}</span>
-                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numSerie); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numSerie); showToast('Número de Serie copiado', 'success'); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </span>
                                     <p className={`flex items-center gap-1.5 text-xs mt-0.5 max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
                                       <span className="truncate">Inv: {fmt(bien.numInv)}</span>
-                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numInv); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </p>
                                     
                                     {(() => {
@@ -2134,7 +2134,7 @@ export default function Inventario() {
                                           <Network size={11} className="text-emerald-600 shrink-0" />
                                           <span className="truncate">{ips[0]}</span>
                                           {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
-                                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(ips[0]); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
+                                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
                                         </div>
                                       );
                                     })()}
@@ -2156,7 +2156,7 @@ export default function Inventario() {
                               <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5 max-w-full">
                                   <p className="font-semibold text-gray-900 text-sm truncate">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
-                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.especificacionTI.nombre_host); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                 </div>
                                 <p className="text-xs text-gray-400">{bien.equipo}</p>
                                 {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
@@ -2166,14 +2166,14 @@ export default function Inventario() {
                                         <User size={11} strokeWidth={2.5} />
                                       </div>
                                       <span className="font-bold whitespace-nowrap truncate">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
-                                      {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].cuenta_windows); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].cuenta_windows); showToast('Usuario de Windows copiado', 'success'); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                       {bien.cuentasPC.length > 1 && (
                                         <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
                                       )}
                                     </div>
                                       <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
                                         <span className="truncate">{bien.cuentasPC[0].correo}</span>
-                                        {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].correo); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                        {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                       </div>
                                   </div>
                                 )}
