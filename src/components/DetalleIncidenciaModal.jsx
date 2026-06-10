@@ -90,7 +90,7 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                   <div>
                     <span className="block text-xs font-semibold text-gray-500 uppercase mb-0.5">Registrado en sistema por</span>
                     <span className="font-medium text-gray-800 break-words block">
-                      {incidencia.generadoPor || 'Usuario del Sistema'} {incidencia.matriculaGenera && `(${incidencia.matriculaGenera})`}
+                      {incidencia.matriculaGenera ? `${incidencia.matriculaGenera} - ` : ''}{incidencia.generadoPor || 'Sin nombre registrado'}
                     </span>
                   </div>
                 </div>

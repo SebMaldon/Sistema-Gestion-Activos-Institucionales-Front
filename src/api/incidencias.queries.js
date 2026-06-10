@@ -38,15 +38,24 @@ export const GET_INCIDENCIAS_QUERY = gql`
     $id_tipo_incidencia: Int
     $id_unidad: String
     $search: String
+    $fecha_creacion_desde: DateTime
+    $fecha_creacion_hasta: DateTime
+    $fecha_resolucion_desde: DateTime
+    $fecha_resolucion_hasta: DateTime
     $first: Int
     $after: String
+    $page: Int
   ) {
     incidencias(
       estatus_reparacion: $estatus_reparacion
       id_tipo_incidencia: $id_tipo_incidencia
       id_unidad: $id_unidad
       search: $search
-      pagination: { first: $first, after: $after }
+      fecha_creacion_desde: $fecha_creacion_desde
+      fecha_creacion_hasta: $fecha_creacion_hasta
+      fecha_resolucion_desde: $fecha_resolucion_desde
+      fecha_resolucion_hasta: $fecha_resolucion_hasta
+      pagination: { first: $first, after: $after, page: $page }
     ) {
       edges {
         node {
