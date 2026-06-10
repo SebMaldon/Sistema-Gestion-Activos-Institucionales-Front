@@ -315,19 +315,19 @@ export default function Unidades() {
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Ubicación</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Encargado</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Clasificación</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
+                {isPrivileged && <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td colSpan="5" className="px-6 py-20 text-center">
+                <tr><td colSpan={isPrivileged ? 5 : 4} className="px-6 py-20 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 size={32} className="text-blue-500 animate-spin" />
                     <p className="text-sm font-medium text-gray-400">Cargando unidades...</p>
                   </div>
                 </td></tr>
               ) : edges.length === 0 ? (
-                <tr><td colSpan="5" className="px-6 py-20 text-center">
+                <tr><td colSpan={isPrivileged ? 5 : 4} className="px-6 py-20 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <AlertTriangle size={32} className="text-gray-300" />
                     <p className="text-sm font-medium text-gray-400">No se encontraron unidades</p>
@@ -379,17 +379,14 @@ export default function Unidades() {
                         </span>
                       </div>
                     </td>
+                    {isPrivileged && (
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        
-                        {isPrivileged && (
-                          <>
-                            <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(node); }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(node); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
-                          </>
-                        )}
+                        <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(node); }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(node); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
                       </div>
                     </td>
+                  )}
                   </tr>
                 ))
               )}

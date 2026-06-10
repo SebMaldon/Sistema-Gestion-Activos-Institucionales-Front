@@ -906,7 +906,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   const deleteCuentaPC = () => { showToast('Borrado de cuenta PC no implementado localmente', 'warning') };
   
   // States
-  const [formTab, setFormTab]           = useState('general'); // 'general' | 'tecnico'
+  const [formTab, setFormTab]           = useState(idRol === 3 ? 'tecnico' : 'general'); // 'general' | 'tecnico'
   const [inconveniencesWarning, setInconveniencesWarning] = useState(null);
   
   const [showTI, setShowTI]             = useState(false);
@@ -1128,7 +1128,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
   const closeForm = useCallback(() => {
     setModalForm(null);
-    setFormTab('general');
+    setFormTab(idRol === 3 ? 'tecnico' : 'general');
     setForm(FORM_EMPTY);
     setTiForm(TI_EMPTY);
     setCuentasList([]);
@@ -1529,7 +1529,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                 {[
                   { key: 'general', label: 'General' },
                   { key: 'tecnico', label: 'Técnico / Garantía', badge: showTI || deviceMode === 'OTHER' || deviceMode === 'PC' || deviceMode === 'LAPTOP' || deviceMode === 'MONITOR' },
-                ].map(t => (
+                ].filter(t => Number(idRol) !== 3 || t.key !== 'general').map(t => (
                   <button
                     key={t.key}
                     type="button"
