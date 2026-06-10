@@ -15,7 +15,7 @@ import {
   Server, Monitor, Cpu, HardDrive, Wifi, Save,
   Package, Shield, Calendar, MapPin, User, Tag,
   ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings,
-  SlidersHorizontal, FilterX, Network
+  SlidersHorizontal, FilterX, Network, Copy
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
@@ -2116,19 +2116,24 @@ export default function Inventario() {
                                 {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
                                 <div className="flex items-center justify-between gap-3 w-full">
                                   <div className="min-w-0">
-                                    <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-block truncate max-w-full">
-                                      {fmt(bien.numSerie)}
+                                    <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-flex items-center gap-1.5 max-w-full">
+                                      <span className="truncate">{fmt(bien.numSerie)}</span>
+                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numSerie); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </span>
-                                    <p className={`text-xs mt-0.5 truncate max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>Inv: {fmt(bien.numInv)}</p>
+                                    <p className={`flex items-center gap-1.5 text-xs mt-0.5 max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
+                                      <span className="truncate">Inv: {fmt(bien.numInv)}</span>
+                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numInv); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                    </p>
                                     
                                     {(() => {
                                       const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
                                       if (ips.length === 0 || hasWifiConflict) return null;
                                       return (
-                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 w-fit" title={`IP(s): ${ips.join(', ')}`}>
-                                          <Network size={11} className="text-emerald-600" />
-                                          <span>{ips[0]}</span>
-                                          {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5">+{ips.length - 1}</span>}
+                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 w-fit max-w-full" title={`IP(s): ${ips.join(', ')}`}>
+                                          <Network size={11} className="text-emerald-600 shrink-0" />
+                                          <span className="truncate">{ips[0]}</span>
+                                          {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
+                                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(ips[0]); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
                                         </div>
                                       );
                                     })()}
@@ -2148,7 +2153,10 @@ export default function Inventario() {
                                 </div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <p className="font-semibold text-gray-900 text-sm">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
+                                <div className="flex items-center gap-1.5 max-w-full">
+                                  <p className="font-semibold text-gray-900 text-sm truncate">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
+                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.especificacionTI.nombre_host); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                </div>
                                 <p className="text-xs text-gray-400">{bien.equipo}</p>
                                 {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
                                   <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-md p-1.5 flex flex-col gap-0.5 w-fit shadow-sm">
@@ -2156,16 +2164,16 @@ export default function Inventario() {
                                       <div className="bg-indigo-200 text-indigo-700 p-0.5 rounded flex items-center justify-center shrink-0">
                                         <User size={11} strokeWidth={2.5} />
                                       </div>
-                                      <span className="font-bold whitespace-nowrap">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
+                                      <span className="font-bold whitespace-nowrap truncate">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
+                                      {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].cuenta_windows); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                       {bien.cuentasPC.length > 1 && (
                                         <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
                                       )}
                                     </div>
-                                    {bien.cuentasPC[0].correo && (
-                                      <div className="text-[10px] text-indigo-600 pl-6 font-semibold whitespace-nowrap" title={`Correo: ${bien.cuentasPC[0].correo}`}>
-                                        {bien.cuentasPC[0].correo}
+                                      <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
+                                        <span className="truncate">{bien.cuentasPC[0].correo}</span>
+                                        {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].correo); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                       </div>
-                                    )}
                                   </div>
                                 )}
                               </td>
@@ -2177,6 +2185,7 @@ export default function Inventario() {
                               <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
                               <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5">
+
                                   <button onClick={() => setModalFicha(bien)} title="Ver Ficha Técnica"
                                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
                                     <Eye size={14} />
