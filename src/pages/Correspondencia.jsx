@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Plus, Mail, RefreshCw, Loader2, AlertTriangle, FileText, Calendar, Building2, CheckCircle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import {
+  Search, Plus, RefreshCw, Loader2, AlertTriangle, FileText,
+  ArrowDownCircle, ArrowUpCircle, CheckCircle, ChevronLeft, ChevronRight
+} from 'lucide-react';
 import { getMesaCorrespondencias } from '../api/correspondencia.queries';
 import FormCorrespondenciaModal from '../components/FormCorrespondenciaModal';
 import { parseServerDate } from '../lib/utils';
@@ -12,10 +15,10 @@ const HighlightText = ({ text, highlight }) => {
   const parts = strText.split(new RegExp(`(${highlight})`, 'gi'));
   return (
     <>
-      {parts.map((part, i) => 
-        part.toLowerCase() === highlight.toLowerCase() ? 
-          <span key={i} className="bg-yellow-200 text-yellow-900 font-bold">{part}</span> : 
-          part
+      {parts.map((part, i) =>
+        part.toLowerCase() === highlight.toLowerCase()
+          ? <span key={i} className="bg-yellow-200 text-yellow-900 font-bold">{part}</span>
+          : part
       )}
     </>
   );
@@ -27,35 +30,35 @@ export default function Correspondencia() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedDesc, setExpandedDesc] = useState({});
-  
+
   const toggleDesc = (folio) => {
     setExpandedDesc(prev => ({ ...prev, [folio]: !prev[folio] }));
   };
-  
-  // Filters State
-  const [filters, setFilters] = useState({
-    Tipo: '',
-    NoOficio: '',
-    Folio: '',
-    PalabraClave: ''
-  });
+
+  // Estado de filtros
+  const [filters, setFilters] = useState({ Tipo: '', NoOficio: '', Folio: '', PalabraClave: '' });
   const [activeFilters, setActiveFilters] = useState({});
 
+  // Paginación por cursor
+  const PAGE_SIZE = 30;
   const [cursor, setCursor] = useState(null);
   const [history, setHistory] = useState([]);
+  const [pageInput, setPageInput] = useState('');
+  const currentPage = history.length + 1;
 
   const { data: correspondenciasData, isLoading, isError, refetch } = useQuery({
     queryKey: ['mesaCorrespondencias', activeFilters, cursor],
     queryFn: () => getMesaCorrespondencias(
       Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
-      { first: 30, after: cursor }
+      { first: PAGE_SIZE, after: cursor }
     ),
   });
 
   const correspondencias = correspondenciasData?.edges?.map(e => e.node) || [];
   const pageInfo = correspondenciasData?.pageInfo;
+  const totalPages = pageInfo?.totalCount ? Math.max(1, Math.ceil(pageInfo.totalCount / PAGE_SIZE)) : 1;
 
-  // Handlers Paginación
+  // Handlers de paginación
   const handleNextPage = () => {
     if (pageInfo?.hasNextPage) {
       setHistory(prev => [...prev, cursor]);
@@ -74,7 +77,26 @@ export default function Correspondencia() {
     }
   };
 
-  // Reset pagination when filters change
+  // Ir a página específica usando el historial de cursores almacenados
+  // history[i] = cursor que se usó para llegar a la página i+1
+  // Sólo se puede saltar a páginas ya visitadas (1 ... currentPage)
+  const handleJumpToPage = (e) => {
+    e.preventDefault();
+    const p = parseInt(pageInput, 10);
+    if (isNaN(p) || p < 1 || p > currentPage) {
+      setPageInput('');
+      return;
+    }
+    if (p === currentPage) { setPageInput(''); return; }
+    // history[0] = cursor para página 1 (siempre null)
+    // history[p-1] = cursor para página p
+    const targetCursor = p === 1 ? null : history[p - 1];
+    setHistory(history.slice(0, p - 1));
+    setCursor(targetCursor ?? null);
+    setPageInput('');
+  };
+
+  // Reset paginación al cambiar filtros
   useEffect(() => {
     setCursor(null);
     setHistory([]);
@@ -82,10 +104,7 @@ export default function Correspondencia() {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
   useEffect(() => {
@@ -106,10 +125,14 @@ export default function Correspondencia() {
   };
 
   return (
-    <div className="p-4 sm:p-6 fade-in relative flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden">
-      
-      {/* Header */}
-      <div className="sticky top-0 z-40 flex-shrink-0 pb-4 mb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 -mx-4 px-4 sm:mx-0 sm:px-0 bg-white/90 backdrop-blur-md">
+    <div className="p-4 sm:p-6 fade-in relative flex flex-col
+      min-h-[calc(100dvh-70px)] overflow-y-auto
+      sm:h-[calc(100vh-70px)] sm:overflow-hidden sm:min-h-0">
+
+      {/* ─── Header ─────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-40 flex-shrink-0 pb-4 mb-4 border-b border-gray-100
+        flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4
+        -mx-4 px-4 sm:mx-0 sm:px-0 bg-white/90 backdrop-blur-md">
         <div className="flex flex-col items-start w-full sm:w-auto">
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Control de Correspondencia</h1>
@@ -128,43 +151,40 @@ export default function Correspondencia() {
           {isMaestroAdmin && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-[#00472e] hover:bg-[#003824] text-white px-5 py-2.5 rounded-lg font-medium transition-colors text-sm shadow-sm"
+              className="flex items-center gap-2 bg-[#00472e] hover:bg-[#003824] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm"
             >
-              <Plus size={18} /><span>Nuevo Registro</span>
+              <Plus size={16} /><span>Nuevo Registro</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Tabs / Filters Top Row */}
-      <div className="flex flex-col xl:flex-row gap-4 justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 shrink-0">
-        
-        {/* Tabs de Tipo */}
-        <div className="flex bg-gray-100 p-1 rounded-xl w-full xl:w-auto">
-          <button 
-            onClick={() => setFilters(prev => ({ ...prev, Tipo: '' }))} 
-            className={`flex-1 xl:flex-none px-6 py-2 text-sm font-semibold rounded-lg transition-all ${filters.Tipo === '' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Todos
-          </button>
-          <button 
-            onClick={() => setFilters(prev => ({ ...prev, Tipo: '1' }))} 
-            className={`flex-1 xl:flex-none px-6 py-2 text-sm font-semibold rounded-lg transition-all ${filters.Tipo === '1' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Enviadas
-          </button>
-          <button 
-            onClick={() => setFilters(prev => ({ ...prev, Tipo: '2' }))} 
-            className={`flex-1 xl:flex-none px-6 py-2 text-sm font-semibold rounded-lg transition-all ${filters.Tipo === '2' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Recibidas
-          </button>
+      {/* ─── Filtros ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 mb-4 flex-shrink-0">
+
+        {/* Tabs tipo */}
+        <div className="flex bg-gray-100 p-1 rounded-xl w-full">
+          {[
+            { label: 'Todos', value: '' },
+            { label: 'Enviadas', value: '1' },
+            { label: 'Recibidas', value: '2' },
+          ].map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setFilters(prev => ({ ...prev, Tipo: tab.value }))}
+              className={`flex-1 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                filters.Tipo === tab.value ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Búsqueda general */}
-        <div className="flex-1 flex gap-3 w-full xl:max-w-2xl">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* Búsqueda — apilada en móvil, en fila en desktop */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               name="PalabraClave"
@@ -180,7 +200,7 @@ export default function Correspondencia() {
             value={filters.NoOficio}
             onChange={handleFilterChange}
             placeholder="No. Oficio..."
-            className="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white outline-none transition-all hidden sm:block"
+            className="w-full sm:w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white outline-none transition-all"
           />
           <input
             type="number"
@@ -188,154 +208,229 @@ export default function Correspondencia() {
             value={filters.Folio}
             onChange={handleFilterChange}
             placeholder="Folio..."
-            className="w-24 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white outline-none transition-all hidden sm:block"
+            className="w-full sm:w-24 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white outline-none transition-all"
           />
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 overflow-hidden">
+      {/* ─── Wrapper tabla: scroll interno en desktop ────────────── */}
+      <div className="sm:flex-1 sm:min-h-0 sm:flex sm:flex-col sm:overflow-hidden">
+        <div className="flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
+          mb-8 sm:mb-0 sm:flex-1 sm:min-h-0 sm:flex sm:flex-col">
 
-        {/* Tabla de Resultados */}
-        <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-w-0 h-full overflow-hidden">
-          <div className="flex-1 overflow-x-auto overflow-y-auto">
+          {/* Área de la tabla */}
+          <div className="w-full overflow-x-auto sm:flex-1 sm:min-h-0 sm:overflow-y-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center h-full min-h-[300px]">
+              <div className="flex items-center justify-center py-16 min-h-[200px]">
                 <div className="flex flex-col items-center gap-3 text-gray-400">
                   <Loader2 size={36} className="animate-spin text-blue-500" />
                   <p className="text-sm font-medium">Cargando oficios...</p>
                 </div>
               </div>
             ) : isError ? (
-              <div className="flex items-center justify-center h-full text-red-500 flex-col gap-2 min-h-[300px]">
+              <div className="flex items-center justify-center py-16 text-red-500 flex-col gap-2">
                 <AlertTriangle size={32} />
-                <p>Error al cargar la correspondencia</p>
+                <p className="text-sm">Error al cargar la correspondencia</p>
               </div>
             ) : correspondencias.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-400 flex-col gap-2 min-h-[300px]">
+              <div className="flex items-center justify-center py-16 text-gray-400 flex-col gap-2">
                 <FileText size={32} className="opacity-50" />
-                <p>No se encontraron registros</p>
+                <p className="text-sm">No se encontraron registros</p>
               </div>
             ) : (
-              <div className="min-w-[1000px]">
-                <table className="w-full text-left text-xs table-fixed">
-                  <colgroup>
-                    <col style={{width: '2.5rem'}} />
-                    <col style={{width: '3.5rem'}} />
-                    <col style={{width: '5rem'}} />
-                    <col style={{width: '7.5rem'}} />
-                    <col style={{width: '7.5rem'}} />
-                    <col style={{width: '8rem'}} />
-                    <col style={{width: '8rem'}} />
-                    <col style={{width: '8rem'}} />
-                    <col />
-                    <col style={{width: '4.5rem'}} />
-                    <col style={{width: '7rem'}} />
-                  </colgroup>
-                  <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10 uppercase tracking-wider font-bold shadow-sm">
-                    <tr>
-                      <th className="px-4 py-3 text-center w-12"></th>
-                      <th className="px-4 py-3">Folio</th>
-                      <th className="px-4 py-3">NoOficio</th>
-                      <th className="px-4 py-3">FechaRecepcion</th>
-                      <th className="px-4 py-3">FechaOficio</th>
-                      <th className="px-4 py-3">Remitente</th>
-                      <th className="px-4 py-3">Unidad</th>
-                      <th className="px-4 py-3">Ubicación</th>
-                      <th className="px-4 py-3 w-64">Descripcion</th>
-                      <th className="px-4 py-3 text-center">Tipo</th>
-                      <th className="px-4 py-3 text-center">Archivo</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {correspondencias.map(corr => (
-                      <tr key={corr.Folio} className="hover:bg-gray-50/80 transition-colors group">
-                        <td className="px-4 py-3 text-center">
-                          <CheckCircle size={18} className="text-green-500 inline-block" />
-                        </td>
-                        <td className="px-4 py-3 font-bold text-gray-800">{corr.Folio}</td>
-                        <td className="px-4 py-3 text-blue-600 font-semibold">
-                          <HighlightText text={corr.NoOficio || '—'} highlight={activeFilters.NoOficio || activeFilters.PalabraClave} />
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaRecepcion)}</td>
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaOficio)}</td>
-                        <td className="px-4 py-3 text-gray-800 font-medium">
-                          <HighlightText text={corr.Remitente || '—'} highlight={activeFilters.PalabraClave} />
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 align-top leading-snug">
-                          {corr.unidad?.descripcion || '—'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 align-top leading-snug">
-                          {corr.ubicacion?.nombre_ubicacion || '—'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 align-top">
-                          <div className={`break-words whitespace-pre-wrap ${expandedDesc[corr.Folio] ? '' : 'line-clamp-3'}`}>
+              <table className="w-full text-left text-xs table-fixed" style={{ minWidth: '1000px' }}>
+                <colgroup>
+                  <col style={{ width: '2.5rem' }} />
+                  <col style={{ width: '3.5rem' }} />
+                  <col style={{ width: '5rem' }} />
+                  <col style={{ width: '7.5rem' }} />
+                  <col style={{ width: '7.5rem' }} />
+                  <col style={{ width: '8rem' }} />
+                  <col style={{ width: '8rem' }} />
+                  <col style={{ width: '8rem' }} />
+                  <col style={{ minWidth: '200px' }} />
+                  <col style={{ width: '4.5rem' }} />
+                  <col style={{ width: '7rem' }} />
+                </colgroup>
+                <thead className="bg-gray-100 text-gray-600 uppercase tracking-wider font-bold shadow-sm">
+                  <tr>
+                    <th className="px-3 py-2.5 text-center w-10"></th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">Folio</th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">NoOficio</th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">F. Recepción</th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">F. Oficio</th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">Remitente</th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">Unidad</th>
+                    <th className="px-3 py-2.5 whitespace-nowrap">Ubicación</th>
+                    <th className="px-3 py-2.5">Descripción</th>
+                    <th className="px-3 py-2.5 text-center whitespace-nowrap">Tipo</th>
+                    <th className="px-3 py-2.5 text-center whitespace-nowrap">Archivo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {correspondencias.map(corr => (
+                    <tr key={corr.Folio} className="hover:bg-gray-50/80 transition-colors group">
+                      <td className="px-3 py-2.5 text-center">
+                        <CheckCircle size={16} className="text-green-500 inline-block" />
+                      </td>
+                      <td className="px-3 py-2.5 font-bold text-gray-800">{corr.Folio}</td>
+                      <td className="px-3 py-2.5 text-blue-600 font-semibold">
+                        <HighlightText text={corr.NoOficio || '—'} highlight={activeFilters.NoOficio || activeFilters.PalabraClave} />
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaRecepcion)}</td>
+                      <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDate(corr.FechaOficio)}</td>
+                      <td className="px-3 py-2.5 text-gray-800 font-medium">
+                        <HighlightText text={corr.Remitente || '—'} highlight={activeFilters.PalabraClave} />
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 align-top leading-snug">
+                        {corr.unidad?.descripcion || '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 align-top leading-snug">
+                        {corr.ubicacion?.nombre_ubicacion || '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 align-top">
+                        {expandedDesc[corr.Folio] ? (
+                          // Expandido: altura máxima con scroll interno, sin preservar saltos de línea crudos
+                          <div className="max-h-40 overflow-y-auto break-words whitespace-normal leading-relaxed text-xs pr-1">
                             <HighlightText text={corr.Descripcion} highlight={activeFilters.PalabraClave} />
                           </div>
-                          {corr.Descripcion && corr.Descripcion.length > 80 && (
-                            <button onClick={() => toggleDesc(corr.Folio)} className="text-blue-500 hover:underline text-[10px] mt-1 font-semibold block">
-                              {expandedDesc[corr.Folio] ? 'Ver menos' : 'Ver más'}
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {corr.Tipo === 1 ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md">
-                              <ArrowUpCircle size={12} /> Env.
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-md">
-                              <ArrowDownCircle size={12} /> Rec.
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center font-semibold text-gray-700">
-                          {corr.archivo_ref?.Archivo || '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        ) : (
+                          // Colapsado: 3 líneas máximo
+                          <div className="line-clamp-3 break-words whitespace-normal">
+                            <HighlightText text={corr.Descripcion} highlight={activeFilters.PalabraClave} />
+                          </div>
+                        )}
+                        {corr.Descripcion && corr.Descripcion.length > 80 && (
+                          <button
+                            onClick={() => toggleDesc(corr.Folio)}
+                            className="text-blue-500 hover:underline text-[10px] mt-1 font-semibold block"
+                          >
+                            {expandedDesc[corr.Folio] ? 'Ver menos' : 'Ver más'}
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {corr.Tipo === 1 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-md whitespace-nowrap">
+                            <ArrowUpCircle size={11} /> Env.
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-2 py-1 rounded-md whitespace-nowrap">
+                            <ArrowDownCircle size={11} /> Rec.
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-semibold text-gray-700">
+                        {corr.archivo_ref?.Archivo || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
 
-          {/* Controles de Paginación */}
-          {pageInfo && (
-            <div className="flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-4 border-t border-gray-100 flex-shrink-0 gap-4">
-              <div className="flex flex-col items-start text-xs text-gray-500 gap-1">
-                <span className="font-medium">
-                  Total: <strong className="text-gray-800 text-sm">{pageInfo.totalCount}</strong> unidades registradas.
+          {/* ─── Paginación ─────────────────────────────────────────── */}
+          <div className="p-3 border-t border-gray-100 flex flex-col gap-2 bg-gray-50 flex-shrink-0">
+            {/* Info total */}
+            <div className="flex items-center justify-between text-xs">
+              {pageInfo?.totalCount !== undefined && (
+                <span className="font-semibold text-gray-700">
+                  Total: {pageInfo.totalCount} registros.
                 </span>
-                <span className="font-bold tracking-wider uppercase text-[10px] text-gray-400">
-                  PÁGINA {history.length + 1} DE {Math.max(1, Math.ceil(pageInfo.totalCount / 30))}
-                </span>
-              </div>
-              <div className="flex gap-2">
+              )}
+              <span className="font-bold text-gray-400 uppercase tracking-wider">
+                Pág. {currentPage}/{totalPages}
+              </span>
+            </div>
+
+            {/* Botones de paginación */}
+            <div className="flex items-center gap-2 justify-center">
+              <button
+                onClick={handlePrevPage}
+                disabled={history.length === 0}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+                title="Página anterior"
+              >
+                <ChevronLeft size={15} />
+              </button>
+
+              {/* Páginas: anterior, actual, siguiente */}
+              {currentPage > 2 && (
+                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
+              )}
+              {currentPage > 3 && (
+                <span className="px-1 text-gray-400 text-xs">...</span>
+              )}
+              {currentPage > 1 && (
                 <button
                   onClick={handlePrevPage}
-                  disabled={history.length === 0}
-                  className="px-5 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors shadow-sm"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
                 >
-                  Anterior
+                  {currentPage - 1}
                 </button>
+              )}
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0"
+              >
+                {currentPage}
+              </button>
+              {pageInfo?.hasNextPage && (
                 <button
                   onClick={handleNextPage}
-                  disabled={!pageInfo.hasNextPage}
-                  className="px-5 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors shadow-sm"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
                 >
-                  Siguiente
+                  {currentPage + 1}
                 </button>
-              </div>
+              )}
+              {currentPage < totalPages - 2 && (
+                <span className="px-1 text-gray-400 text-xs">...</span>
+              )}
+              {currentPage < totalPages - 1 && totalPages > 1 && (
+                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
+                  {totalPages}
+                </span>
+              )}
+
+              <button
+                onClick={handleNextPage}
+                disabled={!pageInfo?.hasNextPage}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+                title="Página siguiente"
+              >
+                <ChevronRight size={15} />
+              </button>
+
+              {/* Ir a página — solo páginas ya visitadas (1..currentPage) */}
+              <form onSubmit={handleJumpToPage} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={currentPage}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  placeholder="Ir a..."
+                  title={`Ingresa un número entre 1 y ${currentPage} (páginas visitadas)`}
+                  className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+                />
+                <button
+                  type="submit"
+                  disabled={!pageInput}
+                  className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors"
+                >
+                  Ir
+                </button>
+              </form>
             </div>
-          )}
+          </div>
+
         </div>
       </div>
 
-      <FormCorrespondenciaModal 
+      <FormCorrespondenciaModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
-
     </div>
   );
 }
