@@ -28,7 +28,7 @@ async function fetchAllBienesForReport(serverFilter) {
       numInv: node.num_inv,
       inconvenientes: node.inconvenientes,
       notas: node.notas,
-      esCapitalizable: node.categoria?.es_capitalizable,
+      esCapitalizable: !!(node.categoria?.es_capitalizable && node.num_inv && !String(node.num_inv).toUpperCase().includes('COMODATO')),
       unidad: node.unidad,
       ubicacion: node.ubicacion
     })));
