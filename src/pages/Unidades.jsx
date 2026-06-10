@@ -335,7 +335,7 @@ export default function Unidades() {
                 </td></tr>
               ) : (
                 edges.map(({ node }) => (
-                  <tr key={node.clave} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={node.clave} onClick={() => { if (window.getSelection().toString().length > 0) return; handleOpenDetail(node); }} className="cursor-pointer hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-gray-800 break-words" title={node.descripcion}>{node.descripcion || 'Sin descripción'}</p>
@@ -381,11 +381,11 @@ export default function Unidades() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleOpenDetail(node)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="Ver Detalles"><Eye size={18} /></button>
+                        
                         {isPrivileged && (
                           <>
-                            <button onClick={() => handleOpenEdit(node)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
-                            <button onClick={() => handleDeleteClick(node)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(node); }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(node); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
                           </>
                         )}
                       </div>

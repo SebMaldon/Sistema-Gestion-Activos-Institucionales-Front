@@ -1274,6 +1274,30 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
         },
       });
     } else {
+      if (idRol === 3) {
+        // Rol estándar solo actualiza TI y Cuentas PC
+        if (showTI && modalForm.id_bien) {
+          const tiData = parseTI();
+          const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
+          if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+          cuentasList.forEach(c => {
+            const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
+            if (c.id_cuenta && !c._new) {
+              updateCuentaPC({ id_cuenta: c.id_cuenta, data });
+            } else {
+              createCuentaPC({ id_bien: modalForm.id_bien, data });
+            }
+          });
+        }
+        setTimeout(() => {
+          closeForm(); 
+          onClose(); 
+          if (refetch) refetch(); 
+          showToast('Especificaciones TI actualizadas.', 'success'); 
+        }, 300);
+        return;
+      }
+
       updateBien({ id_bien: modalForm.id_bien, ...vars }, {
         onSuccess: () => {
           if (showTI && modalForm.id_bien) {
@@ -1526,7 +1550,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
               {/* ── Tab: General ── */}
               {formTab === 'general' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 fade-in">
+              <fieldset disabled={idRol === 3} className="grid grid-cols-1 sm:grid-cols-2 gap-4 fade-in">
                 {/* Categoría */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -1792,7 +1816,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                 </div>
-              </div>
+              </fieldset>
               )}
 
               {/* ── Tab: Técnico ── */}
