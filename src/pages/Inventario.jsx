@@ -43,6 +43,27 @@ import ExportExcelModal from '../components/ExportExcelModal';
 import { EditBienModal } from '../components/EditBienModal';
 import ConfirmModal from '../components/ConfirmModal';
 
+const fallbackCopyTextToClipboard = (text) => {
+  var textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try { document.execCommand('copy'); } catch (err) {}
+  document.body.removeChild(textArea);
+};
+
+export const copyTextFallback = (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopyTextToClipboard(text));
+  } else {
+    fallbackCopyTextToClipboard(text);
+  }
+};
+
 import ReportePanel from '../components/ReportePanel';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
@@ -2119,11 +2140,11 @@ export default function Inventario() {
                                   <div className="min-w-0">
                                     <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-flex items-center gap-1.5 max-w-full">
                                       <span className="truncate">{fmt(bien.numSerie)}</span>
-                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.numSerie); showToast('Número de Serie copiado', 'success'); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numSerie); showToast('Número de Serie copiado', 'success'); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </span>
                                     <p className={`flex items-center gap-1.5 text-xs mt-0.5 max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
                                       <span className="truncate">Inv: {fmt(bien.numInv)}</span>
-                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </p>
                                     
                                     {(() => {
@@ -2134,7 +2155,7 @@ export default function Inventario() {
                                           <Network size={11} className="text-emerald-600 shrink-0" />
                                           <span className="truncate">{ips[0]}</span>
                                           {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
-                                          <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
+                                          <button onClick={(e) => { e.stopPropagation(); copyTextFallback(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
                                         </div>
                                       );
                                     })()}
@@ -2156,7 +2177,7 @@ export default function Inventario() {
                               <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5 max-w-full">
                                   <p className="font-semibold text-gray-900 text-sm truncate">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
-                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                 </div>
                                 <p className="text-xs text-gray-400">{bien.equipo}</p>
                                 {isPcOrLaptop && bien.cuentasPC?.length > 0 && (

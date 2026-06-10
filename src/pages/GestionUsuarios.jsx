@@ -317,7 +317,24 @@ function ResetPasswordModal({ usuario, onClose }) {
   });
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(tempPassword);
+    const copyTextFallback = (text) => {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => fallback(text));
+      } else {
+        fallback(text);
+      }
+    };
+    const fallback = (text) => {
+      var textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(textArea);
+    };
+    copyTextFallback(tempPassword);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

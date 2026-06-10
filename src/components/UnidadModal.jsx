@@ -366,12 +366,18 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
             s[field] = parseInt(s[field]);
           }
         });
+        if (s.id_segmento !== undefined && s.id_segmento !== null && s.id_segmento !== '') {
+          s.id_segmento = parseInt(s.id_segmento);
+        } else {
+          delete s.id_segmento;
+        }
         if (s.fecha_migracion === '' || s.fecha_migracion === null) {
           s.fecha_migracion = null;
         } else {
           s.fecha_migracion = new Date(s.fecha_migracion).toISOString();
         }
         delete s.__typename;
+        delete s.clave;
         return s;
       });
 
