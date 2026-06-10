@@ -76,7 +76,7 @@ function fmt(v) { return v || '—'; }
 function EstatusBadge({ estatus }) {
   const map = {
     'ACTIVO': { bg: '#dcfce7', color: '#15803d', label: 'Activo' },
-    'BAJA': { bg: '#fee2e2', color: '#b91c1c', label: 'Baja' },
+    'INACTIVO': { bg: '#fee2e2', color: '#b91c1c', label: 'Inactivo' },
     'DAÑADO': { bg: '#fef3c7', color: '#d97706', label: 'Dañado' },
     'DEVOLUCIÓN': { bg: '#f3e8ff', color: '#7e22ce', label: 'Devolución' },
     'OTRO': { bg: '#f3f4f6', color: '#374151', label: 'Otro' },

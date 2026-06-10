@@ -5,7 +5,7 @@ import { X, QrCode, Cpu, HardDrive, Wifi, Monitor, Calendar, Shield, Building, U
 const STATUS_BADGE = {
   'Activo': 'badge-activo',
   'En Reparación': 'badge-reparacion',
-  'Baja': 'badge-baja',
+  'Inactivo': 'badge-inactivo',
 };
 
 // Simple QR code visual placeholder
