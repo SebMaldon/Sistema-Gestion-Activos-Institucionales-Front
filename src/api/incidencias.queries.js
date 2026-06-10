@@ -185,7 +185,7 @@ export const GET_BIEN_BY_TERMINO_QUERY = gql`
 
 export const CREATE_INCIDENCIA_MUTATION = gql`
   mutation CreateIncidencia(
-    $id_bien: ID!
+    $id_bien: ID
     $id_tipo_incidencia: Int!
     $descripcion_falla: String!
     $id_unidad: String
