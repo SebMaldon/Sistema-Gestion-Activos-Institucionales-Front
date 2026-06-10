@@ -39,7 +39,7 @@ const NAV_BY_ROL = {
   3: [ // Usuario Estándar (solo consulta)
     { path: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, group: 'Principal' },
     { path: '/inventario', label: 'Inventario', icon: Package, group: 'Consulta' },
-    { path: '/incidencias', label: 'Mis Incidencias', icon: AlertTriangle, group: 'Consulta' },
+    { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Consulta' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Consulta' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Consulta' },
     { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },

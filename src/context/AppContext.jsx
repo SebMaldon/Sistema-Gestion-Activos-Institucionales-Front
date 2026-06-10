@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useRef } from 'react';
 
 const AppContext = createContext(null);
 
@@ -10,10 +10,18 @@ export function AppProvider({ children }) {
   const [isFichaOpen, setIsFichaOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const toastTimeoutRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3500);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+      toastTimeoutRef.current = null;
+    }, 3500);
   };
 
   const openFicha = (asset) => {

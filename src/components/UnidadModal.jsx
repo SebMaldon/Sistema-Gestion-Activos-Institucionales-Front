@@ -31,7 +31,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
     tipo_unidad: '',
     encargado_usuario: '',
     administrador_usuario: '',
-    informatica_usuario: '',
+    informatica_usuario: [''],
     contacto_telefonico: [''],
     contacto_correo: [''],
     segmentos: []
@@ -112,7 +112,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
         tipo_unidad: unidadToEdit.tipo_unidad ?? '',
         encargado_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 1)?.id_usuario ? String(unidadToEdit.unidadesACargo.find(u => u.id_rol_empleado === 1).id_usuario) : '',
         administrador_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 2)?.id_usuario ? String(unidadToEdit.unidadesACargo.find(u => u.id_rol_empleado === 2).id_usuario) : '',
-        informatica_usuario: unidadToEdit.unidadesACargo?.find(u => u.id_rol_empleado === 3)?.id_usuario ? String(unidadToEdit.unidadesACargo.find(u => u.id_rol_empleado === 3).id_usuario) : '',
+        informatica_usuario: (unidadToEdit.unidadesACargo?.filter(u => u.id_rol_empleado === 3).map(u => String(u.id_usuario))?.length ? unidadToEdit.unidadesACargo?.filter(u => u.id_rol_empleado === 3).map(u => String(u.id_usuario)) : ['']),
         contacto_telefonico: tels?.length ? tels : [''],
         contacto_correo: cors?.length ? cors : [''],
         segmentos: unidadToEdit.segmentos ? unidadToEdit.segmentos.map(s => ({
@@ -143,7 +143,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
         tipo_unidad: '',
         encargado_usuario: '',
         administrador_usuario: '',
-        informatica_usuario: '',
+        informatica_usuario: [''],
         contacto_telefonico: [''],
         contacto_correo: [''],
         segmentos: []
@@ -338,7 +338,11 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
       const unidadesACargo = [];
       if (formData.encargado_usuario) unidadesACargo.push({ id_rol_empleado: 1, id_usuario: parseInt(formData.encargado_usuario) });
       if (formData.administrador_usuario) unidadesACargo.push({ id_rol_empleado: 2, id_usuario: parseInt(formData.administrador_usuario) });
-      if (formData.informatica_usuario) unidadesACargo.push({ id_rol_empleado: 3, id_usuario: parseInt(formData.informatica_usuario) });
+      if (Array.isArray(formData.informatica_usuario)) {
+        formData.informatica_usuario.filter(Boolean).forEach(id => {
+          unidadesACargo.push({ id_rol_empleado: 3, id_usuario: parseInt(id) });
+        });
+      }
 
       const contactos = [];
       if (formData.contacto_telefonico) {
@@ -550,14 +554,32 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Encargado de Informática</label>
-                      <SearchableSelect
-                        value={formData.informatica_usuario}
-                        onChange={(val) => setFormData(prev => ({ ...prev, informatica_usuario: val }))}
-                        options={usuariosOptions}
-                        placeholder="-- Seleccionar --"
-                        disabled={loadingUsuarios}
-                      />
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Encargado(s) de Informática</label>
+                      <div className="space-y-2 h-[110px] overflow-y-auto pr-1 custom-scrollbar">
+                        {formData.informatica_usuario?.map((val, i) => (
+                          <div key={i} className="flex gap-2 items-center">
+                            <div className="flex-1">
+                              <SearchableSelect
+                                value={val}
+                                onChange={(newVal) => handleArrayChange('informatica_usuario', i, newVal)}
+                                options={usuariosOptions}
+                                placeholder="-- Seleccionar --"
+                                disabled={loadingUsuarios}
+                              />
+                            </div>
+                            {formData.informatica_usuario.length > 1 && (
+                              <button type="button" onClick={() => handleRemoveArrayItem('informatica_usuario', i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                <X size={16} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {formData.informatica_usuario?.length < 3 && (
+                          <button type="button" onClick={() => handleAddArrayItem('informatica_usuario')} className="text-xs font-bold text-blue-600 flex items-center gap-1 mt-1">
+                            <Plus size={12} /> Agregar Encargado
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -651,7 +673,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono(s)</label>
-                      <div className="space-y-2">
+                      <div className="space-y-2 h-[110px] overflow-y-auto pr-1 custom-scrollbar">
                         {formData.contacto_telefonico.map((tel, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <input
@@ -675,7 +697,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Correo(s) Electrónico(s)</label>
-                      <div className="space-y-2">
+                      <div className="space-y-2 h-[110px] overflow-y-auto pr-1 custom-scrollbar">
                         {formData.contacto_correo.map((correo, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <input

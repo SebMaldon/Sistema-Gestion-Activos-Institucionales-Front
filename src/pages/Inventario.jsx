@@ -29,7 +29,7 @@ import {
   SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION
 } from '../api/inventario.queries';
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA, CREATE_PROVEEDOR } from '../api/garantias.queries';
-import { formatDate, formatDateTime } from '../lib/utils';
+import { formatDate, formatDateTime, copyTextToClipboard } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
 import MultiSearchableSelect from '../components/MultiSearchableSelect';
 import PrintLabelsTab from '../components/PrintLabelsTab';
@@ -842,7 +842,8 @@ export default function Inventario() {
   const { showToast } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const idRol = usuario?.id_rol ?? 3;
-  const canEdit = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
+  // canEdit incluye también al usuario estándar (rol 3) solo para modificar TI y Cuentas
+  const canEdit = [ROL_ADMIN, ROL_MAESTRO, 3].includes(idRol);
   const canDelete = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -2111,18 +2112,18 @@ export default function Inventario() {
                           });
 
                           return (
-                            <tr key={bien.id} className={`hover:bg-gray-50/70 transition-colors group ${isConflictRow ? 'bg-red-50/60' : ''}`}>
+                            <tr key={bien.id} onClick={(e) => { if (window.getSelection().toString().length > 0) return; e.stopPropagation(); setModalFicha(bien); }} className={`hover:bg-gray-50/70 cursor-pointer transition-colors group ${isConflictRow ? 'bg-red-50/60' : ''}`}>
                               <td className="px-4 py-3.5 relative">
                                 {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
                                 <div className="flex items-center justify-between gap-3 w-full">
                                   <div className="min-w-0">
                                     <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-flex items-center gap-1.5 max-w-full">
                                       <span className="truncate">{fmt(bien.numSerie)}</span>
-                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numSerie); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.numSerie); showToast('Número de Serie copiado', 'success'); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </span>
                                     <p className={`flex items-center gap-1.5 text-xs mt-0.5 max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
                                       <span className="truncate">Inv: {fmt(bien.numInv)}</span>
-                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.numInv); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </p>
 
                                     {(() => {
@@ -2133,7 +2134,7 @@ export default function Inventario() {
                                           <Network size={11} className="text-emerald-600 shrink-0" />
                                           <span className="truncate">{ips[0]}</span>
                                           {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
-                                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(ips[0]); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
+                                          <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
                                         </div>
                                       );
                                     })()}
@@ -2155,7 +2156,7 @@ export default function Inventario() {
                               <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5 max-w-full">
                                   <p className="font-semibold text-gray-900 text-sm truncate">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
-                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.especificacionTI.nombre_host); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
+                                  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                 </div>
                                 <p className="text-xs text-gray-400">{bien.equipo}</p>
                                 {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
@@ -2165,14 +2166,14 @@ export default function Inventario() {
                                         <User size={11} strokeWidth={2.5} />
                                       </div>
                                       <span className="font-bold whitespace-nowrap truncate">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
-                                      {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].cuenta_windows); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].cuenta_windows); showToast('Usuario de Windows copiado', 'success'); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                       {bien.cuentasPC.length > 1 && (
                                         <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
                                       <span className="truncate">{bien.cuentasPC[0].correo}</span>
-                                      {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(bien.cuentasPC[0].correo); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                      {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                     </div>
                                   </div>
                                 )}
@@ -2186,22 +2187,18 @@ export default function Inventario() {
                               <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5">
 
-                                  <button onClick={() => setModalFicha(bien)} title="Ver Ficha Técnica"
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
-                                    <Eye size={14} />
-                                  </button>
-                                  <button onClick={() => setModalQR(bien)} title="Ver Identificadores QR"
+                                  <button onClick={(e) => { e.stopPropagation(); setModalQR(bien); }} title="Ver Identificadores QR"
                                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-50 text-green-600 hover:bg-green-100 transition-colors">
                                     <QrCode size={14} />
                                   </button>
                                   {canEdit && (
-                                    <button onClick={() => openEdit(bien)} title="Editar bien"
+                                    <button onClick={(e) => { e.stopPropagation(); openEdit(bien); }} title="Editar bien"
                                       className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
                                       <Edit size={14} />
                                     </button>
                                   )}
                                   {canDelete && (
-                                    <button onClick={() => setModalConfirmDel(bien)} title="Eliminar bien"
+                                    <button onClick={(e) => { e.stopPropagation(); setModalConfirmDel(bien); }} title="Eliminar bien"
                                       className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
                                       <Trash2 size={14} />
                                     </button>
@@ -2239,7 +2236,7 @@ export default function Inventario() {
                     });
 
                     return (
-                      <div key={bien.id} className={`rounded-2xl border shadow-sm p-4 relative overflow-hidden ${isConflictRow ? 'bg-red-50/40 border-red-200' : 'bg-white border-gray-100'}`}>
+                      <div key={bien.id} onClick={() => { if (window.getSelection().toString().length > 0) return; setModalFicha(bien); }} className={`cursor-pointer rounded-2xl border shadow-sm p-4 relative overflow-hidden ${isConflictRow ? 'bg-red-50/40 border-red-200' : 'bg-white border-gray-100 hover:bg-gray-50/50 transition-colors'}`}>
                         {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
                         <div className="flex items-start justify-between gap-3 mb-3 pl-1">
                           <div className="flex-1 min-w-0">
@@ -2292,22 +2289,19 @@ export default function Inventario() {
                           <p><span className="text-gray-400">Inv:</span> {fmt(bien.numInv)}</p>
                         </div>
                         <div className="flex items-center gap-2 pt-3 border-t border-gray-50 flex-wrap">
-                          <button onClick={() => setModalFicha(bien)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-xs font-semibold">
-                            <Eye size={13} /> Ficha
-                          </button>
-                          <button onClick={() => setModalQR(bien)}
+                          
+                          <button onClick={(e) => { e.stopPropagation(); setModalQR(bien); }}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors text-xs font-semibold">
                             <QrCode size={13} /> QR
                           </button>
                           {canEdit && (
-                            <button onClick={() => openEdit(bien)}
+                            <button onClick={(e) => { e.stopPropagation(); openEdit(bien); }}
                               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors text-xs font-semibold">
                               <Edit size={13} /> Editar
                             </button>
                           )}
                           {canDelete && (
-                            <button onClick={() => setModalConfirmDel(bien)}
+                            <button onClick={(e) => { e.stopPropagation(); setModalConfirmDel(bien); }}
                               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors text-xs font-semibold">
                               <Trash2 size={13} /> Eliminar
                             </button>
@@ -2369,7 +2363,7 @@ export default function Inventario() {
             return { ...b, notas: (modalFicha.notas?.length > (b.notas?.length || 0)) ? modalFicha.notas : b.notas };
           })();
           const fichaMode = getDeviceMode(activeFicha.modelo?.tipoDispositivo?.nombre_tipo, activeFicha.categoria?.nombre_categoria);
-          const hasTecnico = activeFicha.especificacionTI || (activeFicha.cuentasPC?.length > 0) || (activeFicha.monitores?.length > 0) || activeFicha.equipoAsignado || (activeFicha.garantias?.length > 0) || fichaMode === 'OTHER';
+          const hasTecnico = activeFicha.especificacionTI || (activeFicha.cuentasPC?.length > 0) || (activeFicha.monitores?.length > 0) || activeFicha.equipoAsignado || (activeFicha.garantias?.length > 0) || fichaMode === 'OTHER' || fichaMode === 'PC' || fichaMode === 'LAPTOP';
           return (
             <Modal onClose={() => { setModalFicha(null); setFichaTabs('info'); }} title="Ficha Técnica" subtitle="Detalles y especificaciones del equipo" wide>
               <div className="space-y-4 text-sm">
@@ -2431,7 +2425,9 @@ export default function Inventario() {
                       <InfoField icon={<Tag size={14} />} label="No. Serie" value={fmt(activeFicha.numSerie)} mono />
                       <InfoField icon={<Tag size={14} />} label="No. Inventario" value={fmt(activeFicha.numInv)} mono />
                       <InfoField icon={<Shield size={14} />} label="Clave Presupuestal" value={fmt(activeFicha.clavePresupuestal)} mono />
+                      <InfoField icon={<MapPin size={14} />} label="Unidad Física" value={activeFicha.unidad ? fmt(activeFicha.unidad.descripcion || activeFicha.unidad.desc_corta) : '—'} />
                       <InfoField icon={<MapPin size={14} />} label="Ubicación" value={fmt(activeFicha.ubicacion)} />
+                      <InfoField icon={<Wifi size={14} />} label="Segmento de Red" value={activeFicha.segmento ? fmt(activeFicha.segmento.nombre || activeFicha.segmento.clave) : 'Sin segmento'} />
                       <InfoField icon={<User size={14} />} label="En Resguardo de" value={fmt(activeFicha.resguardo) + (activeFicha.usuarioResguardo?.matricula ? ` (Mat: ${activeFicha.usuarioResguardo.matricula})` : '')} />
                       <InfoField icon={<Calendar size={14} />} label="Fecha Adquisición" value={formatDate(activeFicha.fechaAdquisicion)} />
                       <InfoField icon={<Calendar size={14} />} label="Última Actualización" value={formatDateTime(activeFicha.fechaActualizacion)} />
@@ -2500,45 +2496,58 @@ export default function Inventario() {
                 {fichaTabs === 'tecnico' && (
                   <div className="space-y-4 fade-in">
                     {/* Especificaciones TI */}
-                    {activeFicha.especificacionTI && (fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
+                    {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
                       <div className="rounded-xl border border-blue-100 overflow-hidden">
                         <div className="bg-blue-50 px-4 py-2.5 flex items-center gap-2">
                           <Monitor size={15} className="text-blue-600" />
                           <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Especificaciones TI</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                          <InfoField icon={<Monitor size={13} />} label="Host Name" value={fmt(activeFicha.especificacionTI.nombre_host)} />
-                          <InfoField icon={<Cpu size={13} />} label="CPU" value={fmt(activeFicha.especificacionTI.cpu_info)} />
-                          <InfoField icon={<Server size={13} />} label="RAM" value={activeFicha.especificacionTI.ram_gb ? `${activeFicha.especificacionTI.ram_gb} GB` : '—'} />
-                          <InfoField icon={<HardDrive size={13} />} label="Almacenamiento" value={activeFicha.especificacionTI.almacenamiento_gb ? `${activeFicha.especificacionTI.almacenamiento_gb} GB` : '—'} />
-                          <InfoField icon={<Wifi size={13} />} label="Dirección IP" value={fmt(activeFicha.especificacionTI.dir_ip)} mono />
-                          <InfoField icon={<Wifi size={13} />} label="MAC Address" value={fmt(activeFicha.especificacionTI.mac_address)} mono />
-                          <InfoField icon={<Wifi size={13} />} label="Dir. MAC Alt" value={fmt(activeFicha.especificacionTI.dir_mac)} mono />
-                          <InfoField icon={<Monitor size={13} />} label="Sistema Op." value={fmt(activeFicha.especificacionTI.modelo_so)} />
-                          <InfoField icon={<Monitor size={13} />} label="Versión Office" value={fmt(activeFicha.especificacionTI.version_office)} />
-                          <InfoField icon={<Calendar size={13} />} label="Último Escaneo" value={formatDateTime(activeFicha.especificacionTI.last_scan)} />
-                          <InfoField icon={<Tag size={13} />} label="Win Serial" value={fmt(activeFicha.especificacionTI.windows_serial)} mono />
-                          <InfoField icon={<Wifi size={13} />} label="Pto. Red" value={fmt(activeFicha.especificacionTI.puerto_red)} />
-                          <InfoField icon={<Wifi size={13} />} label="Switch Red" value={fmt(activeFicha.especificacionTI.switch_red)} />
+                          {(() => {
+                            const ti = activeFicha.especificacionTI || {};
+                            return (
+                              <>
+                                <InfoField icon={<Monitor size={13} />} label="Host Name" value={fmt(ti.nombre_host)} />
+                                <InfoField icon={<Cpu size={13} />} label="CPU" value={fmt(ti.cpu_info)} />
+                                <InfoField icon={<Server size={13} />} label="RAM" value={ti.ram_gb ? `${ti.ram_gb} GB` : '—'} />
+                                <InfoField icon={<HardDrive size={13} />} label="Almacenamiento" value={ti.almacenamiento_gb ? `${ti.almacenamiento_gb} GB` : '—'} />
+                                <InfoField icon={<Wifi size={13} />} label="Dirección IP" value={fmt(ti.dir_ip)} mono />
+                                <InfoField icon={<Wifi size={13} />} label="MAC Address" value={fmt(ti.mac_address)} mono />
+                                <InfoField icon={<Wifi size={13} />} label="Dir. MAC Alt" value={fmt(ti.dir_mac)} mono />
+                                <InfoField icon={<Monitor size={13} />} label="Sistema Op." value={fmt(ti.modelo_so)} />
+                                <InfoField icon={<Monitor size={13} />} label="Versión Office" value={fmt(ti.version_office)} />
+                                <InfoField icon={<Calendar size={13} />} label="Último Escaneo" value={formatDateTime(ti.last_scan)} />
+                                <InfoField icon={<Tag size={13} />} label="Win Serial" value={fmt(ti.windows_serial)} mono />
+                                <InfoField icon={<Wifi size={13} />} label="Pto. Red" value={fmt(ti.puerto_red)} />
+                                <InfoField icon={<Wifi size={13} />} label="Switch Red" value={fmt(ti.switch_red)} />
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
 
                     {/* Cuentas PC */}
-                    {activeFicha.cuentasPC && activeFicha.cuentasPC.length > 0 && (
+                    {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
                       <div className="rounded-xl border border-purple-200 overflow-hidden">
                         <div className="bg-purple-50 px-4 py-2.5 flex items-center gap-2">
                           <User size={15} className="text-purple-600" />
                           <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Cuentas de Usuario</span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-white">
-                          {activeFicha.cuentasPC.map((c, i) => (
-                            <div key={i} className="col-span-full border-b border-gray-100 last:border-0 pb-2 mb-2 last:pb-0 last:mb-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <InfoField icon={<User size={13} />} label={`Cuenta Win. ${i + 1}`} value={fmt(c.cuenta_windows)} />
-                              <InfoField icon={<User size={13} />} label="Correo" value={fmt(c.correo)} />
-                              <InfoField icon={<User size={13} />} label="Tipo Usuario" value={fmt(c.tipo_user)} />
+                        <div className="p-4 bg-white">
+                          {activeFicha.cuentasPC && activeFicha.cuentasPC.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {activeFicha.cuentasPC.map((c, i) => (
+                                <div key={i} className="col-span-full border-b border-gray-100 last:border-0 pb-2 mb-2 last:pb-0 last:mb-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <InfoField icon={<User size={13} />} label={`Cuenta Win. ${i + 1}`} value={fmt(c.cuenta_windows)} />
+                                  <InfoField icon={<User size={13} />} label="Correo" value={fmt(c.correo)} />
+                                  <InfoField icon={<User size={13} />} label="Tipo Usuario" value={fmt(c.tipo_user)} />
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          ) : (
+                            <p className="text-sm text-gray-500 italic text-center py-2">No hay cuentas registradas</p>
+                          )}
                         </div>
                       </div>
                     )}

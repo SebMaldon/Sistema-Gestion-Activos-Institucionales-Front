@@ -906,7 +906,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   const deleteCuentaPC = () => { showToast('Borrado de cuenta PC no implementado localmente', 'warning') };
   
   // States
-  const [formTab, setFormTab]           = useState('general'); // 'general' | 'tecnico'
+  const [formTab, setFormTab]           = useState(idRol === 3 ? 'tecnico' : 'general'); // 'general' | 'tecnico'
   const [inconveniencesWarning, setInconveniencesWarning] = useState(null);
   
   const [showTI, setShowTI]             = useState(false);
@@ -919,6 +919,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
   // ── Formulario ────────────────────────────────────────────────────────────
   const [form, setForm]   = useState(FORM_EMPTY);
+  const [redInterfaces, setRedInterfaces] = useState([{ ip: '', mac: '' }]);
   const [tiForm, setTiForm] = useState(TI_EMPTY);
   // cuentas 1:N: array de { id_cuenta?, cuenta_windows, correo, tipo_user, nombre_host, _editing?, _new? }
   const [cuentasList, setCuentasList] = useState([]);
@@ -1083,6 +1084,18 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
       fecha_adquisicion: bien.fechaAdquisicion
         ? new Date(bien.fechaAdquisicion).toISOString().split('T')[0] : '',
     });
+    // parse existing ips and macs into redInterfaces
+    const rawIp = bien.especificacionTI?.dir_ip || '';
+    const rawMac = bien.especificacionTI?.mac_address || '';
+    const ips = rawIp.split('/').map(x => x.trim()).filter(Boolean);
+    const macs = rawMac.split('/').map(x => x.trim()).filter(Boolean);
+    const interfaces = [];
+    const len = Math.max(ips.length, macs.length, 1);
+    for(let i=0; i<len; i++) {
+      interfaces.push({ ip: ips[i] || '', mac: macs[i] || '' });
+    }
+    setRedInterfaces(interfaces);
+
     setTiForm({
       nombre_host: bien.especificacionTI?.nombre_host ?? '',
       cpu_info: bien.especificacionTI?.cpu_info ?? '',
@@ -1128,8 +1141,9 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
   const closeForm = useCallback(() => {
     setModalForm(null);
-    setFormTab('general');
+    setFormTab(idRol === 3 ? 'tecnico' : 'general');
     setForm(FORM_EMPTY);
+    setRedInterfaces([{ ip: '', mac: '' }]);
     setTiForm(TI_EMPTY);
     setCuentasList([]);
     setFormErrors({});
@@ -1274,6 +1288,30 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
         },
       });
     } else {
+      if (idRol === 3) {
+        // Rol estándar solo actualiza TI y Cuentas PC
+        if (showTI && modalForm.id_bien) {
+          const tiData = parseTI();
+          const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
+          if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+          cuentasList.forEach(c => {
+            const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
+            if (c.id_cuenta && !c._new) {
+              updateCuentaPC({ id_cuenta: c.id_cuenta, data });
+            } else {
+              createCuentaPC({ id_bien: modalForm.id_bien, data });
+            }
+          });
+        }
+        setTimeout(() => {
+          closeForm(); 
+          onClose(); 
+          if (refetch) refetch(); 
+          showToast('Especificaciones TI actualizadas.', 'success'); 
+        }, 300);
+        return;
+      }
+
       updateBien({ id_bien: modalForm.id_bien, ...vars }, {
         onSuccess: () => {
           if (showTI && modalForm.id_bien) {
@@ -1319,9 +1357,9 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
     cpu_info:          tiForm.cpu_info || null,
     ram_gb:            tiForm.ram_gb ? Number(tiForm.ram_gb) : null,
     almacenamiento_gb: tiForm.almacenamiento_gb ? Number(tiForm.almacenamiento_gb) : null,
-    dir_ip:            tiForm.dir_ip || null,
-    dir_mac:           tiForm.dir_mac || null,
-    mac_address:       tiForm.mac_address || null,
+    dir_ip:            redInterfaces.map(r => r.ip).filter(Boolean).join(' / ') || null,
+    dir_mac:           null,
+    mac_address:       redInterfaces.map(r => r.mac).filter(Boolean).join(' / ') || null,
     modelo_so:         tiForm.modelo_so || null,
     version_office:    tiForm.version_office || null,
     puerto_red:        tiForm.puerto_red || null,
@@ -1362,13 +1400,23 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
       hasNoInv = true;
     }
 
-    if (showTI && tiForm.dir_ip && tiForm.dir_ip.trim() !== '') {
-       const cleanIp = tiForm.dir_ip.replace(/\s/g, '');
+    const finalIpStr = redInterfaces.map(r => r.ip).filter(Boolean).join(' / ');
+    if (showTI && finalIpStr && finalIpStr.trim() !== '') {
+       const ipsToCheck = redInterfaces.map(r => r.ip.replace(/\s/g, '')).filter(Boolean);
        const currentId = modalForm !== 'create' ? modalForm.id_bien : null;
+       let conflictIp = null;
+       let conflictDups = [];
        try {
-           const { checkDuplicateIP } = await gqlClient.request(CHECK_DUPLICATE_IP_QUERY, { dir_ip: cleanIp, id_bien_exclude: currentId });
-           if (checkDuplicateIP && checkDuplicateIP.length > 0) {
-               ipConflict = { ip: cleanIp, duplicates: checkDuplicateIP };
+           for (const cleanIp of ipsToCheck) {
+             const { checkDuplicateIP } = await gqlClient.request(CHECK_DUPLICATE_IP_QUERY, { dir_ip: cleanIp, id_bien_exclude: currentId });
+             if (checkDuplicateIP && checkDuplicateIP.length > 0) {
+                 conflictIp = cleanIp;
+                 conflictDups = checkDuplicateIP;
+                 break;
+             }
+           }
+           if (conflictIp) {
+               ipConflict = { ip: conflictIp, duplicates: conflictDups };
            }
        } catch (e) {
            console.error("Error al checar IP duplicada:", e);
@@ -1505,7 +1553,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                 {[
                   { key: 'general', label: 'General' },
                   { key: 'tecnico', label: 'Técnico / Garantía', badge: showTI || deviceMode === 'OTHER' || deviceMode === 'PC' || deviceMode === 'LAPTOP' || deviceMode === 'MONITOR' },
-                ].map(t => (
+                ].filter(t => Number(idRol) !== 3 || t.key !== 'general').map(t => (
                   <button
                     key={t.key}
                     type="button"
@@ -1526,7 +1574,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
               {/* ── Tab: General ── */}
               {formTab === 'general' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 fade-in">
+              <fieldset disabled={idRol === 3} className="grid grid-cols-1 sm:grid-cols-2 gap-4 fade-in">
                 {/* Categoría */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -1792,7 +1840,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                 </div>
-              </div>
+              </fieldset>
               )}
 
               {/* ── Tab: Técnico ── */}
@@ -1819,17 +1867,12 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                         { key: 'modelo_so',          label: 'Sistema Operativo',     placeholder: 'Windows 11 Pro', form: 'ti' },
                         { key: 'version_office',     label: 'Versión de Office',     placeholder: 'Office 2021', form: 'ti' },
                         { key: 'windows_serial',     label: 'Serial de Windows',     placeholder: 'XXXXX-XXXXX-XXXXX', form: 'ti' },
-                        { key: 'dir_ip',             label: 'Dirección IP',          placeholder: '192.168.1.100', form: 'ti' },
-                        { key: 'mac_address',        label: 'MAC Address',           placeholder: 'AA:BB:CC:DD:EE:FF', form: 'ti' },
-                        { key: 'dir_mac',            label: 'Dir. MAC Alt.',         placeholder: '—', form: 'ti' },
                         { key: 'puerto_red',         label: 'Puerto de Red',         placeholder: 'Pto. 12', form: 'ti' },
                         { key: 'switch_red',         label: 'Switch (IP/Nombre)',    placeholder: '10.28.X.X', form: 'ti' },
                         { key: 'last_scan',          label: 'Último Escaneo',        placeholder: '', type: 'datetime-local', form: 'ti' },
                       ].map(({ key, label, placeholder, type = 'text' }) => (
                         <div key={key}>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">{label}
-{key === 'dir_ip' && modalForm !== 'create' && modalForm?.inconvenientes?.some(i => i.includes('IP Repetida')) && (<span className="ml-2 inline-flex items-center gap-1 text-red-600 text-[10px]" title="IP Repetida en otro bien"><Wifi size={12} className="animate-pulse" /> Repetida</span>)}
-</label>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>
                           <input
                             type={type}
                             value={tiForm[key] ?? ''}
@@ -1839,6 +1882,67 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                           />
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {showTI && (
+                    <div className="border-t border-blue-100 p-4 bg-white">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex items-center gap-1.5">
+                          DIRECCIÓN IPV4 Y MAC ADDRESS
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setRedInterfaces([...redInterfaces, { ip: '', mac: '' }])}
+                          className="flex items-center gap-1 text-xs text-blue-600 font-semibold hover:text-blue-800 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          <Plus size={13}/> Agregar
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {redInterfaces.map((net, idx) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={net.ip}
+                              onChange={(e) => {
+                                let v = e.target.value.replace(/[^0-9.]/g, '').replace(/\.+/g, '.');
+                                let parts = v.split('.');
+                                for(let i=0; i<parts.length; i++) {
+                                  if(parts[i].length > 3) {
+                                     parts.splice(i+1, 0, parts[i].slice(3));
+                                     parts[i] = parts[i].slice(0,3);
+                                  }
+                                }
+                                parts = parts.map(p => (p && parseInt(p, 10) > 255) ? '255' : p);
+                                const formattedIp = parts.slice(0,4).join('.');
+                                setRedInterfaces(prev => prev.map((item, i) => i === idx ? { ...item, ip: formattedIp } : item))
+                              }}
+                              placeholder="10.73.226.242"
+                              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 font-mono tracking-widest text-center"
+                            />
+                            <input
+                              type="text"
+                              value={net.mac}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^a-fA-F0-9]/g, '').toUpperCase();
+                                const formattedMac = v.match(/.{1,2}/g)?.join(':').slice(0, 17) || '';
+                                setRedInterfaces(prev => prev.map((item, i) => i === idx ? { ...item, mac: formattedMac } : item))
+                              }}
+                              placeholder="4C:5F:70:73:63:97"
+                              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 font-mono tracking-widest text-center"
+                            />
+                            {redInterfaces.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setRedInterfaces(prev => prev.filter((_, i) => i !== idx))}
+                                className="w-10 h-10 flex items-center justify-center rounded-lg border border-red-200 text-red-500 hover:bg-red-50 shrink-0"
+                              >
+                                <X size={16} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {/* — Cuentas PC (1:N) — */}

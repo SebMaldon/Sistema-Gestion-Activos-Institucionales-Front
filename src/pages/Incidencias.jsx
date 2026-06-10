@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/auth.store';
 import {
   AlertTriangle, Clock, CheckCircle, User, Calendar,
   Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft,
-  Hash, FileText, MapPin
+  Hash, FileText, MapPin, Copy
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
@@ -25,7 +25,7 @@ import {
   useDeleteIncidencia,
   mapIncidenciaNode,
 } from '../hooks/useIncidencias';
-import { parseServerDate } from '../lib/utils';
+import { parseServerDate, copyTextToClipboard } from '../lib/utils';
 
 // ROLES.ADMIN=1 → Maestro (edita+elimina), ROLES.SUPERVISOR=2 → Admin (edita), ROLES.USUARIO=3 → visualiza
 
@@ -103,6 +103,7 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 const IncidenciaCard = memo(function IncidenciaCard({
   inc, onStatusChange, onEdit, onDelete, onAddNota, canEdit, canDelete, isMoving
 }) {
+  const { showToast } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const cardRef = useRef(null);
@@ -146,38 +147,55 @@ const IncidenciaCard = memo(function IncidenciaCard({
           )}
         </div>
 
-        {(canEdit || canDelete) && (
-          <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
-              className={`p-1.5 rounded-xl transition-all duration-200 ${menuOpen ? 'bg-gray-100 text-gray-900 scale-110' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+        <div className="flex items-center gap-2 shrink-0">
+          {inc.requerimiento && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                copyTextToClipboard(inc.requerimiento);
+                showToast('Requerimiento copiado', 'success');
+              }}
+              className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-all cursor-pointer shadow-sm"
+              title="Copiar Requerimiento"
             >
-              <MoreVertical size={18} />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 fade-in overflow-hidden ring-4 ring-black/5">
-                {canEdit && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
-                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 transition-colors"
-                  >
-                    <div className="p-1 bg-amber-100 rounded-lg text-amber-600"><Edit2 size={14} /></div>
-                    Editar Registro
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
-                    className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
-                  >
-                    <div className="p-1 bg-red-100 rounded-lg text-red-600"><Trash2 size={14} /></div>
-                    Eliminar
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+              <span>REQ: {inc.requerimiento}</span>
+              <Copy size={12} className="shrink-0" />
+            </div>
+          )}
+
+          {(canEdit || canDelete) && (
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
+                className={`p-1.5 rounded-xl transition-all duration-200 ${menuOpen ? 'bg-gray-100 text-gray-900 scale-110' : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'}`}
+              >
+                <MoreVertical size={18} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 fade-in overflow-hidden ring-4 ring-black/5">
+                  {canEdit && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="p-1 bg-amber-100 rounded-lg text-amber-600"><Edit2 size={14} /></div>
+                      Editar Registro
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className="p-1 bg-red-100 rounded-lg text-red-600"><Trash2 size={14} /></div>
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Contenido Principal */}
@@ -295,10 +313,16 @@ const IncidenciaCard = memo(function IncidenciaCard({
 // ─── Componente Tabla Histórico ────────────────────────────────────────────────
 
 function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) {
+  const { showToast } = useApp();
+  const [estatusFiltro, setEstatusFiltro] = useState('');
+  const [fechaFiltroTipo, setFechaFiltroTipo] = useState(''); // 'creacion' o 'resolucion'
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [cursor, setCursor] = useState(null);
-  const [cursors, setCursors] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState('');
   const PAGE_SIZE = 15;
 
   const handleSearch = useCallback((val) => {
@@ -306,19 +330,44 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
     clearTimeout(window._incidSearchTimer);
     window._incidSearchTimer = setTimeout(() => {
       setDebouncedSearch(val);
-      setCursor(null);
-      setCursors([]);
+      setCurrentPage(1);
     }, 400);
   }, []);
 
+  const handleEstatusChange = (val) => {
+    setEstatusFiltro(val);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+  };
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['incidencias', 'historico', debouncedSearch, cursor],
+    queryKey: ['incidencias', 'historico', debouncedSearch, estatusFiltro, fechaFiltroTipo, fechaDesde, fechaHasta, currentPage],
     queryFn: async () => {
+      let f_creacion_desde = undefined;
+      let f_creacion_hasta = undefined;
+      let f_resolucion_desde = undefined;
+      let f_resolucion_hasta = undefined;
+
+      if (fechaFiltroTipo === 'creacion') {
+        if (fechaDesde) f_creacion_desde = new Date(fechaDesde + 'T00:00:00').toISOString();
+        if (fechaHasta) f_creacion_hasta = new Date(fechaHasta + 'T23:59:59').toISOString();
+      } else if (fechaFiltroTipo === 'resolucion') {
+        if (fechaDesde) f_resolucion_desde = new Date(fechaDesde + 'T00:00:00').toISOString();
+        if (fechaHasta) f_resolucion_hasta = new Date(fechaHasta + 'T23:59:59').toISOString();
+      }
+
       const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
-        estatus_reparacion: 'Resuelto',
+        estatus_reparacion: estatusFiltro || undefined,
         search: debouncedSearch || undefined,
+        fecha_creacion_desde: f_creacion_desde,
+        fecha_creacion_hasta: f_creacion_hasta,
+        fecha_resolucion_desde: f_resolucion_desde,
+        fecha_resolucion_hasta: f_resolucion_hasta,
         first: PAGE_SIZE,
-        after: cursor ?? undefined,
+        page: currentPage,
       });
       return res.incidencias;
     },
@@ -326,72 +375,162 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
 
   const incidenciasNodes = data?.edges?.map(e => mapIncidenciaNode(e.node)) ?? [];
   const pageInfo = data?.pageInfo;
+  const totalPages = Math.max(1, Math.ceil((pageInfo?.totalCount || 0) / PAGE_SIZE));
 
-  const handleNextPage = () => {
-    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
-      setCursors(p => [...p, cursor]);
-      setCursor(pageInfo.endCursor);
+  const handleJumpToPage = (e) => {
+    e.preventDefault();
+    const p = parseInt(pageInput, 10);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+      setCurrentPage(p);
+      setPageInput('');
     }
-  };
-
-  const handlePrevPage = () => {
-    const prev = [...cursors];
-    const prevCursor = prev.pop() ?? null;
-    setCursors(prev);
-    setCursor(prevCursor);
   };
 
   if (isError) return <div className="p-4 text-red-500 text-sm">Error cargando incidencias.</div>;
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-        <h3 className="font-bold text-gray-800 text-base">Histórico de Incidencias</h3>
-        <div className="relative min-w-[250px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar serie, falla o persona..."
-            value={searchQuery}
-            onChange={e => handleSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          />
+    <div className="flex flex-col bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8 sm:mb-0 sm:flex-1 sm:min-h-0 sm:flex sm:flex-col">
+      {/* ─── Cabecera de filtros ─────────────────────────────────── */}
+      <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col gap-3 bg-gray-50/50">
+
+        {/* Título + badge total */}
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold text-gray-800 text-sm sm:text-base">Todas las Incidencias</h3>
+          {data?.pageInfo?.totalCount !== undefined && (
+            <span className="bg-[#006341]/10 text-[#006341] text-xs font-semibold px-2 py-0.5 rounded-full">
+              {data.pageInfo.totalCount} total
+            </span>
+          )}
+        </div>
+
+        {/* Filtro estatus + buscador (apilados en móvil, en fila en desktop) */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <select
+            value={estatusFiltro}
+            onChange={(e) => handleEstatusChange(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="">Todos los estatus</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="En proceso">En proceso</option>
+            <option value="Resuelto">Resuelto</option>
+          </select>
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar serie, falla o persona..."
+              value={searchQuery}
+              onChange={e => handleSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
+          </div>
+        </div>
+
+        {/* Filtros de Fecha */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm border-t border-gray-200/60 pt-2">
+          <span className="text-gray-500 font-medium text-xs uppercase tracking-wide whitespace-nowrap">Filtro por fecha:</span>
+          <select
+            value={fechaFiltroTipo}
+            onChange={(e) => { setFechaFiltroTipo(e.target.value); handleFilterChange(); }}
+            className="w-full sm:w-auto px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="">Sin filtro de fecha</option>
+            <option value="creacion">Fecha de Creación</option>
+            <option value="resolucion">Fecha de Resolución</option>
+          </select>
+
+          {fechaFiltroTipo && (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => { setFechaDesde(e.target.value); handleFilterChange(); }}
+                className="flex-1 min-w-[130px] px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              />
+              <span className="text-gray-400 text-xs">hasta</span>
+              <input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => { setFechaHasta(e.target.value); handleFilterChange(); }}
+                className="flex-1 min-w-[130px] px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-600"
+              />
+              {(fechaDesde || fechaHasta) && (
+                <button
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); setFechaFiltroTipo(''); handleFilterChange(); }}
+                  className="px-2 py-1.5 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      {/* ─── Tabla: scroll-x en móvil, scroll completo (x+y) en desktop ───── */}
+      <div className="w-full overflow-x-auto sm:flex-1 sm:min-h-0 sm:overflow-y-auto">
         {isLoading ? (
           <div className="py-10 text-center text-sm text-gray-400">Cargando incidencias...</div>
         ) : incidenciasNodes.length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-400">No hay incidencias.</div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 sticky top-0 uppercase tracking-wider">
+          <table className="w-full text-left text-xs" style={{ minWidth: '700px' }}>
+            <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3 font-semibold">Num Serie</th>
-                <th className="px-4 py-3 font-semibold">Alias</th>
-                <th className="px-4 py-3 font-semibold">Tipo</th>
-                <th className="px-4 py-3 font-semibold">Falla</th>
-                <th className="px-4 py-3 font-semibold">Requerimiento</th>
-                <th className="px-4 py-3 font-semibold">F. Creación</th>
-                <th className="px-4 py-3 font-semibold">F. Resolución</th>
-                <th className="px-4 py-3 font-semibold text-center">Acciones</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Num Serie</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Alias</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Tipo</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Estatus</th>
+                <th className="px-3 py-2.5 font-semibold">Falla</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Requerimiento</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">F. Creación</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">F. Resolución</th>
+                <th className="px-3 py-2.5 font-semibold text-center whitespace-nowrap">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {incidenciasNodes.map(inc => (
                 <tr key={inc.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-800 break-words max-w-[120px]">{inc.numSerie}</td>
-                  <td className="px-4 py-3 text-blue-600 font-medium break-words max-w-[120px]">{inc.alias || '—'}</td>
-                  <td className="px-4 py-3 text-blue-600 font-medium truncate max-w-[100px]">{inc.tipoIncidencia}</td>
-                  <td className="px-4 py-3 text-gray-600 max-w-[250px] break-words" title={inc.falla}>{inc.falla}</td>
-                  <td className="px-4 py-3 text-gray-700">{inc.requerimiento || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600 font-medium">{inc.fecha}</td>
-                  <td className="px-4 py-3 text-green-700 font-medium">
+                  <td className="px-3 py-2.5 font-semibold text-gray-800 whitespace-nowrap max-w-[110px] truncate" title={inc.numSerie}>{inc.numSerie}</td>
+                  <td className="px-3 py-2.5 text-blue-600 font-medium whitespace-nowrap max-w-[100px] truncate" title={inc.alias}>{inc.alias || '—'}</td>
+                  <td className="px-3 py-2.5 text-blue-600 font-medium whitespace-nowrap max-w-[90px] truncate" title={inc.tipoIncidencia}>{inc.tipoIncidencia}</td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      inc.estatus === 'Pendiente' ? 'bg-amber-100 text-amber-700' :
+                      inc.estatus === 'En proceso' ? 'bg-blue-100 text-blue-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {inc.estatus}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-gray-600 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
+                  <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">
+                    {inc.requerimiento ? (
+                      <div className="flex items-center gap-1.5">
+                        <span>{inc.requerimiento}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyTextToClipboard(inc.requerimiento);
+                            showToast('Requerimiento copiado', 'success');
+                          }}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors cursor-pointer shrink-0"
+                          title="Copiar Requerimiento"
+                        >
+                          <Copy size={11} />
+                        </button>
+                      </div>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-gray-600 font-medium whitespace-nowrap">{inc.fecha}</td>
+                  <td className="px-3 py-2.5 text-green-700 font-medium whitespace-nowrap">
                     {inc.fechaResolucion || '—'}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center justify-center gap-1.5">
                       <button onClick={() => onViewDetail(inc)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors" title="Ver Detalles">
                         <Eye size={13} />
                       </button>
@@ -414,19 +553,79 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
         )}
       </div>
 
-      <div className="p-3 border-t border-gray-100 flex items-center justify-between text-sm bg-gray-50 text-gray-600">
-        <div>
-          Página {cursors.length + 1}
+      {/* ─── Paginación ─────────────────────────────────────────── */}
+      <div className="p-3 border-t border-gray-100 flex flex-col gap-2 bg-gray-50 text-gray-600">
+        {/* Info total */}
+        <div className="flex items-center justify-between text-xs">
+          {data?.pageInfo?.totalCount !== undefined && (
+            <span className="font-semibold text-gray-700">Total: {data.pageInfo.totalCount} incidencias registradas.</span>
+          )}
+          <span className="font-bold text-gray-400 uppercase tracking-wider">
+            Pág. {currentPage}/{totalPages}
+          </span>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handlePrevPage} disabled={cursors.length === 0}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
-            <ChevronLeft size={14} /> Anterior
+
+        {/* Controles de paginación */}
+        <div className="flex items-center gap-1 flex-wrap justify-center">
+          {/* Flecha Anterior */}
+          <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
+            <ChevronLeft size={15} />
           </button>
-          <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
-            Siguiente <ChevronRight size={14} />
+
+          {/* Página actual y páginas cercanas — más compacto en móvil */}
+          {(() => {
+            const pages = [];
+            // Siempre mostrar página 1
+            if (currentPage > 2) pages.push(1);
+            // Separador
+            if (currentPage > 3) pages.push('...-left');
+            // Página anterior (si existe)
+            if (currentPage > 1) pages.push(currentPage - 1);
+            // Página actual
+            pages.push(currentPage);
+            // Página siguiente (si existe)
+            if (currentPage < totalPages) pages.push(currentPage + 1);
+            // Separador
+            if (currentPage < totalPages - 2) pages.push('...-right');
+            // Última página
+            if (currentPage < totalPages - 1) pages.push(totalPages);
+            return pages.map((p, idx) => {
+              if (typeof p === 'string') {
+                return <span key={p} className="px-1 text-gray-400 text-xs">...</span>;
+              }
+              return (
+                <button key={`page-${p}-${idx}`} onClick={() => setCurrentPage(p)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                    currentPage === p ? 'bg-[#006341] text-white shadow-sm' : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-600'
+                  }`}>
+                  {p}
+                </button>
+              );
+            });
+          })()}
+
+          {/* Flecha Siguiente */}
+          <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages || totalPages === 0}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
+            <ChevronRight size={15} />
           </button>
+
+          {/* Ir a página */}
+          <form onSubmit={handleJumpToPage} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+            <input
+              type="number"
+              min="1"
+              max={totalPages}
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value)}
+              placeholder="Ir a..."
+              className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+            />
+            <button type="submit" disabled={!pageInput} className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors">
+              Ir
+            </button>
+          </form>
         </div>
       </div>
     </div>
@@ -646,7 +845,11 @@ export default function Incidencias() {
   }
 
   return (
-    <div className="p-4 sm:p-6 fade-in relative flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden">
+    <div className={`p-4 sm:p-6 fade-in relative flex flex-col ${
+      tab === 'historico'
+        ? 'min-h-[calc(100dvh-70px)] overflow-y-auto sm:h-[calc(100vh-70px)] sm:overflow-hidden sm:min-h-0'
+        : 'h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden'
+    }`}>
 
       {/* Header */}
       <div className="sticky top-0 z-40 flex-shrink-0 pb-4 mb-4 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 -mx-4 px-4 sm:mx-0 sm:px-0 bg-white/90 backdrop-blur-md">
@@ -746,13 +949,15 @@ export default function Incidencias() {
       )}
 
       {tab === 'historico' && (
-        <TablaHistorico 
-          canEdit={idRol === 1} 
-          canDelete={idRol === 1} 
-          onEdit={handleEdit} 
-          onDelete={handleDelete} 
-          onViewDetail={handleVerDetalle}
-        />
+        <div className="sm:flex-1 sm:min-h-0 sm:flex sm:flex-col sm:overflow-hidden">
+          <TablaHistorico 
+            canEdit={idRol === 1} 
+            canDelete={idRol === 1} 
+            onEdit={handleEdit} 
+            onDelete={handleDelete} 
+            onViewDetail={handleVerDetalle}
+          />
+        </div>
       )}
 
       {canCreateIncident && tab === 'kanban' && (
