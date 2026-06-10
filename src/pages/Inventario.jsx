@@ -427,8 +427,8 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                   }}
                   disabled={!hasPendingChange}
                   className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${hasPendingChange
-                      ? 'text-white shadow-md hover:opacity-90 cursor-pointer'
-                      : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                    ? 'text-white shadow-md hover:opacity-90 cursor-pointer'
+                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
                     }`}
                   style={hasPendingChange ? {
                     background: localSelected
@@ -507,10 +507,10 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                         ref={isHighlighted ? selectedItemRef : null}
                         onClick={() => setLocalSelected(m.clave_modelo)}
                         className={`w-full grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-center px-3 py-2.5 text-left text-sm transition-colors ${isHighlighted
-                            ? 'bg-green-50 border-l-[3px] border-green-500'
-                            : isOriginal
-                              ? 'bg-gray-50 border-l-[3px] border-gray-300'
-                              : 'hover:bg-gray-50 border-l-[3px] border-transparent'
+                          ? 'bg-green-50 border-l-[3px] border-green-500'
+                          : isOriginal
+                            ? 'bg-gray-50 border-l-[3px] border-gray-300'
+                            : 'hover:bg-gray-50 border-l-[3px] border-transparent'
                           }`}
                       >
                         {/* Clave */}
@@ -530,8 +530,8 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                         </span>
                         {/* Marca (String lookup) */}
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 max-w-[80px] truncate border ${marcaObj
-                            ? 'bg-purple-50 text-purple-700 border-purple-100'
-                            : 'bg-gray-50 text-gray-400 border-gray-200'
+                          ? 'bg-purple-50 text-purple-700 border-purple-100'
+                          : 'bg-gray-50 text-gray-400 border-gray-200'
                           }`}>
                           {marcaObj?.marca || '—'}
                         </span>
@@ -878,7 +878,7 @@ export default function Inventario() {
 
   const [filterStatus, setFilterStatus] = useState(location.state?.filterStatus || '');
   const [filterUbicacion, setFilterUbicacion] = useState('');
-  
+
   const [sortBy, setSortBy] = useState('');
   const [sortDir, setSortDir] = useState('');
 
@@ -1672,8 +1672,8 @@ export default function Inventario() {
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, con_notas_recientes: !p.con_notas_recientes })); setCursor(null); setCursors([]); }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${advFilters.con_notas_recientes
-                        ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     title="Mostrar bienes con notas recientes (últimos 30 días)"
                   >
@@ -1682,8 +1682,8 @@ export default function Inventario() {
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, inconvenientes: !p.inconvenientes })); setCursor(null); setCursors([]); }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${advFilters.inconvenientes
-                        ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     title="Mostrar equipos con inconvenientes (Sin número de inventario o IP duplicada)"
                   >
@@ -1692,8 +1692,8 @@ export default function Inventario() {
                   <button
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showAdvancedFilters || activeFilterCount > 0
-                        ? 'bg-green-50 border-green-300 text-green-700 shadow-sm'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-green-50 border-green-300 text-green-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                   >
                     <SlidersHorizontal size={14} />
@@ -1707,8 +1707,8 @@ export default function Inventario() {
                     <button
                       onClick={() => { setShowReporte(r => !r); if (showAdvancedFilters) setShowAdvancedFilters(false); }}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showReporte
-                          ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                        ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}
                       title="Panel de estadísticas y reporte de los datos filtrados"
                     >
@@ -2146,7 +2146,7 @@ export default function Inventario() {
                                       <span className="truncate">Inv: {fmt(bien.numInv)}</span>
                                       {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </p>
-                                    
+
                                     {(() => {
                                       const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
                                       if (ips.length === 0 || hasWifiConflict) return null;
@@ -2192,10 +2192,10 @@ export default function Inventario() {
                                         <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
                                       )}
                                     </div>
-                                      <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
-                                        <span className="truncate">{bien.cuentasPC[0].correo}</span>
-                                        {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
-                                      </div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
+                                      <span className="truncate">{bien.cuentasPC[0].correo}</span>
+                                      {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                    </div>
                                   </div>
                                 )}
                               </td>
@@ -2430,8 +2430,8 @@ export default function Inventario() {
                       key={t.key}
                       onClick={() => setFichaTabs(t.key)}
                       className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-2 -mb-px ${fichaTabs === t.key
-                          ? 'border-green-600 text-green-700 bg-green-50/50'
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                        ? 'border-green-600 text-green-700 bg-green-50/50'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                         }`}
                     >
                       {t.label}
@@ -2637,8 +2637,8 @@ export default function Inventario() {
                           <div>
                             <p className="text-xs text-gray-400 flex items-center gap-1 mb-0.5">Estado</p>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${activeFicha.garantias[0].estado_garantia === 'VIGENTE' ? 'bg-green-100 text-green-800' :
-                                activeFicha.garantias[0].estado_garantia === 'VENCIDA' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
+                              activeFicha.garantias[0].estado_garantia === 'VENCIDA' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
                               }`}>{activeFicha.garantias[0].estado_garantia || 'VIGENTE'}</span>
                           </div>
                         </div>

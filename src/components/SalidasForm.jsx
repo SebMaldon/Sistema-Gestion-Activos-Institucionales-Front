@@ -15,10 +15,11 @@ import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
 import {
   FileText, Trash2, Loader2, Download, Eye, Check,
   Hash, Edit2, X, Printer, ChevronRight, AlertCircle,
-  UserCheck, Plus, Upload, HelpCircle, MonitorUp
+  UserCheck, Plus, Upload, HelpCircle, MonitorUp,
+  User, Package, Monitor
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
-import { PDFDocument, StandardFonts, rgb, PDFName } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFName, TextAlignment } from 'pdf-lib';
 import * as XLSX from 'xlsx';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -54,8 +55,8 @@ export default function SalidasForm() {
     devolucion:      'NO',
     fechaDevolucion: '',
     responsable:     '',
+    origenBienes:    'COORDINACIÓN DE INFORMÁTICA',
     fechaSalidaDia:  new Date().toISOString().split('T')[0],
-    fechaSalidaHora: new Date().toTimeString().split(' ')[0].slice(0, 5),
   });
 
   const [bienesSeleccionados, setBienesSeleccionados] = useState([]);
@@ -166,6 +167,23 @@ export default function SalidasForm() {
     if (finalUrl)   URL.revokeObjectURL(finalUrl);
   }, []);
 
+  // ─── Interceptar Ctrl+P para imprimir PDF ─────────────────
+  useEffect(() => {
+    const handlePrint = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        if (etapa === 'confirmado' && finalUrl) {
+          e.preventDefault();
+          window.open(finalUrl);
+        } else if (etapa === 'preview') {
+          e.preventDefault();
+          showToast('Debes confirmar el folio antes de poder imprimir.', 'warning');
+        }
+      }
+    };
+    window.addEventListener('keydown', handlePrint);
+    return () => window.removeEventListener('keydown', handlePrint);
+  }, [etapa, finalUrl, previewUrl, showToast]);
+
   // ─── Handlers form ────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -191,8 +209,9 @@ export default function SalidasForm() {
     if (bien) {
       setBienesSeleccionados((p) => {
         const updated = [...p];
+        const newItems = [];
         const nat = (bien.num_inv && bien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
-        updated.push({
+        newItems.push({
           id_bien:     bien.id_bien,
           cantidad:    '1',
           naturaleza:  nat,
@@ -205,7 +224,7 @@ export default function SalidasForm() {
             const monitorBien = rel.monitor;
             if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
               const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
-              updated.push({
+              newItems.push({
                 id_bien:     monitorBien.id_bien,
                 cantidad:    '1',
                 naturaleza:  natMon,
@@ -215,21 +234,21 @@ export default function SalidasForm() {
             }
           });
         }
-        return updated;
+        return [...newItems, ...updated];
       });
     }
   };
 
   const handleAddManualBien = () => {
     setBienesSeleccionados((p) => [
-      ...p,
       {
         id_bien: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         cantidad: '1',
         naturaleza: 'BMNC',
         descripcion: '',
         originalData: null,
-      }
+      },
+      ...p
     ]);
   };
 
@@ -305,12 +324,13 @@ export default function SalidasForm() {
 
         setBienesSeleccionados(prev => {
           let updated = [...prev];
+          let newItems = [];
           results.forEach(({ rawValue, bienFound }) => {
             if (bienFound) {
-              if (!updated.some(p => p.id_bien === bienFound.id_bien)) {
+              if (!updated.some(p => p.id_bien === bienFound.id_bien) && !newItems.some(p => p.id_bien === bienFound.id_bien)) {
                 agregados++;
                 const nat = (bienFound.num_inv && bienFound.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
-                updated.push({
+                newItems.push({
                   id_bien: bienFound.id_bien,
                   cantidad: bienFound.num_serie || '1',
                   naturaleza: nat,
@@ -322,10 +342,10 @@ export default function SalidasForm() {
               if (incluirMonitores && bienFound.monitores && bienFound.monitores.length > 0) {
                 bienFound.monitores.forEach(rel => {
                   const monitorBien = rel.monitor;
-                  if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
+                  if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien) && !newItems.some(b => b.id_bien === monitorBien.id_bien)) {
                     monitoresAgregados++;
                     const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
-                    updated.push({
+                    newItems.push({
                       id_bien:     monitorBien.id_bien,
                       cantidad:    monitorBien.num_serie || '1',
                       naturaleza:  natMon,
@@ -339,7 +359,7 @@ export default function SalidasForm() {
               noEncontrados.push(rawValue);
             }
           });
-          return updated;
+          return [...newItems, ...updated];
         });
 
         setTimeout(() => {
@@ -370,15 +390,16 @@ export default function SalidasForm() {
     let agregados = 0;
     setBienesSeleccionados(prev => {
       let updated = [...prev];
+      let newItems = [];
       prev.forEach(bienSel => {
         const original = bienSel.originalData;
         if (original && original.monitores && original.monitores.length > 0) {
           original.monitores.forEach(rel => {
             const monitorBien = rel.monitor;
-            if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
+            if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien) && !newItems.some(b => b.id_bien === monitorBien.id_bien)) {
               agregados++;
               const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
-              updated.push({
+              newItems.push({
                 id_bien:     monitorBien.id_bien,
                 cantidad:    monitorBien.num_serie || '1',
                 naturaleza:  natMon,
@@ -389,7 +410,7 @@ export default function SalidasForm() {
           });
         }
       });
-      return updated;
+      return [...newItems, ...updated];
     });
 
     if (agregados > 0) {
@@ -427,10 +448,13 @@ export default function SalidasForm() {
       const page     = doc.getPages()[0];
       const { width, height } = page.getSize();
 
-      const setTextField = (name, value) => {
+      const setTextField = (name, value, alignCenter = false) => {
         try {
           const f = pdfForm.getTextField(name);
-          if (f) f.setText(value || '');
+          if (f) {
+            f.setText(value || '');
+            if (alignCenter) f.setAlignment(TextAlignment.Center);
+          }
         } catch { /* campo no existe en PDF */ }
       };
 
@@ -447,32 +471,22 @@ export default function SalidasForm() {
       };
 
       // ── Folio (esquina superior derecha) ──────────────────
-      let folioSet = false;
-      const folioFormat = `FOLIO:${folioStr}`;
+      const folioFormat = `FOLIO: ${folioStr}`;
       
       try {
         const ff = pdfForm.getTextField('Folio');
-        if (ff) { ff.setText(folioFormat); folioSet = true; }
+        if (ff) pdfForm.removeField(ff);
       } catch { /* no existe campo Folio en el PDF */ }
 
-      if (!folioSet) {
-        page.drawText(folioFormat, {
-          x: width - 105, y: height - 26,
-          size: 9, font: boldFont, color: rgb(0, 0, 0),
-        });
-      }
+      // Dibujar dentro del CropBox visible (tope Y es 741, borde derecho X es 525)
+      page.drawText(folioFormat, {
+        x: 475, y: 732,
+        size: 9.5, font: regFont, color: rgb(0, 0, 0),
+      });
 
       // ── Datos generales (en todas las páginas) ────────────
       const dp = form.fechaSalidaDia.split('-');
       const fmtDate = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : form.fechaSalidaDia;
-      let fmtTime = form.fechaSalidaHora;
-      if (form.fechaSalidaHora) {
-        const [hh, mm] = form.fechaSalidaHora.split(':');
-        let h = parseInt(hh, 10);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        h = h % 12 || 12;
-        fmtTime = `${String(h).padStart(2, '0')}:${mm} ${ampm}`;
-      }
 
       setTextField('Elc',               form.solicitante);
       setTextField('NombreSolicitante', form.solicitante);
@@ -483,8 +497,24 @@ export default function SalidasForm() {
       setTextField('Telefono',          form.telefono);
       setTextField('RazonSalida',       form.motivo);
       setTextField('ObservacionesBienes', form.observaciones);
-      setTextField('FechaSalida',       `${fmtDate} ${fmtTime}`);
+      setTextField('FechaSalida',       fmtDate);
       setTextField('NombreResponsable', form.responsable || 'Usuario Maestro');
+      
+      let originBase = form.origenBienes || '';
+      if (originBase && !originBase.toUpperCase().startsWith('DEL ')) {
+        originBase = `DEL ${originBase}`;
+      }
+      
+      let origin1 = originBase;
+      let origin2 = '';
+      if (origin1.length > 55) {
+        let splitIndex = origin1.lastIndexOf(' ', 55);
+        if (splitIndex === -1 || splitIndex < 20) splitIndex = 55;
+        origin2 = origin1.substring(splitIndex).trim();
+        origin1 = origin1.substring(0, splitIndex).trim();
+      }
+      setTextField('OrigenBienes',      origin1);
+      setTextField('OrigenBienes2',     origin2);
 
       if (form.devolucion === 'SI') {
         drawXOnCheckbox('DevolucionCheck1', true);
@@ -495,14 +525,14 @@ export default function SalidasForm() {
       } else {
         drawXOnCheckbox('DevolucionCheck1', false);
         drawXOnCheckbox('DevolucionCheck2', true);
-        setTextField('FechaDevolucion', 'N/A');
+        setTextField('FechaDevolucion', '');
       }
       // ── Bienes en campos f0c1..f10c1 (slots 0-10) ─────────
       pageItems.forEach((bien, i) => {
         const row = i; // f0 a f10
-        setTextField(pdfRowField(row, 1), String(bien.cantidad || ''));
-        setTextField(pdfRowField(row, 2), bien.naturaleza  || '');
-        setTextField(pdfRowField(row, 3), bien.descripcion || '');
+        setTextField(pdfRowField(row, 1), String(bien.cantidad || ''), true);
+        setTextField(pdfRowField(row, 2), bien.naturaleza  || '', true);
+        setTextField(pdfRowField(row, 3), bien.descripcion || '', true);
       });
 
       // Hacer campos de solo lectura y acoplar al documento
@@ -521,27 +551,12 @@ export default function SalidasForm() {
       pageBytesList.push(await fillDoc(pageGroups[i], i + 1, i === 0));
     }
 
-    // Combinar páginas y escalarlas para aprovechar los márgenes
+    // Combinar páginas sin escalar
     const finalDoc = await PDFDocument.create();
     for (const bytes of pageBytesList) {
-      // Usar embedPdf permite re-dibujar la página aplanada a otra escala
-      const [embeddedPage] = await finalDoc.embedPdf(bytes, [0]);
-      
-      const scale = 1.15; // 15% más grande
-      const originalWidth = 612; // Letter
-      const originalHeight = 792;
-      const page = finalDoc.addPage([originalWidth, originalHeight]);
-      
-      // Centrar después de escalar
-      const x = (originalWidth - (originalWidth * scale)) / 2;
-      const y = (originalHeight - (originalHeight * scale)) / 2;
-
-      page.drawPage(embeddedPage, {
-        x: x,
-        y: y,
-        xScale: scale,
-        yScale: scale
-      });
+      const tempDoc = await PDFDocument.load(bytes);
+      const copiedPages = await finalDoc.copyPages(tempDoc, [0]);
+      finalDoc.addPage(copiedPages[0]);
     }
 
     return finalDoc.save();
@@ -701,7 +716,7 @@ export default function SalidasForm() {
 
   // ── Etapa FORMULARIO ──────────────────────────────────────
   return (
-    <div className="space-y-5 pb-24">
+    <div className="flex flex-col h-[calc(100vh-230px)] space-y-4 pb-4">
 
       {/* ── Barra de folio ── */}
       <div className="flex items-center justify-between bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-100 rounded-xl px-4 py-3">
@@ -759,13 +774,15 @@ export default function SalidasForm() {
       )}
 
       {/* ── Grid principal ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-0">
 
         {/* ─ Izquierda: datos del solicitante ─ */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2">
-            Información del Solicitante
-          </h3>
+        <div className="space-y-6 overflow-y-auto pr-3 pb-8 custom-scrollbar">
+          
+          <div className="bg-white border border-teal-100/60 shadow-sm rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex items-center gap-2">
+              <User size={16} className="text-teal-600" /> Información del Solicitante
+            </h3>
 
           {/* Autocompletado de Usuario */}
           <div className="bg-teal-50/50 p-3 rounded-lg border border-teal-100">
@@ -859,9 +876,13 @@ export default function SalidasForm() {
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
             </div>
           </div>
+          </div>
 
-          <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 pt-1">Detalles de Salida</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white border border-emerald-100/60 shadow-sm rounded-xl p-5 space-y-4">
+            <h3 className="text-sm font-bold text-emerald-800 border-b border-emerald-100 pb-2 flex items-center gap-2">
+              <Package size={16} className="text-emerald-600" /> Detalles de Salida
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-gray-600 mb-1">Motivo / Razón de salida</label>
               <input type="text" name="motivo" value={form.motivo} onChange={handleChange}
@@ -872,10 +893,16 @@ export default function SalidasForm() {
               <input type="date" name="fechaSalidaDia" value={form.fechaSalidaDia} onChange={handleChange}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
             </div>
+
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Hora de Salida</label>
-              <input type="time" name="fechaSalidaHora" value={form.fechaSalidaHora} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Retirar bienes del:</label>
+              <SearchableSelect
+                value={form.origenBienes}
+                onChange={(val) => setForm(p => ({ ...p, origenBienes: val }))}
+                options={catalogos?.unidades?.map(u => ({ value: u.descripcion || u.desc_corta, label: u.descripcion || u.desc_corta })) || []}
+                placeholder="Seleccionar o escribir..."
+                allowCustom={true}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre Responsable (Autoriza)</label>
@@ -902,13 +929,15 @@ export default function SalidasForm() {
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
             </div>
           </div>
+          </div>
         </div>
 
         {/* ─ Derecha: bienes ─ */}
-        <div className="space-y-4">
+        <div className="overflow-y-auto pr-3 pb-8 custom-scrollbar flex flex-col">
+          <div className="bg-white border border-teal-100/60 shadow-sm rounded-xl p-5 space-y-4 flex flex-col flex-1">
           <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
             <div className="flex flex-col">
-              <span>Bienes a Retirar</span>
+              <span className="flex items-center gap-2"><Monitor size={16} className="text-teal-600" /> Bienes a Retirar</span>
               <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-500 font-normal">
                 <HelpCircle size={12} className="text-teal-600" />
                 <span><strong className="text-teal-700">BMC:</strong> C/Inventario</span>
@@ -1042,6 +1071,7 @@ export default function SalidasForm() {
                 );
               })
             )}
+          </div>
           </div>
         </div>
       </div>
