@@ -40,3 +40,45 @@ export function formatDateTime(d) {
     hour: '2-digit', minute: '2-digit', hour12: true 
   });
 }
+
+/** Copia un texto al portapapeles de manera segura, con soporte para contextos HTTP inseguros */
+export function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+      .then(() => true)
+      .catch((err) => {
+        console.error('Error al copiar usando Clipboard API:', err);
+        return fallbackCopy(text);
+      });
+  }
+  return Promise.resolve(fallbackCopy(text));
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '0';
+  textarea.style.width = '2em';
+  textarea.style.height = '2em';
+  textarea.style.padding = '0';
+  textarea.style.border = 'none';
+  textarea.style.outline = 'none';
+  textarea.style.boxShadow = 'none';
+  textarea.style.background = 'transparent';
+  
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return successful;
+  } catch (err) {
+    console.error('Error en fallback de copiado:', err);
+    document.body.removeChild(textarea);
+    return false;
+  }
+}

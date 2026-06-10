@@ -25,7 +25,7 @@ import {
   useDeleteIncidencia,
   mapIncidenciaNode,
 } from '../hooks/useIncidencias';
-import { parseServerDate } from '../lib/utils';
+import { parseServerDate, copyTextToClipboard } from '../lib/utils';
 
 // ROLES.ADMIN=1 → Maestro (edita+elimina), ROLES.SUPERVISOR=2 → Admin (edita), ROLES.USUARIO=3 → visualiza
 
@@ -152,7 +152,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
             <div 
               onClick={(e) => {
                 e.stopPropagation();
-                navigator.clipboard.writeText(inc.requerimiento);
+                copyTextToClipboard(inc.requerimiento);
                 showToast('Requerimiento copiado', 'success');
               }}
               className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 font-bold px-2.5 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-all cursor-pointer shadow-sm"
@@ -512,7 +512,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(inc.requerimiento);
+                            copyTextToClipboard(inc.requerimiento);
                             showToast('Requerimiento copiado', 'success');
                           }}
                           className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors cursor-pointer shrink-0"
