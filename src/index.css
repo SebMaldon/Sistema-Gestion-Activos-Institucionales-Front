@@ -92,6 +92,29 @@ input[type="password"]::-ms-clear {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
+/* Hover cell zoom effect */
+.hover-cell-zoom {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+.hover-cell-zoom:hover {
+  transform: scale(1.15);
+  z-index: 50;
+  position: relative;
+  background-color: white;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin: -0.75rem;
+  border-color: #e5e7eb;
+}
+.hover-cell-zoom:hover .truncate {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-all;
+}
+
 /* Toast notification */
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }

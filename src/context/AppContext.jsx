@@ -11,6 +11,16 @@ export function AppProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
+  const [hoverZoomEnabled, setHoverZoomEnabled] = useState(() => {
+    return localStorage.getItem('hoverZoomEnabled') !== 'false';
+  });
+
+  const toggleHoverZoom = () => {
+    const val = !hoverZoomEnabled;
+    setHoverZoomEnabled(val);
+    localStorage.setItem('hoverZoomEnabled', val);
+  };
+  
   const toastTimeoutRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
@@ -43,6 +53,7 @@ export function AppProvider({ children }) {
       openFicha, closeFicha,
       sidebarOpen, setSidebarOpen,
       sidebarCollapsed, setSidebarCollapsed,
+      hoverZoomEnabled, toggleHoverZoom,
     }}>
       {children}
     </AppContext.Provider>

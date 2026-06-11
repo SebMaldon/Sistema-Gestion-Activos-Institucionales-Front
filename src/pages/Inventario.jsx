@@ -860,7 +860,7 @@ function MonitoresSelector({ idBienEquipo, isCreateMode, asignados = [], onAsign
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
 export default function Inventario() {
-  const { showToast } = useApp();
+  const { showToast, hoverZoomEnabled } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const idRol = usuario?.id_rol ?? 3;
   // canEdit incluye también al usuario estándar (rol 3) solo para modificar TI y Cuentas
@@ -2136,14 +2136,14 @@ export default function Inventario() {
                             <tr key={bien.id} onClick={(e) => { if (window.getSelection().toString().length > 0) return; e.stopPropagation(); setModalFicha(bien); }} className={`hover:bg-gray-50/70 cursor-pointer transition-colors group ${isConflictRow ? 'bg-red-50/60' : ''}`}>
                               <td className="px-4 py-3.5 relative">
                                 {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
-                                <div className="flex items-center justify-between gap-3 w-full">
+                                <div className={`flex items-center justify-between gap-3 w-full ${hoverZoomEnabled ? 'hover-cell-zoom' : ''}`}>
                                   <div className="min-w-0">
                                     <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700 inline-flex items-center gap-1.5 max-w-full">
-                                      <span className="truncate">{fmt(bien.numSerie)}</span>
+                                      <span className="truncate" title={hoverZoomEnabled ? fmt(bien.numSerie) : undefined}>{fmt(bien.numSerie)}</span>
                                       {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numSerie); showToast('Número de Serie copiado', 'success'); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </span>
                                     <p className={`flex items-center gap-1.5 text-xs mt-0.5 max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
-                                      <span className="truncate">Inv: {fmt(bien.numInv)}</span>
+                                      <span className="truncate" title={hoverZoomEnabled ? `Inv: ${fmt(bien.numInv)}` : undefined}>Inv: {fmt(bien.numInv)}</span>
                                       {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                     </p>
 
@@ -2153,7 +2153,7 @@ export default function Inventario() {
                                       return (
                                         <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 w-fit max-w-full" title={`IP(s): ${ips.join(', ')}`}>
                                           <Network size={11} className="text-emerald-600 shrink-0" />
-                                          <span className="truncate">{ips[0]}</span>
+                                          <span className="truncate" title={hoverZoomEnabled ? ips[0] : undefined}>{ips[0]}</span>
                                           {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
                                           <button onClick={(e) => { e.stopPropagation(); copyTextFallback(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600/60 hover:text-emerald-800 shrink-0 ml-0.5"><Copy size={11} /></button>
                                         </div>
@@ -2175,8 +2175,9 @@ export default function Inventario() {
                                 </div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <div className="flex items-center gap-1.5 max-w-full">
-                                  <p className="font-semibold text-gray-900 text-sm truncate">{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
+                                <div className={`w-full ${hoverZoomEnabled ? 'hover-cell-zoom' : ''}`}>
+                                  <div className="flex items-center gap-1.5 max-w-full">
+                                    <p className="font-semibold text-gray-900 text-sm truncate" title={hoverZoomEnabled ? (bien.especificacionTI?.nombre_host || 'Sin Host') : undefined}>{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
                                   {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 shrink-0"><Copy size={12} /></button>}
                                 </div>
                                 <p className="text-xs text-gray-400">{bien.equipo}</p>
@@ -2186,24 +2187,31 @@ export default function Inventario() {
                                       <div className="bg-indigo-200 text-indigo-700 p-0.5 rounded flex items-center justify-center shrink-0">
                                         <User size={11} strokeWidth={2.5} />
                                       </div>
-                                      <span className="font-bold whitespace-nowrap truncate">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
+                                      <span className="font-bold whitespace-nowrap truncate" title={hoverZoomEnabled ? (bien.cuentasPC[0].cuenta_windows || 'Sin usuario') : undefined}>{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
                                       {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].cuenta_windows); showToast('Usuario de Windows copiado', 'success'); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                       {bien.cuentasPC.length > 1 && (
                                         <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
-                                      <span className="truncate">{bien.cuentasPC[0].correo}</span>
+                                      <span className="truncate" title={hoverZoomEnabled ? bien.cuentasPC[0].correo : undefined}>{bien.cuentasPC[0].correo}</span>
                                       {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
                                     </div>
                                   </div>
                                 )}
+                                </div>
                               </td>
                               <td className="px-4 py-3.5 text-xs min-w-[200px]">
-                                <p className="font-semibold text-gray-900 text-[13px] break-words">{fmt(bien.unidadFisica)}</p>
-                                <p className="text-[11px] text-gray-400 mt-0.5 break-words">{fmt(bien.ubicacion)}</p>
+                                <div className={hoverZoomEnabled ? 'hover-cell-zoom' : ''}>
+                                  <p className="font-semibold text-gray-900 text-[13px] break-words" title={hoverZoomEnabled ? fmt(bien.unidadFisica) : undefined}>{fmt(bien.unidadFisica)}</p>
+                                  <p className="text-[11px] text-gray-400 mt-0.5 break-words" title={hoverZoomEnabled ? fmt(bien.ubicacion) : undefined}>{fmt(bien.ubicacion)}</p>
+                                </div>
                               </td>
-                              <td className="px-4 py-3.5 text-xs text-gray-600 min-w-[180px] break-words">{fmt(bien.resguardo)}</td>
+                              <td className="px-4 py-3.5 text-xs text-gray-600 min-w-[180px] break-words">
+                                <div className={hoverZoomEnabled ? 'hover-cell-zoom' : ''}>
+                                  {fmt(bien.resguardo)}
+                                </div>
+                              </td>
                               <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
                               <td className="px-4 py-3.5">
                                 <div className="flex items-center gap-1.5">

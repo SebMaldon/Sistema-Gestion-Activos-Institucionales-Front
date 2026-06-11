@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
-import { Bell, User, Shield, UserCog, Menu } from 'lucide-react';
+import { Bell, User, Shield, UserCog, Menu, MousePointerClick } from 'lucide-react';
 import { gqlClient } from '../api/client';
 import {
   OBTENER_MIS_NOTIFICACIONES,
@@ -22,7 +22,7 @@ const ROL_CONFIG = {
 
 export default function Topbar() {
   const navigate = useNavigate();
-  const { sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed } = useApp();
+  const { sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, hoverZoomEnabled, toggleHoverZoom } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
   const [showNotif, setShowNotif] = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
@@ -144,6 +144,16 @@ export default function Topbar() {
             <p className="text-gray-400 text-xs leading-tight">{rolConf.sublabel}</p>
           </div>
         </div>
+
+        {/* Hover Zoom Toggle */}
+        <button
+          onClick={toggleHoverZoom}
+          className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors ${hoverZoomEnabled ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+          title="Activar o desactivar zoom en celdas de las tablas"
+        >
+          <MousePointerClick size={14} />
+          <span className="text-xs font-semibold">{hoverZoomEnabled ? 'Zoom ON' : 'Zoom OFF'}</span>
+        </button>
 
         {/* Notifications */}
         <div className="relative">
