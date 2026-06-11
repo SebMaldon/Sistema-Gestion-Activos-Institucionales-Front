@@ -9,7 +9,7 @@ import MultiSelect from '../components/MultiSelect';
 
 const GET_BITACORA_LOOKUPS = gql`
   query GetBitacoraLookups {
-    usuarios(estatus: true) { edges { node { id_usuario nombre_completo } } }
+    usuarios(estatus: true, pagination: { first: 20000 }) { edges { node { id_usuario nombre_completo } } }
     catCategoriasActivo { id_categoria nombre_categoria }
     catUnidadesMedida { id_unidad_medida nombre_unidad }
     proveedores { id_proveedor nombre_proveedor }
