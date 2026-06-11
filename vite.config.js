@@ -4,8 +4,33 @@ import tailwindcss from '@tailwindcss/vite'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import obfuscator from 'vite-plugin-javascript-obfuscator'
 
+const cacheBusterPlugin = () => ({
+  name: 'cache-buster',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url === '/' || req.url.includes('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+      next();
+    });
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url === '/' || req.url.includes('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+      next();
+    });
+  }
+});
+
 export default defineConfig({
   plugins: [
+    cacheBusterPlugin(),
     react(),
     tailwindcss(),
     obfuscator({
