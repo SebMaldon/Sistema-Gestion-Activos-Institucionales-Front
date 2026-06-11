@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getArchivos, crearMesaCorrespondencia } from '../api/correspondencia.queries';
+import { getArchivos, crearMesaCorrespondencia, editarMesaCorrespondencia } from '../api/correspondencia.queries';
 import { GET_CAT_UNIDADES_QUERY } from '../api/unidades.queries';
 import { GET_UBICACIONES_POR_UNIDAD } from '../api/inventario.queries';
 import { gqlClient } from '../api/client';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
 
-export default function FormCorrespondenciaModal({ isOpen, onClose }) {
+export default function FormCorrespondenciaModal({ isOpen, onClose, initialData }) {
   const queryClient = useQueryClient();
   const { showToast } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
+  const [isManualFolio, setIsManualFolio] = useState(!!initialData);
+  const [isManualNoOficio, setIsManualNoOficio] = useState(!!initialData);
 
   const [formData, setFormData] = useState({
+    Folio: '',
     Tipo: 1, // 1: Enviada, 2: Recibida
     NoOficio: '',
     FechaOficio: new Date().toISOString().split('T')[0],
@@ -56,7 +59,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
 
   const ubicaciones = ubicacionesData || [];
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: crearMesaCorrespondencia,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mesaCorrespondencias'] });
@@ -68,27 +71,58 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
     }
   });
 
-  // Reset form on open
+  const editMutation = useMutation({
+    mutationFn: (data) => editarMesaCorrespondencia(initialData.Folio, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mesaCorrespondencias'] });
+      showToast('Registro actualizado exitosamente', 'success');
+      onClose();
+    },
+    onError: (err) => {
+      showToast(err.message || 'Error al actualizar el registro', 'error');
+    }
+  });
+
+  const isLoadingMutation = createMutation.isPending || editMutation.isPending;
+
+  // Reset form on open or initialData change
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        Tipo: 1,
-        NoOficio: '',
-        FechaOficio: new Date().toISOString().split('T')[0],
-        Remitente: usuario?.nombre_completo || '',
-        Descripcion: '',
-        Clave_unidad: '',
-        id_ubicacion: '',
-        Archivo: ''
-      });
+      setIsManualFolio(!!initialData);
+      setIsManualNoOficio(!!initialData);
+      if (initialData) {
+        setFormData({
+          Folio: initialData.Folio || '',
+          Tipo: initialData.Tipo,
+          NoOficio: initialData.NoOficio || '',
+          FechaOficio: initialData.FechaOficio ? new Date(initialData.FechaOficio).toISOString().split('T')[0] : '',
+          Remitente: initialData.Remitente || '',
+          Descripcion: initialData.Descripcion || '',
+          Clave_unidad: initialData.unidad?.clave || '',
+          id_ubicacion: initialData.ubicacion?.id_ubicacion || '',
+          Archivo: initialData.Archivo || ''
+        });
+      } else {
+        setFormData({
+          Folio: '',
+          Tipo: 1,
+          NoOficio: '',
+          FechaOficio: new Date().toISOString().split('T')[0],
+          Remitente: usuario?.nombre_completo || '',
+          Descripcion: '',
+          Clave_unidad: '',
+          id_ubicacion: '',
+          Archivo: ''
+        });
+      }
     }
-  }, [isOpen, usuario]);
+  }, [isOpen, initialData, usuario]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'Tipo' || name === 'Archivo' ? parseInt(value) : value,
+      [name]: name === 'Tipo' || name === 'Archivo' || name === 'Folio' ? parseInt(value) || value : value,
       ...(name === 'Clave_unidad' ? { id_ubicacion: '' } : {})
     }));
   };
@@ -118,7 +152,9 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
     }
 
     const input = {
+      Folio: formData.Folio ? parseInt(formData.Folio) : undefined,
       Tipo: formData.Tipo,
+      NoOficio: formData.NoOficio?.trim() || undefined,
       FechaOficio: new Date(formData.FechaOficio).toISOString(),
       Remitente: formData.Remitente,
       Descripcion: formData.Descripcion,
@@ -127,11 +163,11 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
       Archivo: parseInt(formData.Archivo),
     };
 
-    if (formData.Tipo === 2) {
-      input.NoOficio = formData.NoOficio;
+    if (initialData) {
+      editMutation.mutate(input);
+    } else {
+      createMutation.mutate(input);
     }
-
-    mutation.mutate(input);
   };
 
   return (
@@ -142,8 +178,8 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
           
           <div className="bg-[#00472e] p-5 flex justify-between items-center text-white shrink-0">
             <div>
-              <Dialog.Title className="text-xl font-bold">Control de Correspondencia</Dialog.Title>
-              <p className="text-green-100 text-sm mt-1">Registrar un nuevo oficio o correspondencia</p>
+              <Dialog.Title className="text-xl font-bold">{initialData ? 'Editar Correspondencia' : 'Control de Correspondencia'}</Dialog.Title>
+              <p className="text-green-100 text-sm mt-1">{initialData ? `Editando folio ${initialData.Folio}` : 'Registrar un nuevo oficio o correspondencia'}</p>
             </div>
             <Dialog.Close asChild>
               <button className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
@@ -153,7 +189,36 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="flex items-center justify-between text-sm font-semibold text-gray-700 mb-1">
+                  <span>Folio</span>
+                  {!initialData && (
+                    <label className="flex items-center gap-1 text-xs text-gray-500 font-normal cursor-pointer hover:text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={isManualFolio}
+                        onChange={(e) => {
+                          setIsManualFolio(e.target.checked);
+                          if (!e.target.checked) setFormData(p => ({ ...p, Folio: '' }));
+                        }}
+                        className="rounded w-3 h-3 text-[#00472e] focus:ring-[#00472e]"
+                      />
+                      Manual
+                    </label>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  name="Folio"
+                  value={formData.Folio}
+                  onChange={handleChange}
+                  placeholder="Autogenerado..."
+                  disabled={!isManualFolio && !initialData}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo</label>
                 <select
@@ -169,25 +234,33 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">No. Oficio</label>
-                {formData.Tipo === 1 ? (
-                  <input
-                    type="text"
-                    value="Autogenerado"
-                    disabled
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-100 text-gray-500 italic"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    name="NoOficio"
-                    value={formData.NoOficio}
-                    onChange={handleChange}
-                    placeholder="Ingrese el número de oficio..."
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                )}
+                <label className="flex items-center justify-between text-sm font-semibold text-gray-700 mb-1">
+                  <span>No. Oficio</span>
+                  {!initialData && formData.Tipo === 1 && (
+                    <label className="flex items-center gap-1 text-xs text-gray-500 font-normal cursor-pointer hover:text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={isManualNoOficio}
+                        onChange={(e) => {
+                          setIsManualNoOficio(e.target.checked);
+                          if (!e.target.checked) setFormData(p => ({ ...p, NoOficio: '' }));
+                        }}
+                        className="rounded w-3 h-3 text-[#00472e] focus:ring-[#00472e]"
+                      />
+                      Manual
+                    </label>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  name="NoOficio"
+                  value={formData.NoOficio}
+                  onChange={handleChange}
+                  placeholder={formData.Tipo === 1 && !initialData && !isManualNoOficio ? "Autogenerado..." : "Ingrese el número..."}
+                  disabled={!isManualNoOficio && !initialData && formData.Tipo === 1}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                  required={formData.Tipo === 2}
+                />
               </div>
             </div>
 
@@ -224,7 +297,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
                 name="Descripcion"
                 value={formData.Descripcion}
                 onChange={handleChange}
-                rows={4}
+                rows={8}
                 placeholder="Detalles de la correspondencia..."
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 required
@@ -252,14 +325,14 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Ubicación
-                  {formData.Clave_unidad && loadingUbicaciones && <span className="text-xs text-gray-400 ml-2">Cargando...</span>}
+                <div className="flex items-center h-5 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 whitespace-nowrap">Ubicación</label>
+                  {formData.Clave_unidad && loadingUbicaciones && <span className="text-[11px] text-gray-400 ml-2 font-normal truncate">Cargando...</span>}
                   {formData.Clave_unidad && !loadingUbicaciones && ubicaciones.length === 0 && !errorUbicaciones && (
-                    <span className="text-xs text-amber-500 ml-2">(Sin ubicaciones registradas para esta unidad)</span>
+                    <span className="text-[11px] text-amber-500 ml-2 font-normal truncate" title="(Sin ubicaciones registradas para esta unidad)">(Sin ubicaciones)</span>
                   )}
-                  {errorUbicaciones && <span className="text-xs text-red-500 ml-2">(Error al cargar)</span>}
-                </label>
+                  {errorUbicaciones && <span className="text-[11px] text-red-500 ml-2 font-normal truncate">(Error al cargar)</span>}
+                </div>
                 <select
                   name="id_ubicacion"
                   value={formData.id_ubicacion}
@@ -300,18 +373,18 @@ export default function FormCorrespondenciaModal({ isOpen, onClose }) {
               type="button"
               onClick={onClose}
               className="px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
-              disabled={mutation.isPending}
+              disabled={isLoadingMutation}
             >
               Cancelar
             </button>
             <button
               type="submit"
               onClick={handleSubmit}
-              disabled={mutation.isPending}
+              disabled={isLoadingMutation}
               className="px-6 py-2 text-sm font-semibold text-white bg-[#00472e] rounded-lg hover:bg-[#003824] transition-colors flex items-center gap-2"
             >
-              {mutation.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
-              {mutation.isPending ? 'Guardando...' : 'Finalizar y Guardar'}
+              {isLoadingMutation ? <Loader2 size={16} className="animate-spin" /> : null}
+              {isLoadingMutation ? 'Guardando...' : (initialData ? 'Actualizar' : 'Finalizar y Guardar')}
             </button>
           </div>
 
