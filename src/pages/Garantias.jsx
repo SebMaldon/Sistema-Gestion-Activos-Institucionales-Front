@@ -14,7 +14,7 @@ import {
   GET_BIEN_BY_TERMINO,
 } from '../api/garantias.queries';
 import {
-  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight
+  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
@@ -433,12 +433,34 @@ export default function Garantias() {
   const isMaestro = idRol === 1;
   const isAdministrador = idRol === 2;
 
+  const [activeTab, setActiveTab] = useState('GARANTIAS');
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showPorVencer, setShowPorVencer] = useState(location.state?.filterPorVencer || false);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+  
+  const [modalProveedor, setModalProveedor] = useState(false);
+  const [modalEditarProveedor, setModalEditarProveedor] = useState(null);
+  const [modalEliminarProveedor, setModalEliminarProveedor] = useState(null);
+
+  const deleteProveedorMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(DELETE_PROVEEDOR, vars),
+    onSuccess: (_, vars) => {
+      qc.setQueryData(['proveedores'], old => {
+        if (!old || !old.proveedores) return { proveedores: [] };
+        return {
+          ...old,
+          proveedores: old.proveedores.filter(p => p.id_proveedor !== vars.id_proveedor)
+        };
+      });
+      showToast('Proveedor eliminado exitosamente', 'success');
+      setModalEliminarProveedor(null);
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al eliminar proveedor', 'error'),
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 15;
 
@@ -519,7 +541,7 @@ export default function Garantias() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center">
             <ShieldCheck className="text-green-600 mr-2" size={24} />
-            Control de Garantías
+            Control de Garantías y Proveedores
           </h1>
           <p className="text-sm text-gray-500 mt-1 pl-8">Administración de pólizas y resguardos de proveedores</p>
         </div>
@@ -533,7 +555,7 @@ export default function Garantias() {
             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
           </button>
           {/* Administrador y Maestro pueden crear */}
-          {(isMaestro || isAdministrador) && (
+          {(isMaestro || isAdministrador) && activeTab === 'GARANTIAS' && (
             <button
               onClick={() => setModalCrear(true)}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
@@ -542,8 +564,36 @@ export default function Garantias() {
               <span className="hidden sm:inline">Agregar Garantía</span>
             </button>
           )}
+          {(isMaestro || isAdministrador) && activeTab === 'PROVEEDORES' && (
+            <button
+              onClick={() => setModalProveedor(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+              style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+              <Building size={16} />
+              <span className="hidden sm:inline">Nuevo Proveedor</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('GARANTIAS')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'GARANTIAS' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+        >
+          Control de Garantías
+        </button>
+        <button
+          onClick={() => setActiveTab('PROVEEDORES')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'PROVEEDORES' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+        >
+          Directorio de Proveedores
+        </button>
+      </div>
+
+      {activeTab === 'GARANTIAS' && (
+        <>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -726,10 +776,102 @@ export default function Garantias() {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {activeTab === 'PROVEEDORES' && (
+        <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto content-start">
+            {proveedores.map(prov => (
+              <div key={prov.id_proveedor} className="border border-gray-200 rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-lg bg-green-50 text-green-700 flex items-center justify-center">
+                      <Building size={20} />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-base leading-tight">{prov.nombre_proveedor}</h3>
+                  </div>
+                  {(isMaestro || isAdministrador) && (
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => setModalEditarProveedor(prov)}
+                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Editar Proveedor"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      {isMaestro && (
+                        <button 
+                          onClick={() => setModalEliminarProveedor(prov)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar Proveedor"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2 mt-2">
+                  {prov.contactos && prov.contactos.length > 0 ? (
+                    prov.contactos.map((c, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                        {c.tipo_contacto === 'Teléfono' && <Phone size={14} className="mt-0.5 text-gray-400 shrink-0" />}
+                        {c.tipo_contacto === 'Correo' && <Mail size={14} className="mt-0.5 text-gray-400 shrink-0" />}
+                        {c.tipo_contacto === 'Dirección' && <MapPin size={14} className="mt-0.5 text-gray-400 shrink-0" />}
+                        {(c.tipo_contacto === 'Nombre de Contacto' || c.tipo_contacto === 'Otro') && <User size={14} className="mt-0.5 text-gray-400 shrink-0" />}
+                        <span className="break-all"><strong className="text-gray-500 font-medium">{c.tipo_contacto}:</strong> {c.contacto}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Sin contactos registrados.</p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {proveedores.length === 0 && (
+              <div className="col-span-full py-10 text-center text-gray-400">
+                <Building size={32} className="mx-auto mb-2 opacity-30" />
+                No hay proveedores registrados.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {modalCrear && <GarantiaModal onClose={() => setModalCrear(false)} proveedores={proveedores} />}
       {modalEditar && <GarantiaModal garantia={modalEditar} onClose={() => setModalEditar(null)} proveedores={proveedores} />}
       {modalEliminar && <ConfirmEliminarModal garantia={modalEliminar} onClose={() => setModalEliminar(null)} />}
+      
+      {modalProveedor && <ProveedorModal onClose={() => setModalProveedor(false)} />}
+      {modalEditarProveedor && <ProveedorModal proveedor={modalEditarProveedor} onClose={() => setModalEditarProveedor(null)} />}
+      {modalEliminarProveedor && (
+        <Modal onClose={() => setModalEliminarProveedor(null)} title="Eliminar Proveedor" subtitle="Esta acción es permanente">
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col items-center text-center">
+                <AlertCircle size={40} className="text-red-500 mb-3" />
+                <h3 className="text-red-800 font-bold mb-1">¿Estás seguro de eliminar este proveedor?</h3>
+                <p className="text-sm text-red-600 mb-2">
+                    Si el proveedor está vinculado a garantías existentes, no podrás eliminarlo.
+                </p>
+                <p className="font-semibold text-gray-800 text-xs bg-white px-3 py-1 rounded inline-block border border-red-100 shadow-sm mt-2">
+                    Proveedor: {modalEliminarProveedor.nombre_proveedor}
+                </p>
+            </div>
+            <div className="flex gap-3 mt-4">
+                <button type="button" onClick={() => setModalEliminarProveedor(null)} disabled={deleteProveedorMut.isPending}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                  Cancelar
+                </button>
+                <button type="button" disabled={deleteProveedorMut.isPending} onClick={() => deleteProveedorMut.mutate({ id_proveedor: modalEliminarProveedor.id_proveedor })}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-lg">
+                  {deleteProveedorMut.isPending ? 'Eliminando...' : 'Sí, Eliminar Proveedor'}
+                </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

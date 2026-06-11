@@ -35,6 +35,11 @@ export const GET_PROVEEDORES = gql`
     proveedores {
       id_proveedor
       nombre_proveedor
+      contactos {
+        id_contacto
+        contacto
+        tipo_contacto
+      }
     }
   }
 `;
@@ -151,6 +156,31 @@ export const CREATE_PROVEEDOR = gql`
     createProveedor(nombre_proveedor: $nombre_proveedor, contactos: $contactos) {
       id_proveedor
       nombre_proveedor
+      contactos {
+        id_contacto
+        contacto
+        tipo_contacto
+      }
     }
+  }
+`;
+
+export const UPDATE_PROVEEDOR = gql`
+  mutation UpdateProveedor($id_proveedor: ID!, $nombre_proveedor: String, $contactos: [ContactoInput!]) {
+    updateProveedor(id_proveedor: $id_proveedor, nombre_proveedor: $nombre_proveedor, contactos: $contactos) {
+      id_proveedor
+      nombre_proveedor
+      contactos {
+        id_contacto
+        contacto
+        tipo_contacto
+      }
+    }
+  }
+`;
+
+export const DELETE_PROVEEDOR = gql`
+  mutation DeleteProveedor($id_proveedor: ID!) {
+    deleteProveedor(id_proveedor: $id_proveedor)
   }
 `;
