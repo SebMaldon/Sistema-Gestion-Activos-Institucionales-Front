@@ -14,7 +14,7 @@ import {
   GET_BIEN_BY_TERMINO,
 } from '../api/garantias.queries';
 import {
-  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin
+  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
@@ -25,6 +25,7 @@ function EstatusBadge({ estatus }) {
   const map = {
     'VIGENTE': { bg: '#dcfce7', color: '#15803d', label: 'Vigente' },
     'VENCIDA': { bg: '#fee2e2', color: '#b91c1c', label: 'Vencida' },
+    'DESCONOCIDO': { bg: '#f1f5f9', color: '#64748b', label: 'Desconocido' },
   };
   const s = map[estatus] ?? { bg: '#f3f4f6', color: '#374151', label: estatus };
   return (
@@ -437,6 +438,14 @@ export default function Garantias() {
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [showPorVencer, setShowPorVencer] = useState(location.state?.filterPorVencer || false);
+  const [dateFilterType, setDateFilterType] = useState('NONE');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [proveedorFilter, setProveedorFilter] = useState('ALL');
+  
+  const [showStats, setShowStats] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'bien', direction: 'asc' });
+
   const [modalCrear, setModalCrear] = useState(false);
   const [modalEditar, setModalEditar] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
@@ -505,7 +514,8 @@ export default function Garantias() {
   const filteredGarantias = garantias.filter(g => {
     // Status Filter
     if (statusFilter === 'VIGENTE' && g.estado_garantia !== 'VIGENTE') return false;
-    if (statusFilter === 'VENCIDA' && g.estado_garantia === 'VIGENTE') return false;
+    if (statusFilter === 'VENCIDA' && (g.estado_garantia === 'VIGENTE' || g.estado_garantia === 'DESCONOCIDO')) return false;
+    if (statusFilter === 'DESCONOCIDO' && g.estado_garantia !== 'DESCONOCIDO') return false;
 
     // Por Vencer Filter
     if (showPorVencer) {
@@ -517,6 +527,34 @@ export default function Garantias() {
       if (diffDays < 0 || diffDays > 62) return false; // 2 meses aprox
     }
 
+    // Date Filter
+    if (dateFilterType !== 'NONE') {
+      let targetDate = null;
+      const dateStr = dateFilterType === 'INICIO' ? g.fecha_inicio : g.fecha_fin;
+      if (dateStr) {
+        const parts = dateStr.split('-');
+        if (parts.length >= 3) {
+            targetDate = new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+        }
+      }
+
+      if (!targetDate) return false;
+
+      if (startDate) {
+        const partsS = startDate.split('-');
+        const s = new Date(partsS[0], partsS[1] - 1, partsS[2]);
+        if (targetDate < s) return false;
+      }
+
+      if (endDate) {
+        const partsE = endDate.split('-');
+        const e = new Date(partsE[0], partsE[1] - 1, partsE[2], 23, 59, 59);
+        if (targetDate > e) return false;
+      }
+    }
+
+    if (proveedorFilter !== 'ALL' && g.id_proveedor !== parseInt(proveedorFilter)) return false;
+
     if (!searchFilter) return true;
     const term = searchFilter.toLowerCase();
     const proveedorMatch = g.proveedorObj?.nombre_proveedor?.toLowerCase().includes(term);
@@ -525,14 +563,61 @@ export default function Garantias() {
     return proveedorMatch || serieMatch || invMatch;
   });
 
-  const totalPages = Math.ceil(filteredGarantias.length / PAGE_SIZE) || 1;
+  const sortedGarantias = [...filteredGarantias].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    
+    let aValue = '';
+    let bValue = '';
+
+    switch (sortConfig.key) {
+      case 'bien':
+        aValue = a.bien ? `${a.bien.modelo?.marca?.marca} ${a.bien.modelo?.descrip_disp}` : '';
+        bValue = b.bien ? `${b.bien.modelo?.marca?.marca} ${b.bien.modelo?.descrip_disp}` : '';
+        break;
+      case 'periodo':
+        aValue = a.fecha_fin || '';
+        bValue = b.fecha_fin || '';
+        break;
+      case 'proveedor':
+        aValue = a.proveedorObj?.nombre_proveedor || '';
+        bValue = b.proveedorObj?.nombre_proveedor || '';
+        break;
+      case 'estado':
+        aValue = a.estado_garantia || '';
+        bValue = b.estado_garantia || '';
+        break;
+      default:
+        break;
+    }
+
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedGarantias.length / PAGE_SIZE) || 1;
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [filteredGarantias.length, currentPage, totalPages]);
+  }, [sortedGarantias.length, currentPage, totalPages]);
 
-  const paginatedGarantias = filteredGarantias.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginatedGarantias = sortedGarantias.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }) => {
+    if (sortConfig.key !== columnKey) return <ArrowUpDown size={14} className="text-gray-300 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />;
+    return sortConfig.direction === 'asc' 
+      ? <ChevronUp size={14} className="text-green-600 ml-1" />
+      : <ChevronDown size={14} className="text-green-600 ml-1" />;
+  };
 
   return (
     <div className="h-full flex flex-col p-4 sm:p-5 space-y-4 fade-in">
@@ -595,8 +680,11 @@ export default function Garantias() {
       {activeTab === 'GARANTIAS' && (
         <>
 
+      {/* Stats Cards Toggle Button inside Tabs Area (Optional place, or inside controls) */}
+
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {showStats && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-in">
           <div 
             onClick={() => setStatusFilter('ALL')}
             className={`rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${statusFilter === 'ALL' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/20' : 'bg-white border-gray-100 hover:border-blue-200'}`}
@@ -630,14 +718,29 @@ export default function Garantias() {
               <div>
                   <p className={`text-xs font-semibold uppercase tracking-wide ${statusFilter === 'VENCIDA' ? 'text-red-700' : 'text-red-500'}`}>Vencidas / Anuladas</p>
                   <h3 className={`text-2xl font-black mt-1 text-red-900`}>
-                    {garantias.filter(g => g.estado_garantia !== 'VIGENTE').length}
+                    {garantias.filter(g => g.estado_garantia !== 'VIGENTE' && g.estado_garantia !== 'DESCONOCIDO').length}
                   </h3>
               </div>
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-colors ${statusFilter === 'VENCIDA' ? 'bg-red-100 text-red-700' : 'bg-red-50 text-red-600'}`}>
                  <AlertCircle />
               </div>
           </div>
-      </div>
+          <div 
+            onClick={() => setStatusFilter(statusFilter === 'DESCONOCIDO' ? 'ALL' : 'DESCONOCIDO')}
+            className={`rounded-2xl p-5 border shadow-sm flex items-center justify-between cursor-pointer transition-all ${statusFilter === 'DESCONOCIDO' ? 'bg-slate-100 border-slate-300 ring-2 ring-slate-500/20' : 'bg-white border-gray-100 hover:border-slate-300'}`}
+          >
+              <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${statusFilter === 'DESCONOCIDO' ? 'text-slate-700' : 'text-slate-500'}`}>Desconocidas</p>
+                  <h3 className={`text-2xl font-black mt-1 text-slate-900`}>
+                    {garantias.filter(g => g.estado_garantia === 'DESCONOCIDO').length}
+                  </h3>
+              </div>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-colors ${statusFilter === 'DESCONOCIDO' ? 'bg-slate-200 text-slate-700' : 'bg-slate-50 text-slate-600'}`}>
+                 <Box />
+              </div>
+          </div>
+          </div>
+      )}
 
       {/* Control Actions & Search */}
       <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20">
@@ -654,6 +757,14 @@ export default function Garantias() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowStats(!showStats)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showStats ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              title="Mostrar u ocultar panel de estadísticas"
+            >
+              <BarChart2 size={14} className={showStats ? "text-blue-600" : "text-gray-500"} />
+              <span className="hidden sm:inline">{showStats ? 'Ocultar Resumen' : 'Ver Resumen'}</span>
+            </button>
+            <button
               onClick={() => setShowPorVencer(!showPorVencer)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showPorVencer ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
               title="Filtrar garantías por vencer (próximos 2 meses)"
@@ -661,6 +772,59 @@ export default function Garantias() {
               <AlertCircle size={14} className={showPorVencer ? "text-amber-600" : "text-amber-500"} />
               <span className="hidden sm:inline">{showPorVencer ? 'Por Vencer (Activo)' : 'Por Vencer'}</span>
             </button>
+          </div>
+        </div>
+        
+        {/* Filtros avanzados (Fecha y Proveedor) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+          
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-gray-400" />
+            <span className="text-xs font-bold text-gray-500 tracking-wide uppercase">Proveedor:</span>
+            <select
+              value={proveedorFilter}
+              onChange={(e) => setProveedorFilter(e.target.value)}
+              className="border-2 border-transparent hover:border-gray-200 bg-gray-50 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 focus:bg-white font-medium text-gray-700 appearance-none pr-8 cursor-pointer max-w-[200px] truncate transition-colors"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.2em 1.2em' }}
+            >
+              <option value="ALL">Todos los proveedores</option>
+              {proveedores.map(p => (
+                <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hidden sm:block w-px h-6 bg-gray-200 mx-2"></div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={dateFilterType}
+              onChange={(e) => setDateFilterType(e.target.value)}
+              className="border-2 border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none bg-white font-medium text-gray-700 appearance-none pr-8 cursor-pointer"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%233b82f6\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.2em 1.2em' }}
+            >
+              <option value="NONE">Sin filtro de fecha</option>
+              <option value="INICIO">Fecha de Inicio</option>
+              <option value="FIN">Fecha de Vencimiento</option>
+            </select>
+            
+            {dateFilterType !== 'NONE' && (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={e => setStartDate(e.target.value)} 
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
+                />
+                <span className="text-gray-400 text-sm font-medium">hasta</span>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={e => setEndDate(e.target.value)} 
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -682,10 +846,30 @@ export default function Garantias() {
             <table className="w-full text-sm text-left whitespace-nowrap">
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
                 <tr>
-                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipo Asociado</th>
-                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Periodo de Cobertura</th>
-                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Proveedor</th>
-                  <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
+                  <th 
+                    className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
+                    onClick={() => handleSort('bien')}
+                  >
+                    <div className="flex items-center">Equipo Asociado <SortIcon columnKey="bien" /></div>
+                  </th>
+                  <th 
+                    className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
+                    onClick={() => handleSort('periodo')}
+                  >
+                    <div className="flex items-center">Periodo de Cobertura <SortIcon columnKey="periodo" /></div>
+                  </th>
+                  <th 
+                    className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
+                    onClick={() => handleSort('proveedor')}
+                  >
+                    <div className="flex items-center">Proveedor <SortIcon columnKey="proveedor" /></div>
+                  </th>
+                  <th 
+                    className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
+                    onClick={() => handleSort('estado')}
+                  >
+                    <div className="flex items-center">Estado <SortIcon columnKey="estado" /></div>
+                  </th>
                   {(isMaestro || isAdministrador) && (
                       <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
                   )}
