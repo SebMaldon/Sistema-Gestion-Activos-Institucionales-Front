@@ -1038,33 +1038,35 @@ export default function GestionUsuarios() {
               <ChevronLeft size={15} />
             </button>
 
-            {/* Páginas numeradas usando historial de cursors */}
-            {currentPage > 2 && (
-              <button onClick={() => { setCursors([]); setCursor(null); }}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
-                1
+            <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
+              {/* Páginas numeradas usando historial de cursors */}
+              {currentPage > 2 && (
+                <button onClick={() => { setCursors([]); setCursor(null); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
+                  1
+                </button>
+              )}
+              {currentPage > 3 && <span className="px-1 text-gray-400 text-xs">...</span>}
+              {currentPage > 1 && (
+                <button onClick={handlePrevPage}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
+                  {currentPage - 1}
+                </button>
+              )}
+              <button className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0">
+                {currentPage}
               </button>
-            )}
-            {currentPage > 3 && <span className="px-1 text-gray-400 text-xs">...</span>}
-            {currentPage > 1 && (
-              <button onClick={handlePrevPage}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
-                {currentPage - 1}
-              </button>
-            )}
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0">
-              {currentPage}
-            </button>
-            {pageInfo?.hasNextPage && (
-              <button onClick={handleNextPage}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
-                {currentPage + 1}
-              </button>
-            )}
-            {currentPage < totalPages - 2 && <span className="px-1 text-gray-400 text-xs">...</span>}
-            {currentPage < totalPages - 1 && totalPages > 1 && (
-              <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">{totalPages}</span>
-            )}
+              {pageInfo?.hasNextPage && (
+                <button onClick={handleNextPage}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
+                  {currentPage + 1}
+                </button>
+              )}
+              {currentPage < totalPages - 2 && <span className="px-1 text-gray-400 text-xs">...</span>}
+              {currentPage < totalPages - 1 && totalPages > 1 && (
+                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">{totalPages}</span>
+              )}
+            </div>
 
             <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
               className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">

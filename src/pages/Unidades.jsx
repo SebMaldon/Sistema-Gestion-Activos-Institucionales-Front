@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Loader2, Building2, AlertTriangle, Eye, MapPin, User, Filter, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Loader2, Building2, AlertTriangle, Eye, MapPin, User, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUnidades, useCreateUnidad, useUpdateUnidad, useDeleteUnidad, useCatTipoUnidades, useCatDistinctFiltros } from '../hooks/useUnidades';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
@@ -26,6 +26,8 @@ export default function Unidades() {
 
   const [after, setAfter] = useState(null);
   const [history, setHistory] = useState([]);
+  const [pageInput, setPageInput] = useState('');
+  const currentPage = history.length + 1;
 
   // Advanced filters state
   const [showFilters, setShowFilters] = useState(false);
@@ -68,10 +70,35 @@ export default function Unidades() {
   const handleOpenDetail = (u) => { setUnidadToShow(u); setIsDetailOpen(true); };
 
   const handleNextPage = () => {
-    if (pageInfo.hasNextPage) { setHistory([...history, after]); setAfter(pageInfo.endCursor); }
+    if (pageInfo?.hasNextPage) {
+      setHistory(prev => [...prev, after]);
+      setAfter(pageInfo.endCursor);
+    }
   };
+
   const handlePrevPage = () => {
-    if (history.length > 0) { const prev = history[history.length - 1]; setHistory(history.slice(0, -1)); setAfter(prev); }
+    if (history.length > 0) {
+      const newHistory = [...history];
+      const prev = newHistory.pop();
+      setHistory(newHistory);
+      setAfter(prev);
+    } else {
+      setAfter(null);
+    }
+  };
+
+  const handleJumpToPage = (e) => {
+    e.preventDefault();
+    const p = parseInt(pageInput, 10);
+    if (isNaN(p) || p < 1 || p > currentPage) {
+      setPageInput('');
+      return;
+    }
+    if (p === currentPage) { setPageInput(''); return; }
+    const targetCursor = p === 1 ? null : history[p - 1];
+    setHistory(history.slice(0, p - 1));
+    setAfter(targetCursor ?? null);
+    setPageInput('');
   };
   const handleSearch = (val) => { setSearch(val); setAfter(null); setHistory([]); };
   const handleZonaChange = (val) => { setSelectedZona(val); setAfter(null); setHistory([]); };
@@ -394,14 +421,97 @@ export default function Unidades() {
           </table>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-          <div className="flex flex-col gap-0.5">
-            <p className="text-xs text-gray-500 font-medium">Total: <span className="text-gray-900 font-bold">{totalCount}</span> unidades registradas.</p>
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Página {history.length + 1} de {totalPages || 1}</p>
+        {/* ─── Paginación ─────────────────────────────────────────── */}
+        <div className="p-3 border-t border-gray-100 flex flex-col gap-2 bg-gray-50 flex-shrink-0">
+          {/* Info total */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-gray-700">
+              Total: {totalCount} registros.
+            </span>
+            <span className="font-bold text-gray-400 uppercase tracking-wider">
+              Pág. {currentPage}/{totalPages || 1}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handlePrevPage} disabled={history.length === 0} className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">Anterior</button>
-            <button onClick={handleNextPage} disabled={!pageInfo.hasNextPage} className="px-4 py-1.5 text-xs font-semibold bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">Siguiente</button>
+
+          {/* Botones de paginación */}
+          <div className="flex items-center gap-2 justify-center flex-wrap">
+            <button
+              onClick={handlePrevPage}
+              disabled={history.length === 0}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+              title="Página anterior"
+            >
+              <ChevronLeft size={15} />
+            </button>
+
+            <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
+              {/* Páginas: anterior, actual, siguiente */}
+              {currentPage > 2 && (
+                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
+              )}
+              {currentPage > 3 && (
+                <span className="px-1 text-gray-400 text-xs">...</span>
+              )}
+              {currentPage > 1 && (
+                <button
+                  onClick={handlePrevPage}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  {currentPage - 1}
+                </button>
+              )}
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0"
+              >
+                {currentPage}
+              </button>
+              {pageInfo?.hasNextPage && (
+                <button
+                  onClick={handleNextPage}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  {currentPage + 1}
+                </button>
+              )}
+              {currentPage < totalPages - 2 && (
+                <span className="px-1 text-gray-400 text-xs">...</span>
+              )}
+              {currentPage < totalPages - 1 && totalPages > 1 && (
+                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
+                  {totalPages}
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={handleNextPage}
+              disabled={!pageInfo?.hasNextPage}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+              title="Página siguiente"
+            >
+              <ChevronRight size={15} />
+            </button>
+
+            {/* Ir a página — solo páginas ya visitadas (1..currentPage) */}
+            <form onSubmit={handleJumpToPage} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+              <input
+                type="number"
+                min="1"
+                max={currentPage}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                placeholder="Ir a..."
+                title={`Ingresa un número entre 1 y ${currentPage} (páginas visitadas)`}
+                className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+              />
+              <button
+                type="submit"
+                disabled={!pageInput}
+                className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors"
+              >
+                Ir
+              </button>
+            </form>
           </div>
         </div>
       </div>

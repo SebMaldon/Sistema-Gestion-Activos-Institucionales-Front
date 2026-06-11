@@ -573,37 +573,39 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
             <ChevronLeft size={15} />
           </button>
 
-          {/* Página actual y páginas cercanas — más compacto en móvil */}
-          {(() => {
-            const pages = [];
-            // Siempre mostrar página 1
-            if (currentPage > 2) pages.push(1);
-            // Separador
-            if (currentPage > 3) pages.push('...-left');
-            // Página anterior (si existe)
-            if (currentPage > 1) pages.push(currentPage - 1);
-            // Página actual
-            pages.push(currentPage);
-            // Página siguiente (si existe)
-            if (currentPage < totalPages) pages.push(currentPage + 1);
-            // Separador
-            if (currentPage < totalPages - 2) pages.push('...-right');
-            // Última página
-            if (currentPage < totalPages - 1) pages.push(totalPages);
-            return pages.map((p, idx) => {
-              if (typeof p === 'string') {
-                return <span key={p} className="px-1 text-gray-400 text-xs">...</span>;
-              }
-              return (
-                <button key={`page-${p}-${idx}`} onClick={() => setCurrentPage(p)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
-                    currentPage === p ? 'bg-[#006341] text-white shadow-sm' : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-600'
-                  }`}>
-                  {p}
-                </button>
-              );
-            });
-          })()}
+          <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
+            {/* Página actual y páginas cercanas — más compacto en móvil */}
+            {(() => {
+              const pages = [];
+              // Siempre mostrar página 1
+              if (currentPage > 2) pages.push(1);
+              // Separador
+              if (currentPage > 3) pages.push('...-left');
+              // Página anterior (si existe)
+              if (currentPage > 1) pages.push(currentPage - 1);
+              // Página actual
+              pages.push(currentPage);
+              // Página siguiente (si existe)
+              if (currentPage < totalPages) pages.push(currentPage + 1);
+              // Separador
+              if (currentPage < totalPages - 2) pages.push('...-right');
+              // Última página
+              if (currentPage < totalPages - 1) pages.push(totalPages);
+              return pages.map((p, idx) => {
+                if (typeof p === 'string') {
+                  return <span key={p} className="px-1 text-gray-400 text-xs">...</span>;
+                }
+                return (
+                  <button key={`page-${p}-${idx}`} onClick={() => setCurrentPage(p)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                      currentPage === p ? 'bg-[#006341] text-white shadow-sm' : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-600'
+                    }`}>
+                    {p}
+                  </button>
+                );
+              });
+            })()}
+          </div>
 
           {/* Flecha Siguiente */}
           <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages || totalPages === 0}

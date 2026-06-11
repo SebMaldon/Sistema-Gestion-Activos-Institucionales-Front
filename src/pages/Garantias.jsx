@@ -14,7 +14,7 @@ import {
   GET_BIEN_BY_TERMINO,
 } from '../api/garantias.queries';
 import {
-  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter
+  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter, ChevronLeft
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
@@ -454,6 +454,8 @@ export default function Garantias() {
   const [modalEditarProveedor, setModalEditarProveedor] = useState(null);
   const [modalEliminarProveedor, setModalEliminarProveedor] = useState(null);
 
+  const [pageInput, setPageInput] = useState('');
+
   const deleteProveedorMut = useMutation({
     mutationFn: (vars) => gqlClient.request(DELETE_PROVEEDOR, vars),
     onSuccess: (_, vars) => {
@@ -602,6 +604,20 @@ export default function Garantias() {
     }
   }, [sortedGarantias.length, currentPage, totalPages]);
 
+  const handleNextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1));
+  const handlePrevPage = () => setCurrentPage(p => Math.max(1, p - 1));
+
+  const handleJumpToPage = (e) => {
+    e.preventDefault();
+    const p = parseInt(pageInput, 10);
+    if (isNaN(p) || p < 1 || p > totalPages) {
+      setPageInput('');
+      return;
+    }
+    setCurrentPage(p);
+    setPageInput('');
+  };
+
   const paginatedGarantias = sortedGarantias.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleSort = (key) => {
@@ -612,7 +628,7 @@ export default function Garantias() {
     setSortConfig({ key, direction });
   };
 
-  const SortIcon = ({ columnKey }) => {
+  const renderSortIcon = (columnKey) => {
     if (sortConfig.key !== columnKey) return <ArrowUpDown size={14} className="text-gray-300 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />;
     return sortConfig.direction === 'asc' 
       ? <ChevronUp size={14} className="text-green-600 ml-1" />
@@ -850,25 +866,25 @@ export default function Garantias() {
                     className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
                     onClick={() => handleSort('bien')}
                   >
-                    <div className="flex items-center">Equipo Asociado <SortIcon columnKey="bien" /></div>
+                    <div className="flex items-center">Equipo Asociado {renderSortIcon('bien')}</div>
                   </th>
                   <th 
                     className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
                     onClick={() => handleSort('periodo')}
                   >
-                    <div className="flex items-center">Periodo de Cobertura <SortIcon columnKey="periodo" /></div>
+                    <div className="flex items-center">Periodo de Cobertura {renderSortIcon('periodo')}</div>
                   </th>
                   <th 
                     className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
                     onClick={() => handleSort('proveedor')}
                   >
-                    <div className="flex items-center">Proveedor <SortIcon columnKey="proveedor" /></div>
+                    <div className="flex items-center">Proveedor {renderSortIcon('proveedor')}</div>
                   </th>
                   <th 
                     className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:bg-gray-100 transition-colors group select-none"
                     onClick={() => handleSort('estado')}
                   >
-                    <div className="flex items-center">Estado <SortIcon columnKey="estado" /></div>
+                    <div className="flex items-center">Estado {renderSortIcon('estado')}</div>
                   </th>
                   {(isMaestro || isAdministrador) && (
                       <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
@@ -934,28 +950,96 @@ export default function Garantias() {
 
         {/* Paginación */}
         {!isLoading && filteredGarantias.length > 0 && (
-          <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0">
-            <p className="text-xs text-gray-500 font-medium">
-              Mostrando <span className="text-gray-900 font-bold">{(currentPage - 1) * PAGE_SIZE + 1}</span> a <span className="text-gray-900 font-bold">{Math.min(currentPage * PAGE_SIZE, filteredGarantias.length)}</span> de <span className="text-gray-900 font-bold">{filteredGarantias.length}</span> registros.
-            </p>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:text-green-700 hover:border-green-300 disabled:opacity-50 disabled:hover:text-gray-600 disabled:hover:border-gray-200 transition-all"
-              >
-                Anterior
-              </button>
-              <span className="text-xs font-semibold px-2 text-gray-600">
-                Página {currentPage} de {totalPages}
+          <div className="p-3 border-t border-gray-100 flex flex-col gap-2 bg-gray-50 flex-shrink-0">
+            {/* Info total */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-gray-700">
+                Total: {filteredGarantias.length} registros.
               </span>
-              <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:text-green-700 hover:border-green-300 disabled:opacity-50 disabled:hover:text-gray-600 disabled:hover:border-gray-200 transition-all"
+              <span className="font-bold text-gray-400 uppercase tracking-wider">
+                Pág. {currentPage}/{totalPages}
+              </span>
+            </div>
+
+            {/* Botones de paginación */}
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+                title="Página anterior"
               >
-                Siguiente
+                <ChevronLeft size={15} />
               </button>
+
+              <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
+                {/* Páginas: anterior, actual, siguiente */}
+                {currentPage > 2 && (
+                  <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
+                )}
+                {currentPage > 3 && (
+                  <span className="px-1 text-gray-400 text-xs">...</span>
+                )}
+                {currentPage > 1 && (
+                  <button
+                    onClick={handlePrevPage}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                  >
+                    {currentPage - 1}
+                  </button>
+                )}
+                <button
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0"
+                >
+                  {currentPage}
+                </button>
+                {currentPage < totalPages && (
+                  <button
+                    onClick={handleNextPage}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                  >
+                    {currentPage + 1}
+                  </button>
+                )}
+                {currentPage < totalPages - 2 && (
+                  <span className="px-1 text-gray-400 text-xs">...</span>
+                )}
+                {currentPage < totalPages - 1 && totalPages > 1 && (
+                  <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
+                    {totalPages}
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+                title="Página siguiente"
+              >
+                <ChevronRight size={15} />
+              </button>
+
+              {/* Ir a página */}
+              <form onSubmit={handleJumpToPage} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  placeholder="Ir a..."
+                  title={`Ingresa un número entre 1 y ${totalPages}`}
+                  className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+                />
+                <button
+                  type="submit"
+                  disabled={!pageInput}
+                  className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors"
+                >
+                  Ir
+                </button>
+              </form>
             </div>
           </div>
         )}
