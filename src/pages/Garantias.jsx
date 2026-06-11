@@ -151,8 +151,8 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.id_bien || !form.fecha_fin) {
-      showToast('El bien y la fecha de fin son obligatorios', 'warning');
+    if (!form.id_bien) {
+      showToast('El bien es obligatorio', 'warning');
       return;
     }
 
@@ -172,7 +172,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
       updateMut.mutate({
         id_garantia: garantia.id_garantia,
         fecha_inicio: form.fecha_inicio || null,
-        fecha_fin: form.fecha_fin,
+        fecha_fin: form.fecha_fin || null,
         id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
         estado_garantia: 'VIGENTE',
       });
@@ -180,7 +180,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
       createMut.mutate({
         id_bien: form.id_bien,
         fecha_inicio: form.fecha_inicio || null,
-        fecha_fin: form.fecha_fin,
+        fecha_fin: form.fecha_fin || null,
         id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
         estado_garantia: 'VIGENTE',
       });
@@ -258,8 +258,8 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
               <input type="date" className={inputCls} value={form.fecha_inicio} onChange={e => handleChange('fecha_inicio', e.target.value)} />
             </div>
             <div>
-              <label className={labelCls}>Fecha Fin *</label>
-              <input type="date" className={inputCls} value={form.fecha_fin} onChange={e => handleChange('fecha_fin', e.target.value)} required />
+              <label className={labelCls}>Fecha Fin</label>
+              <input type="date" className={inputCls} value={form.fecha_fin} onChange={e => handleChange('fecha_fin', e.target.value)} />
               
               {/* Atajos de cálculo automático */}
               <div className="flex gap-2 mt-2">
