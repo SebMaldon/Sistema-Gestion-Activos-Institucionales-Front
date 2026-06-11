@@ -58,6 +58,21 @@ export const CREAR_MESA_CORRESPONDENCIA = gql`
   }
 `;
 
+export const EDITAR_MESA_CORRESPONDENCIA = gql`
+  mutation EditarMesaCorrespondencia($Folio: Int!, $input: MesaCorrespondenciaInput!) {
+    editarMesaCorrespondencia(Folio: $Folio, input: $input) {
+      Folio
+      NoOficio
+    }
+  }
+`;
+
+export const ELIMINAR_MESA_CORRESPONDENCIA = gql`
+  mutation EliminarMesaCorrespondencia($Folio: Int!) {
+    eliminarMesaCorrespondencia(Folio: $Folio)
+  }
+`;
+
 export const getArchivos = async () => {
   const { getArchivos } = await gqlClient.request(GET_ARCHIVOS);
   return getArchivos;
@@ -71,4 +86,14 @@ export const getMesaCorrespondencias = async (filter, pagination) => {
 export const crearMesaCorrespondencia = async (input) => {
   const { crearMesaCorrespondencia } = await gqlClient.request(CREAR_MESA_CORRESPONDENCIA, { input });
   return crearMesaCorrespondencia;
+};
+
+export const editarMesaCorrespondencia = async (Folio, input) => {
+  const { editarMesaCorrespondencia } = await gqlClient.request(EDITAR_MESA_CORRESPONDENCIA, { Folio, input });
+  return editarMesaCorrespondencia;
+};
+
+export const eliminarMesaCorrespondencia = async (Folio) => {
+  const { eliminarMesaCorrespondencia } = await gqlClient.request(ELIMINAR_MESA_CORRESPONDENCIA, { Folio });
+  return eliminarMesaCorrespondencia;
 };

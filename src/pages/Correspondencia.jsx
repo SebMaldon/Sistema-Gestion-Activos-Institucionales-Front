@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Plus, RefreshCw, Loader2, AlertTriangle, FileText,
-  ArrowDownCircle, ArrowUpCircle, CheckCircle, ChevronLeft, ChevronRight
+  ArrowDownCircle, ArrowUpCircle, CheckCircle, ChevronLeft, ChevronRight,
+  Edit, Trash2
 } from 'lucide-react';
-import { getMesaCorrespondencias } from '../api/correspondencia.queries';
+import { getMesaCorrespondencias, eliminarMesaCorrespondencia } from '../api/correspondencia.queries';
 import FormCorrespondenciaModal from '../components/FormCorrespondenciaModal';
 import { parseServerDate } from '../lib/utils';
 import { useAuthStore } from '../store/auth.store';
+import { useApp } from '../context/AppContext';
 
 const HighlightText = ({ text, highlight }) => {
   if (!highlight || !text) return <>{text}</>;
@@ -27,8 +29,11 @@ const HighlightText = ({ text, highlight }) => {
 export default function Correspondencia() {
   const usuario = useAuthStore((s) => s.usuario);
   const isMaestroAdmin = usuario?.id_rol === 1 || usuario?.id_rol === 2;
+  const queryClient = useQueryClient();
+  const { showToast } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialData, setInitialData] = useState(null);
   const [expandedDesc, setExpandedDesc] = useState({});
 
   const toggleDesc = (folio) => {
@@ -57,6 +62,28 @@ export default function Correspondencia() {
   const correspondencias = correspondenciasData?.edges?.map(e => e.node) || [];
   const pageInfo = correspondenciasData?.pageInfo;
   const totalPages = pageInfo?.totalCount ? Math.max(1, Math.ceil(pageInfo.totalCount / PAGE_SIZE)) : 1;
+
+  const deleteMutation = useMutation({
+    mutationFn: eliminarMesaCorrespondencia,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mesaCorrespondencias'] });
+      showToast('Registro eliminado exitosamente', 'success');
+    },
+    onError: (err) => {
+      showToast(err.message || 'Error al eliminar', 'error');
+    }
+  });
+
+  const handleDelete = (folio) => {
+    if (window.confirm('¿Está seguro de eliminar este registro?')) {
+      deleteMutation.mutate(folio);
+    }
+  };
+
+  const handleEdit = (corr) => {
+    setInitialData(corr);
+    setIsModalOpen(true);
+  };
 
   // Handlers de paginación
   const handleNextPage = () => {
@@ -150,7 +177,7 @@ export default function Correspondencia() {
           </button>
           {isMaestroAdmin && (
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => { setInitialData(null); setIsModalOpen(true); }}
               className="flex items-center gap-2 bg-[#00472e] hover:bg-[#003824] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm"
             >
               <Plus size={16} /><span>Nuevo Registro</span>
@@ -251,6 +278,7 @@ export default function Correspondencia() {
                   <col style={{ minWidth: '200px' }} />
                   <col style={{ width: '4.5rem' }} />
                   <col style={{ width: '7rem' }} />
+                  {isMaestroAdmin && <col style={{ width: '6rem' }} />}
                 </colgroup>
                 <thead className="bg-gray-100 text-gray-600 uppercase tracking-wider font-bold shadow-sm">
                   <tr>
@@ -265,6 +293,7 @@ export default function Correspondencia() {
                     <th className="px-3 py-2.5">Descripción</th>
                     <th className="px-3 py-2.5 text-center whitespace-nowrap">Tipo</th>
                     <th className="px-3 py-2.5 text-center whitespace-nowrap">Archivo</th>
+                    {isMaestroAdmin && <th className="px-3 py-2.5 text-center whitespace-nowrap">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -323,6 +352,18 @@ export default function Correspondencia() {
                       <td className="px-3 py-2.5 text-center font-semibold text-gray-700">
                         {corr.archivo_ref?.Archivo || '—'}
                       </td>
+                      {isMaestroAdmin && (
+                        <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => handleEdit(corr)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Editar">
+                              <Edit size={16} />
+                            </button>
+                            <button onClick={() => handleDelete(corr.Folio)} className="text-red-500 hover:text-red-700 transition-colors" title="Eliminar" disabled={deleteMutation.isPending}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -430,6 +471,7 @@ export default function Correspondencia() {
       <FormCorrespondenciaModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        initialData={initialData}
       />
     </div>
   );

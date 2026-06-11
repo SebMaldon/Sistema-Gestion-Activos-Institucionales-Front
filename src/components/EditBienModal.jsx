@@ -969,31 +969,27 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
   const { mutate: createGarantia } = useMutation({
     mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
-    onSuccess: () => showToast('Garantía guardada', 'success'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      qc.invalidateQueries({ queryKey: ['garantias'] });
+      showToast('Garantía guardada', 'success');
+    },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al guardar garantía', 'error'),
   });
   const { mutate: updateGarantia } = useMutation({
     mutationFn: (vars) => gqlClient.request(UPDATE_GARANTIA, vars),
-    onSuccess: () => showToast('Garantía actualizada', 'success'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      qc.invalidateQueries({ queryKey: ['garantias'] });
+      showToast('Garantía actualizada', 'success');
+    },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar garantía', 'error'),
   });
 
   const { mutate: createBien, isPending: creating } = useCreateBien({
-    onSuccess: () => { 
-      closeForm(); 
-      onClose(); 
-      if (refetch) refetch(); 
-      showToast('Bien registrado correctamente.', 'success'); 
-    },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
   });
   const { mutate: updateBien, isPending: updating } = useUpdateBien({
-    onSuccess: () => { 
-      closeForm(); 
-      onClose(); 
-      if (refetch) refetch(); 
-      showToast('Bien actualizado correctamente.', 'success'); 
-    },
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar bien.', 'error'),
   });
 
@@ -1276,14 +1272,30 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
           }
 
           // Crear Garantía si aplica
-          if (garantiaForm.show && garantiaForm.fecha_fin) {
+          if (garantiaForm.show) {
+            const handleFinish = async () => {
+              await queryClient.cancelQueries({ queryKey: ['bienes'] });
+              closeForm();
+              onClose();
+              if (refetch) await refetch();
+              showToast('Bien registrado correctamente.', 'success');
+            };
             createGarantia({
               id_bien: bienCreado.id_bien,
               fecha_inicio: garantiaForm.fecha_inicio || null,
-              fecha_fin: garantiaForm.fecha_fin,
+              fecha_fin: garantiaForm.fecha_fin || null,
               id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
               estado_garantia: 'VIGENTE'
-            });
+            }, { onSuccess: handleFinish });
+          } else {
+             const handleFinish = async () => {
+               await queryClient.cancelQueries({ queryKey: ['bienes'] });
+               closeForm();
+               onClose();
+               if (refetch) await refetch();
+               showToast('Bien registrado correctamente.', 'success');
+             };
+             handleFinish();
           }
         },
       });
@@ -1303,10 +1315,11 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
             }
           });
         }
-        setTimeout(() => {
+        setTimeout(async () => {
+          await queryClient.cancelQueries({ queryKey: ['bienes'] });
           closeForm(); 
           onClose(); 
-          if (refetch) refetch(); 
+          if (refetch) await refetch(); 
           showToast('Especificaciones TI actualizadas.', 'success'); 
         }, 300);
         return;
@@ -1328,24 +1341,40 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
               }
             });
           }
-          if (garantiaForm.show && garantiaForm.fecha_fin) {
+          if (garantiaForm.show) {
+            const handleFinish = async () => {
+              await queryClient.cancelQueries({ queryKey: ['bienes'] });
+              closeForm();
+              onClose();
+              if (refetch) await refetch();
+              showToast('Bien actualizado correctamente.', 'success');
+            };
             if (garantiaForm.id_garantia) {
               updateGarantia({
                 id_garantia: garantiaForm.id_garantia,
                 fecha_inicio: garantiaForm.fecha_inicio || null,
-                fecha_fin: garantiaForm.fecha_fin,
+                fecha_fin: garantiaForm.fecha_fin || null,
                 id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
                 estado_garantia: 'VIGENTE'
-              });
+              }, { onSuccess: handleFinish });
             } else {
               createGarantia({
                 id_bien: modalForm.id_bien,
                 fecha_inicio: garantiaForm.fecha_inicio || null,
-                fecha_fin: garantiaForm.fecha_fin,
+                fecha_fin: garantiaForm.fecha_fin || null,
                 id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
                 estado_garantia: 'VIGENTE'
-              });
+              }, { onSuccess: handleFinish });
             }
+          } else {
+             const handleFinish = async () => {
+               await queryClient.cancelQueries({ queryKey: ['bienes'] });
+               closeForm();
+               onClose();
+               if (refetch) await refetch();
+               showToast('Bien actualizado correctamente.', 'success');
+             };
+             handleFinish();
           }
         },
       });
@@ -2117,7 +2146,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Fin *</label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Fin</label>
                       <input
                         type="date"
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
