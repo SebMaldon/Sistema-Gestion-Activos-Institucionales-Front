@@ -1565,7 +1565,7 @@ export default function Inventario() {
               <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
             </button>
             {/* Botón Exportar — solo en tabs de bienes, no en Impresión ni Carga Masiva */}
-            {(activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
+            {(activeTab === 'Todos' || activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
               <button
                 id="btn-exportar-excel"
                 onClick={() => setShowExportModal(true)}
@@ -1603,6 +1603,7 @@ export default function Inventario() {
         <div className="flex items-center justify-between flex-wrap gap-4 w-full">
           <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
             {[
+              { key: 'Todos', label: 'Todos los bienes' },
               { key: 'Capitalizable', label: 'Bienes Capitalizables' },
               { key: 'No Capitalizable', label: 'Bienes No Capitalizables' },
               ...(canEdit ? [{ key: 'Carga Masiva', label: 'Carga Masiva' }] : []),
@@ -1614,7 +1615,7 @@ export default function Inventario() {
                   setActiveTab(tab.key);
                   setCursor(null);
                   setCursors([]);
-                  if (tab.key === 'Capitalizable') {
+                  if (tab.key === 'Capitalizable' || tab.key === 'Todos') {
                     setAdvFilters(prev => ({ ...prev, inconvenientes: false }));
                   }
                 }}
@@ -1700,7 +1701,7 @@ export default function Inventario() {
                     )}
                   </button>
                   {/* Botón Reporte */}
-                  {(activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
+                  {(activeTab === 'Todos' || activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
                     <button
                       onClick={() => { setShowReporte(r => !r); if (showAdvancedFilters) setShowAdvancedFilters(false); }}
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showReporte
@@ -2031,7 +2032,7 @@ export default function Inventario() {
             </div>
 
             {/* ── Panel de Reporte (desplegable, separado de filtros) ─────── */}
-            {showReporte && (activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
+            {showReporte && (activeTab === 'Todos' || activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
               <ReportePanel
                 serverFilter={serverFilter}
                 activeTab={activeTab}

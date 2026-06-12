@@ -290,7 +290,7 @@ export default function ReportePanel({ serverFilter, activeTab, onClose }) {
                 {view === 'lista' ? 'Reporte por Unidad Física' : `Detalle de ${selectedUnidad.descCorta}`}
               </p>
               <p className="text-xs text-green-100/80">
-                {activeTab === 'Capitalizable' ? 'Bienes Capitalizables' : 'Bienes No Capitalizables'}
+                {activeTab === 'Capitalizable' ? 'Bienes Capitalizables' : activeTab === 'No Capitalizable' ? 'Bienes No Capitalizables' : 'Todos los Bienes'}
               </p>
             </div>
           </div>
