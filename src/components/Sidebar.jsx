@@ -91,9 +91,11 @@ export default function Sidebar() {
             <img src="/IMSS_logo_blanco.png" alt="IMSS" className="w-8 h-8 object-contain" />
           </div>
           {!sidebarCollapsed && (
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-w-0">
               <p className="text-white font-bold text-sm leading-tight whitespace-nowrap">IMSS</p>
-              <p className="text-green-200 text-xs leading-tight whitespace-nowrap">Gestión de Activos</p>
+              <p className="text-green-200 text-[10px] leading-tight mt-0.5" title="Sistema Integral De Infraestructura Tecnologica">
+                Sistema Integral De Infraestructura Tecnologica
+              </p>
             </div>
           )}
           {/* X solo en mobile */}
