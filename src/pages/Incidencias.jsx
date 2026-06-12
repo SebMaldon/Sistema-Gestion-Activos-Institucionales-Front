@@ -101,28 +101,38 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 // ─── Tarjeta de Incidencia ────────────────────────────────────────────────────
 // memo evita re-renders cuando el padre re-renderiza pero las props no cambian.
 const IncidenciaCard = memo(function IncidenciaCard({
-  inc, onStatusChange, onEdit, onDelete, onAddNota, canEdit, canDelete, isMoving
+  inc, onStatusChange, onEdit, onDelete, onAddNota, canEdit, canDelete, isMoving,
+  isExpanded, onToggle
 }) {
   const { showToast } = useApp();
-  const [expanded, setExpanded] = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const cardRef = useRef(null);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
-      if (cardRef.current && !cardRef.current.contains(event.target)) {
-        setExpanded(false);
-        setMenuOpen(false);
+      // Ignorar clics si ocurren dentro de un modal global (que usan z-50)
+      if (event.target.closest('.z-50')) {
+        return;
+      }
+      
+      const isOutside = cardRef.current && !cardRef.current.contains(event.target);
+      
+      if (isOutside) {
+        // Siempre cerrar el menú al hacer clic fuera
+        if (menuOpen) setMenuOpen(false);
+        // NOTA: Ya no cerramos automáticamente 'expanded' para evitar que las tarjetas
+        // den saltos (layout shift) y el usuario pierda su lugar. 
+        // Solo se cerrará cuando el usuario vuelva a hacer clic sobre la tarjeta abierta.
       }
     };
-    if (expanded || menuOpen) document.addEventListener('mousedown', handleOutsideClick);
+    if (menuOpen) document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [expanded, menuOpen]);
+  }, [menuOpen, inc.estatus]);
 
   const handleCardClick = useCallback(() => {
     if (menuOpen) setMenuOpen(false);
-    else setExpanded(prev => !prev);
-  }, [menuOpen]);
+    else onToggle();
+  }, [menuOpen, onToggle]);
 
   // Obtener config de columna para el indicador visual
   const colConfig = COLUMNS.find(c => c.id === inc.estatus) || COLUMNS[0];
@@ -130,6 +140,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
   return (
     <div
       ref={cardRef}
+      data-card-status={inc.estatus}
       className={`group bg-white rounded-2xl border border-gray-50 p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
       onClick={handleCardClick}
     >
@@ -233,7 +244,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
       </div>
 
       {/* Ver más indicador */}
-      {!expanded && (
+      {!isExpanded && (
         <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-500 transition-all py-1 rounded-lg hover:bg-gray-50">
           <AlignLeft size={12} className="transition-transform group-hover:scale-125" />
           <span>Detalles de seguimiento</span>
@@ -241,7 +252,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
       )}
 
       {/* Detalle expandido */}
-      {expanded && (
+      {isExpanded && (
         <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 fade-in">
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 border border-gray-100 shadow-sm min-w-0">
@@ -664,6 +675,7 @@ export default function Incidencias() {
   const [isNotaModalOpen,        setIsNotaModalOpen]        = useState(false);
   const [incidenciaParaNota,     setIncidenciaParaNota]     = useState(null);
   const [incidenciaDetalle,      setIncidenciaDetalle]      = useState(null);
+  const [expandedCards,          setExpandedCards]          = useState({}); // { [estatus]: id_incidencia }
   const [confirmConfig, setConfirmConfig] = useState({
     isOpen: false,
     title: '',
@@ -672,6 +684,13 @@ export default function Incidencias() {
     type: 'danger',
     onConfirm: () => {},
   });
+
+  const handleToggleCard = useCallback((id, estatus) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [estatus]: prev[estatus] === id ? null : id
+    }));
+  }, []);
 
   // ── useMemo: agrupa incidencias por columna y filtra resueltas por semana ──
   const columnedCards = useMemo(() => {
@@ -901,13 +920,13 @@ export default function Incidencias() {
 
       {/* Contenido principal según la pestaña */}
       {tab === 'kanban' && (
-        <div className="flex-1 overflow-hidden -mx-4 sm:mx-0">
-          <div className="h-full flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 gap-5 px-4 sm:px-0 scrollbar-hide">
+        <div className="flex-1 overflow-hidden -mx-4 sm:mx-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 gap-5 px-4 sm:px-0 scrollbar-hide">
             {COLUMNS.map(col => {
               const Icon   = col.icon;
               const cards  = columnedCards[col.id] ?? [];
               return (
-                <div key={col.id} className="h-full flex flex-col min-w-[85vw] md:min-w-0 snap-center md:snap-align-none pb-2 md:pb-0">
+                <div key={col.id} className="h-full flex flex-col min-w-[85vw] md:min-w-0 min-h-0 snap-center md:snap-align-none pb-2 md:pb-0">
                   <div
                     className="sticky top-0 z-30 flex-shrink-0 flex items-center gap-2.5 px-4 py-3 rounded-t-2xl shadow-sm backdrop-blur-sm"
                     style={{ backgroundColor: `${col.bg}EE` }}
@@ -939,6 +958,8 @@ export default function Incidencias() {
                           canEdit={canEdit}
                           canDelete={canDelete}
                           isMoving={movingId === inc.id}
+                          isExpanded={expandedCards[inc.estatus] === inc.id}
+                          onToggle={() => handleToggleCard(inc.id, inc.estatus)}
                         />
                       ))
                     )}
