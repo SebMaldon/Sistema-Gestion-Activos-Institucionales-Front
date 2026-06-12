@@ -285,6 +285,12 @@ export const DELETE_INCIDENCIA_MUTATION = gql`
   }
 `;
 
+export const DELETE_NOTA_MUTATION = gql`
+  mutation DeleteNota($id_nota: ID!) {
+    deleteNota(id_nota: $id_nota)
+  }
+`;
+
 export const GET_UNIDADES_QUERY = gql`
   query GetCatUnidades {
     catUnidades {

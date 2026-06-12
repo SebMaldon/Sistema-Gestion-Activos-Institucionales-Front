@@ -16,6 +16,7 @@ import {
   AGREGAR_NOTA_MUTATION,
   UPDATE_ESTATUS_MUTATION,
   DELETE_INCIDENCIA_MUTATION,
+  DELETE_NOTA_MUTATION,
 } from '../api/incidencias.queries';
 
 
@@ -333,6 +334,21 @@ export function useUpdateIncidencia() {
   return useMutation({
     mutationFn: (vars) => gqlClient.request(UPDATE_INCIDENCIA_MUTATION, vars),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['incidencias'] }),
+  });
+}
+
+export function useDeleteNota() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars) => gqlClient.request(DELETE_NOTA_MUTATION, vars),
+    onSuccess: (_, { id_incidencia }) => {
+      // Refresh the notes for this specific incidencia
+      if (id_incidencia) {
+        qc.invalidateQueries({ queryKey: ['notasIncidencia', String(id_incidencia)] });
+      } else {
+        qc.invalidateQueries({ queryKey: ['notasIncidencia'] });
+      }
+    },
   });
 }
 

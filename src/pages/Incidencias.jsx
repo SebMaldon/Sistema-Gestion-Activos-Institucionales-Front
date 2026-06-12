@@ -23,6 +23,7 @@ import {
   useResolverIncidencia,
   useAgregarNota,
   useDeleteIncidencia,
+  useDeleteNota,
   mapIncidenciaNode,
 } from '../hooks/useIncidencias';
 import { parseServerDate, copyTextToClipboard } from '../lib/utils';
@@ -39,7 +40,7 @@ const COLUMNS = [
 
 // ─── NotasPanel: carga notas solo cuando la tarjeta se expande ────────────────
 // Al montar (expanded=true) dispara la query. Si ya está en caché, no re-fetcha.
-const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, resolucion, fechaResolucion }) {
+const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, onDeleteNota, resolucion, fechaResolucion }) {
   const { data: notas = [], isLoading } = useNotasIncidencia(incidenciaId);
 
   return (
@@ -71,15 +72,24 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
           <p className="text-amber-600 font-medium text-xs mb-2">Notas de Seguimiento</p>
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
             {notas.map(nota => (
-              <div key={nota.id_nota} className="border-t border-amber-100 first:border-t-0 pt-1.5 first:pt-0">
-                <p className="text-amber-900 leading-relaxed whitespace-pre-wrap text-xs break-words">{nota.contenido_nota}</p>
-                <p className="text-amber-500 mt-0.5 text-xs">
-                  — {nota.usuarioAutor?.nombre_completo || 'Sistema'} ·{' '}
-                  {(() => {
-                    const d = parseServerDate(nota.fecha_creacion);
-                    return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '';
-                  })()}
-                </p>
+              <div key={nota.id_nota} className="border-t border-amber-100 first:border-t-0 pt-1.5 first:pt-0 relative group/nota">
+                <p className="text-amber-900 leading-relaxed whitespace-pre-wrap text-xs break-words pr-6">{nota.contenido_nota}</p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-amber-500 text-xs">
+                    — {nota.usuarioAutor?.nombre_completo || 'Sistema'} ·{' '}
+                    {(() => {
+                      const d = parseServerDate(nota.fecha_creacion);
+                      return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '';
+                    })()}
+                  </p>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); if(window.confirm('¿Eliminar esta nota?')) onDeleteNota(nota.id_nota, incidenciaId); }}
+                    className="opacity-0 group-hover/nota:opacity-100 p-1 hover:bg-amber-100 rounded text-red-500 transition-all"
+                    title="Eliminar Nota"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -99,9 +109,8 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 });
 
 // ─── Tarjeta de Incidencia ────────────────────────────────────────────────────
-// memo evita re-renders cuando el padre re-renderiza pero las props no cambian.
 const IncidenciaCard = memo(function IncidenciaCard({
-  inc, onStatusChange, onEdit, onDelete, onAddNota, canEdit, canDelete, isMoving,
+  inc, onStatusChange, onEdit, onDelete, onAddNota, onDeleteNota, canEdit, canDelete, isMoving,
   isExpanded, onToggle, isHighlighted
 }) {
   const { showToast } = useApp();
@@ -288,19 +297,16 @@ const IncidenciaCard = memo(function IncidenciaCard({
               incidenciaId={inc.id} 
               estatus={inc.estatus} 
               onAddNota={onAddNota} 
+              onDeleteNota={onDeleteNota}
               resolucion={inc.resolucion} 
               fechaResolucion={inc.fechaResolucion} 
             />
           </div>
 
           {/* Botones de cambio de estatus */}
-          {canEdit && inc.estatus !== 'Resuelto' && (
+          {canEdit && (
             <div className="flex gap-2 mt-2">
-              {COLUMNS.filter(c => {
-                if (inc.estatus === 'Pendiente') return c.id === 'En proceso' || c.id === 'Resuelto';
-                if (inc.estatus === 'En proceso') return c.id === 'Resuelto';
-                return false;
-              }).map(col => {
+              {COLUMNS.filter(c => c.id !== inc.estatus).map(col => {
                 const ColIcon = col.icon;
                 return (
                   <button
@@ -323,7 +329,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
 
 // ─── Componente Tabla Histórico ────────────────────────────────────────────────
 
-function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) {
+function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, onStatusChange }) {
   const { showToast } = useApp();
   const [estatusFiltro, setEstatusFiltro] = useState('');
   const [fechaFiltroTipo, setFechaFiltroTipo] = useState(''); // 'creacion' o 'resolucion'
@@ -507,13 +513,30 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail }) 
                   <td className="px-3 py-2.5 text-blue-600 font-medium whitespace-nowrap max-w-[100px] truncate" title={inc.alias}>{inc.alias || '—'}</td>
                   <td className="px-3 py-2.5 text-blue-600 font-medium whitespace-nowrap max-w-[90px] truncate" title={inc.tipoIncidencia}>{inc.tipoIncidencia}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      inc.estatus === 'Pendiente' ? 'bg-amber-100 text-amber-700' :
-                      inc.estatus === 'En proceso' ? 'bg-blue-100 text-blue-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {inc.estatus}
-                    </span>
+                    {canEdit ? (
+                      <select
+                        value={inc.estatus}
+                        onChange={(e) => { e.stopPropagation(); onStatusChange(inc, e.target.value); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider outline-none cursor-pointer border-r-4 ${
+                          inc.estatus === 'Pendiente' ? 'bg-amber-100 text-amber-700 border-amber-100' :
+                          inc.estatus === 'En proceso' ? 'bg-blue-100 text-blue-700 border-blue-100' :
+                          'bg-green-100 text-green-700 border-green-100'
+                        }`}
+                      >
+                        <option value="Pendiente">PENDIENTE</option>
+                        <option value="En proceso">EN PROCESO</option>
+                        <option value="Resuelto">RESUELTO</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        inc.estatus === 'Pendiente' ? 'bg-amber-100 text-amber-700' :
+                        inc.estatus === 'En proceso' ? 'bg-blue-100 text-blue-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {inc.estatus}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2.5 text-gray-600 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
                   <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">
@@ -658,6 +681,16 @@ export default function Incidencias() {
   const resolverIncidencia = useResolverIncidencia();
   const agregarNota        = useAgregarNota();
   const deleteIncidencia   = useDeleteIncidencia();
+  const deleteNota         = useDeleteNota();
+
+  const handleDeleteNota = useCallback(async (id_nota, id_incidencia) => {
+    try {
+      await deleteNota.mutateAsync({ id_nota: String(id_nota), id_incidencia: String(id_incidencia) });
+      showToast('Nota de seguimiento eliminada', 'success');
+    } catch {
+      showToast('Error al eliminar la nota', 'error');
+    }
+  }, [deleteNota, showToast]);
 
   const [movingId, setMovingId] = useState(null);
   const [tab, setTab] = useState('kanban'); // 'kanban' | 'historico'
@@ -732,9 +765,35 @@ export default function Incidencias() {
 
   // Recibe el objeto completo para no depender de `incidencias` en los deps
   const handleStatusChange = useCallback(async (inc, newStatus) => {
+    if (inc.estatus === newStatus) return;
+
     if (newStatus === 'Resuelto') {
       setIncidenciaParaResolver(inc);
       setIsResolucionModalOpen(true);
+      return;
+    }
+
+    if (inc.estatus === 'Resuelto') {
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Reabrir Incidencia Resuelta',
+        message: `¿Deseas cambiar el estatus a "${newStatus}"? Al hacerlo se borrarán los detalles de la resolución actual y la incidencia volverá a estar activa.`,
+        confirmText: 'Sí, cambiar estatus',
+        type: 'danger',
+        onConfirm: async () => {
+          setMovingId(inc.id);
+          try {
+            await updateEstatus.mutateAsync({ id_incidencia: String(inc.id), estatus_reparacion: newStatus });
+            showToast(`Estatus cambiado a "${newStatus}"`, 'success');
+            setLastEditedId(inc.id);
+          } catch {
+            showToast('Error al cambiar el estatus', 'error');
+          } finally {
+            setMovingId(null);
+            setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+          }
+        }
+      });
       return;
     }
 
@@ -960,6 +1019,7 @@ export default function Incidencias() {
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                           onAddNota={handleAbrirNotaModal}
+                          onDeleteNota={handleDeleteNota}
                           canEdit={canEdit}
                           canDelete={canDelete}
                           isMoving={movingId === inc.id}
@@ -985,6 +1045,7 @@ export default function Incidencias() {
             onEdit={handleEdit} 
             onDelete={handleDelete} 
             onViewDetail={handleVerDetalle}
+            onStatusChange={handleStatusChange}
           />
         </div>
       )}
@@ -1028,6 +1089,7 @@ export default function Incidencias() {
         isOpen={!!incidenciaDetalle}
         onClose={() => setIncidenciaDetalle(null)}
         incidencia={incidenciaDetalle}
+        onDeleteNota={canDelete ? handleDeleteNota : undefined}
       />
 
       {/* Modal de Confirmación Genérico */}

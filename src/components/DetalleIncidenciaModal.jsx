@@ -1,9 +1,9 @@
 import React from 'react';
-import { X, Clock, Calendar, User, Users, FileText, CheckCircle, Info, Wrench, Monitor, Building2, AlignLeft, Send, Activity } from 'lucide-react';
+import { X, Clock, Calendar, User, Users, FileText, CheckCircle, Info, Wrench, Monitor, Building2, AlignLeft, Send, Activity, Trash2 } from 'lucide-react';
 import { useNotasIncidencia } from '../hooks/useIncidencias';
 import { parseServerDate } from '../lib/utils';
 
-export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) {
+export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia, onDeleteNota }) {
   // Cargar notas de la incidencia (el hook maneja enabled internamente si el id es null)
   const { data: notas = [], isLoading: isLoadingNotas } = useNotasIncidencia(incidencia?.id);
 
@@ -161,20 +161,31 @@ export default function DetalleIncidenciaModal({ isOpen, onClose, incidencia }) 
                         dateStyle: 'short', timeStyle: 'short'
                       }) : '--:--';
                       return (
-                        <div key={n.id_nota} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                          <p className="text-xs text-gray-800 bg-white p-2 rounded border border-gray-100 mb-2 leading-relaxed break-words whitespace-pre-wrap">
+                        <div key={n.id_nota} className="bg-gray-50 rounded-lg p-3 border border-gray-100 relative group/nota">
+                          <p className="text-xs text-gray-800 bg-white p-2 rounded border border-gray-100 mb-2 leading-relaxed break-words whitespace-pre-wrap pr-8">
                             {n.contenido_nota}
                           </p>
-                          <div className="flex items-center justify-between text-gray-500 text-[10px] sm:text-xs">
-                            <span className="font-medium flex items-center gap-1">
-                              <User size={10} /> {n.usuarioAutor?.nombre_completo || 'Sistema'}
-                            </span>
-                            <span className="flex items-center gap-1 text-gray-400">
-                              <Clock size={10} /> {(() => {
-                                const d = parseServerDate(n.fecha_creacion);
-                                return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '--:--';
-                              })()}
-                            </span>
+                          <div className="flex items-center justify-between text-gray-500 text-[10px] sm:text-xs mt-1">
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium flex items-center gap-1">
+                                <User size={10} /> {n.usuarioAutor?.nombre_completo || 'Sistema'}
+                              </span>
+                              <span className="flex items-center gap-1 text-gray-400">
+                                <Clock size={10} /> {(() => {
+                                  const d = parseServerDate(n.fecha_creacion);
+                                  return d ? d.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '--:--';
+                                })()}
+                              </span>
+                            </div>
+                            {onDeleteNota && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); if(window.confirm('¿Eliminar esta nota?')) onDeleteNota(n.id_nota, incidencia.id); }}
+                                className="opacity-0 group-hover/nota:opacity-100 p-1.5 hover:bg-red-100 rounded text-red-500 transition-all absolute right-4 top-4"
+                                title="Eliminar Nota"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
