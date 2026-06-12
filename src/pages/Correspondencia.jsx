@@ -46,16 +46,19 @@ export default function Correspondencia() {
 
   // Paginación por cursor
   const PAGE_SIZE = 30;
-  const [cursor, setCursor] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const setCursor = () => {};
+  
+  const cursor = null;
+  const history = { length: currentPage - 1 };
   const [pageInput, setPageInput] = useState('');
-  const currentPage = history.length + 1;
+  
 
   const { data: correspondenciasData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['mesaCorrespondencias', activeFilters, cursor],
+    queryKey: ['mesaCorrespondencias', activeFilters, currentPage],
     queryFn: () => getMesaCorrespondencias(
       Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
-      { first: PAGE_SIZE, after: cursor }
+      { first: PAGE_SIZE, page: currentPage }
     ),
   });
 
@@ -86,47 +89,19 @@ export default function Correspondencia() {
   };
 
   // Handlers de paginación
-  const handleNextPage = () => {
-    if (pageInfo?.hasNextPage) {
-      setHistory(prev => [...prev, cursor]);
-      setCursor(pageInfo.endCursor);
-    }
-  };
+  const handleNextPage = () => { if (currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999)) setCurrentPage(p => p + 1); };
 
-  const handlePrevPage = () => {
-    if (history.length > 0) {
-      const newHistory = [...history];
-      const prevCursor = newHistory.pop();
-      setHistory(newHistory);
-      setCursor(prevCursor);
-    } else {
-      setCursor(null);
-    }
-  };
+  const handlePrevPage = () => { setCurrentPage(p => Math.max(1, p - 1)); };
 
   // Ir a página específica usando el historial de cursores almacenados
   // history[i] = cursor que se usó para llegar a la página i+1
   // Sólo se puede saltar a páginas ya visitadas (1 ... currentPage)
-  const handleJumpToPage = (e) => {
-    e.preventDefault();
-    const p = parseInt(pageInput, 10);
-    if (isNaN(p) || p < 1 || p > currentPage) {
-      setPageInput('');
-      return;
-    }
-    if (p === currentPage) { setPageInput(''); return; }
-    // history[0] = cursor para página 1 (siempre null)
-    // history[p-1] = cursor para página p
-    const targetCursor = p === 1 ? null : history[p - 1];
-    setHistory(history.slice(0, p - 1));
-    setCursor(targetCursor ?? null);
-    setPageInput('');
-  };
+  const handleJumpToPage = (e) => { e.preventDefault(); const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= (typeof totalPages !== 'undefined' ? totalPages : 9999)) { setCurrentPage(p); } setPageInput(''); };
 
   // Reset paginación al cambiar filtros
   useEffect(() => {
     setCursor(null);
-    setHistory([]);
+    setCurrentPage(1);
   }, [activeFilters]);
 
   const handleFilterChange = (e) => {
@@ -389,7 +364,7 @@ export default function Correspondencia() {
             <div className="flex items-center gap-2 justify-center flex-wrap">
               <button
                 onClick={handlePrevPage}
-                disabled={history.length === 0}
+                disabled={currentPage === 1}
                 className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
                 title="Página anterior"
               >
@@ -399,8 +374,13 @@ export default function Correspondencia() {
               <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
                 {/* Páginas: anterior, actual, siguiente */}
                 {currentPage > 2 && (
-                  <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
-                )}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  1
+                </button>
+              )}
                 {currentPage > 3 && (
                   <span className="px-1 text-gray-400 text-xs">...</span>
                 )}
@@ -417,7 +397,7 @@ export default function Correspondencia() {
                 >
                   {currentPage}
                 </button>
-                {pageInfo?.hasNextPage && (
+                {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
                   <button
                     onClick={handleNextPage}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
@@ -429,15 +409,18 @@ export default function Correspondencia() {
                   <span className="px-1 text-gray-400 text-xs">...</span>
                 )}
                 {currentPage < totalPages - 1 && totalPages > 1 && (
-                  <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
-                    {totalPages}
-                  </span>
-                )}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  {totalPages}
+                </button>
+              )}
               </div>
 
               <button
                 onClick={handleNextPage}
-                disabled={!pageInfo?.hasNextPage}
+                disabled={currentPage >= (typeof totalPages !== 'undefined' ? totalPages : 1)}
                 className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
                 title="Página siguiente"
               >
@@ -449,11 +432,11 @@ export default function Correspondencia() {
                 <input
                   type="number"
                   min="1"
-                  max={currentPage}
+                  max={totalPages || 1}
                   value={pageInput}
                   onChange={(e) => setPageInput(e.target.value)}
                   placeholder="Ir a..."
-                  title={`Ingresa un número entre 1 y ${currentPage} (páginas visitadas)`}
+                  title={`Ingresa un número de página válido`}
                   className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
                 />
                 <button

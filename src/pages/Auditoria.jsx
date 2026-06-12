@@ -231,12 +231,12 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
 
 
 export default function Auditoria() {
-  const [cursor, setCursor] = useState(null);
-  const [cursors, setCursors] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const setCursor = () => {};
+  const setCursors = () => setCurrentPage(1);
+  const cursor = null;
+  const cursors = { length: currentPage - 1 };
   const [pageInput, setPageInput] = useState('');
-  const currentPage = cursors.length + 1;
-  
-  // Advanced filters state
   const [showFilters, setShowFilters] = useState(false);
   const [filterAccion, setFilterAccion] = useState([]);
   const [filterModulo, setFilterModulo] = useState([]);
@@ -256,7 +256,7 @@ export default function Auditoria() {
   });
 
   const { data: bitacoraData, isLoading, isError } = useQuery({
-    queryKey: ['bitacora', filterAccion, filterModulo, filterOrigen, filterUsuario, filterFechaDesde, filterFechaHasta, cursor],
+    queryKey: ['bitacora', filterAccion, filterModulo, filterOrigen, filterUsuario, filterFechaDesde, filterFechaHasta, currentPage],
     queryFn: () => gqlClient.request(GET_BITACORA, {
       accion: filterAccion.length > 0 ? filterAccion : undefined,
       tabla_afectada: filterModulo.length > 0 ? filterModulo : undefined,
@@ -265,7 +265,7 @@ export default function Auditoria() {
       fechaDesde: filterFechaDesde ? new Date(filterFechaDesde).toISOString() : undefined,
       fechaHasta: filterFechaHasta ? new Date(new Date(filterFechaHasta).setHours(23, 59, 59, 999)).toISOString() : undefined,
       first: PAGE_SIZE,
-      after: cursor ?? undefined,
+      page: currentPage,
     }),
     select: d => d.bitacora,
     refetchInterval: 10000, // Auto-refrescar cada 10 segundos
@@ -279,33 +279,11 @@ export default function Auditoria() {
   const totalCount = pageInfo?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
 
-  const handleNextPage = () => {
-    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
-      setCursors(p => [...p, cursor]);
-      setCursor(pageInfo.endCursor);
-    }
-  };
+  const handleNextPage = () => { if (currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999)) setCurrentPage(p => p + 1); };
 
-  const handlePrevPage = () => {
-    const prev = [...cursors];
-    const prevCursor = prev.pop() ?? null;
-    setCursors(prev);
-    setCursor(prevCursor);
-  };
+  const handlePrevPage = () => { setCurrentPage(p => Math.max(1, p - 1)); };
 
-  const handleJumpToPage = (e) => {
-    e.preventDefault();
-    const p = parseInt(pageInput, 10);
-    if (isNaN(p) || p < 1 || p > currentPage) {
-      setPageInput('');
-      return;
-    }
-    if (p === currentPage) { setPageInput(''); return; }
-    const targetCursor = p === 1 ? null : cursors[p - 1];
-    setCursors(cursors.slice(0, p - 1));
-    setCursor(targetCursor ?? null);
-    setPageInput('');
-  };
+  const handleJumpToPage = (e) => { e.preventDefault(); const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= (typeof totalPages !== 'undefined' ? totalPages : 9999)) { setCurrentPage(p); } setPageInput(''); };
 
   return (
     <div className="flex flex-col h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden p-4 sm:p-6 gap-5 fade-in">
@@ -648,7 +626,12 @@ export default function Auditoria() {
             <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
               {/* Páginas: anterior, actual, siguiente */}
               {currentPage > 2 && (
-                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  1
+                </button>
               )}
               {currentPage > 3 && (
                 <span className="px-1 text-gray-400 text-xs">...</span>
@@ -666,7 +649,7 @@ export default function Auditoria() {
               >
                 {currentPage}
               </button>
-              {pageInfo?.hasNextPage && (
+              {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
                 <button
                   onClick={handleNextPage}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
@@ -678,15 +661,18 @@ export default function Auditoria() {
                 <span className="px-1 text-gray-400 text-xs">...</span>
               )}
               {currentPage < totalPages - 1 && totalPages > 1 && (
-                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
                   {totalPages}
-                </span>
+                </button>
               )}
             </div>
 
             <button
               onClick={handleNextPage}
-              disabled={!pageInfo?.hasNextPage}
+              disabled={currentPage >= (typeof totalPages !== 'undefined' ? totalPages : 1)}
               className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
               title="Página siguiente"
             >
@@ -698,11 +684,11 @@ export default function Auditoria() {
               <input
                 type="number"
                 min="1"
-                max={currentPage}
+                max={totalPages || 1}
                 value={pageInput}
                 onChange={(e) => setPageInput(e.target.value)}
                 placeholder="Ir a..."
-                title={`Ingresa un número entre 1 y ${currentPage} (páginas visitadas)`}
+                title={`Ingresa un número de página válido`}
                 className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
               />
               <button

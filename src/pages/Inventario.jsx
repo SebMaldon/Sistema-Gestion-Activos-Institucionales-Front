@@ -882,8 +882,11 @@ export default function Inventario() {
   const [sortBy, setSortBy] = useState('');
   const [sortDir, setSortDir] = useState('');
 
-  const [cursor, setCursor] = useState(null);
-  const [cursors, setCursors] = useState([]); // historial para retroceder
+  const [currentPage, setCurrentPage] = useState(1);
+  const setCursor = () => {};
+  const setCursors = () => setCurrentPage(1);
+  const cursor = null;
+  const cursors = { length: currentPage - 1 };
   const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 60 : 15;
 
   useEffect(() => {
@@ -1045,7 +1048,7 @@ export default function Inventario() {
   const [showReporte, setShowReporte] = useState(false);
 
   // ── Datos ─────────────────────────────────────────────────────────────────
-  const { data: bienesData, isLoading, isError, refetch, isFetching } = useBienes(serverFilter, { first: PAGE_SIZE, after: cursor ?? undefined });
+  const { data: bienesData, isLoading, isError, refetch, isFetching } = useBienes(serverFilter, { first: PAGE_SIZE, page: currentPage });
   const bienes = bienesData?.items ?? [];
   const pageInfo = bienesData?.pageInfo ?? {};
 
@@ -1059,36 +1062,13 @@ export default function Inventario() {
     }
   }, [bienes]);
 
-  const handleNextPage = () => {
-    if (pageInfo?.hasNextPage && pageInfo.endCursor) {
-      setCursors(p => [...p, cursor]);
-      setCursor(pageInfo.endCursor);
-    }
-  };
+  const handleNextPage = () => { if (currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999)) setCurrentPage(p => p + 1); };
 
-  const handlePrevPage = () => {
-    const prev = [...cursors];
-    const prevCursor = prev.pop() ?? null;
-    setCursors(prev);
-    setCursor(prevCursor);
-  };
+  const handlePrevPage = () => { setCurrentPage(p => max(1, p - 1)); };
 
   const [pageInput, setPageInput] = useState('');
 
-  const handleJumpToPage = (e) => {
-    e.preventDefault();
-    const p = parseInt(pageInput);
-    const currentPage = cursors.length + 1;
-    if (isNaN(p) || p < 1 || p > currentPage) return;
-    if (p === currentPage) {
-      setPageInput('');
-      return;
-    }
-    const targetCursor = p === 1 ? null : cursors[p - 1];
-    setCursors(cursors.slice(0, p - 1));
-    setCursor(targetCursor ?? null);
-    setPageInput('');
-  };
+  const handleJumpToPage = (e) => { e.preventDefault(); const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= (typeof totalPages !== 'undefined' ? totalPages : 9999)) { setCurrentPage(p); } setPageInput(''); };
 
   const toggleSort = (col) => {
     if (sortBy === col) {
@@ -2403,7 +2383,7 @@ export default function Inventario() {
                       <button className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0">
                         {currentPage}
                       </button>
-                      {pageInfo?.hasNextPage && (
+                      {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
                         <button onClick={handleNextPage}
                           className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0">
                           {currentPage + 1}
@@ -2411,12 +2391,17 @@ export default function Inventario() {
                       )}
                       {currentPage < totalPages - 2 && <span className="px-1 text-gray-400 text-xs">...</span>}
                       {currentPage < totalPages - 1 && totalPages > 1 && (
-                        <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">{totalPages}</span>
-                      )}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  {totalPages}
+                </button>
+              )}
                     </div>
 
                     {/* Flecha Siguiente */}
-                    <button onClick={handleNextPage} disabled={!pageInfo?.hasNextPage}
+                    <button onClick={handleNextPage} disabled={currentPage >= (typeof totalPages !== 'undefined' ? totalPages : 1)}
                       className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
                       <ChevronRight size={15} />
                     </button>
@@ -2426,11 +2411,11 @@ export default function Inventario() {
                       <input
                         type="number"
                         min="1"
-                        max={currentPage}
+                        max={totalPages || 1}
                         value={pageInput}
                         onChange={(e) => setPageInput(e.target.value)}
                         placeholder="Ir a..."
-                        title={`Ingresa un número entre 1 y ${currentPage} (páginas visitadas)`}
+                        title={`Ingresa un número de página válido`}
                         className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
                       />
                       <button

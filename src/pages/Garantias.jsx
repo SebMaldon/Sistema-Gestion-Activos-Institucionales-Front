@@ -975,8 +975,13 @@ export default function Garantias() {
               <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
                 {/* Páginas: anterior, actual, siguiente */}
                 {currentPage > 2 && (
-                  <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
-                )}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  1
+                </button>
+              )}
                 {currentPage > 3 && (
                   <span className="px-1 text-gray-400 text-xs">...</span>
                 )}
@@ -1005,10 +1010,13 @@ export default function Garantias() {
                   <span className="px-1 text-gray-400 text-xs">...</span>
                 )}
                 {currentPage < totalPages - 1 && totalPages > 1 && (
-                  <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
-                    {totalPages}
-                  </span>
-                )}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  {totalPages}
+                </button>
+              )}
               </div>
 
               <button

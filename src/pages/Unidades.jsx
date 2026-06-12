@@ -10,8 +10,7 @@ import MultiSelect from '../components/MultiSelect';
 
 // Esta pagina muestra las UNIDADES FISICAS (tabla: unidades)
 export default function Unidades() {
-  const [search, setSearch] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
   const [unidadToEdit, setUnidadToEdit] = useState(null);
   const { showToast } = useApp();
   const usuario = useAuthStore((s) => s.usuario);
@@ -24,11 +23,9 @@ export default function Unidades() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [unidadToDelete, setUnidadToDelete] = useState(null);
 
-  const [after, setAfter] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState('');
-  const currentPage = history.length + 1;
-
   // Advanced filters state
   const [showFilters, setShowFilters] = useState(false);
   const [selectedZona, setSelectedZona] = useState([]);
@@ -57,7 +54,7 @@ export default function Unidades() {
     segmento_monitorear: selectedMonitorear !== '' ? parseInt(selectedMonitorear) : undefined,
     sortBy,
     sortOrder,
-    pagination: { first: 30, after }
+    pagination: { first: 30, page: currentPage }
   });
   const edges = data?.edges || [];
   const pageInfo = data?.pageInfo || {};
@@ -74,47 +71,21 @@ export default function Unidades() {
   const handleOpenEdit = (u) => { setUnidadToEdit(u); setIsModalOpen(true); };
   const handleOpenDetail = (u) => { setUnidadToShow(u); setIsDetailOpen(true); };
 
-  const handleNextPage = () => {
-    if (pageInfo?.hasNextPage) {
-      setHistory(prev => [...prev, after]);
-      setAfter(pageInfo.endCursor);
-    }
-  };
+  const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(p => p + 1); };
 
-  const handlePrevPage = () => {
-    if (history.length > 0) {
-      const newHistory = [...history];
-      const prev = newHistory.pop();
-      setHistory(newHistory);
-      setAfter(prev);
-    } else {
-      setAfter(null);
-    }
-  };
+  const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(p => p - 1); };
 
-  const handleJumpToPage = (e) => {
-    e.preventDefault();
-    const p = parseInt(pageInput, 10);
-    if (isNaN(p) || p < 1 || p > currentPage) {
-      setPageInput('');
-      return;
-    }
-    if (p === currentPage) { setPageInput(''); return; }
-    const targetCursor = p === 1 ? null : history[p - 1];
-    setHistory(history.slice(0, p - 1));
-    setAfter(targetCursor ?? null);
-    setPageInput('');
-  };
-  const handleSearch = (val) => { setSearch(val); setAfter(null); setHistory([]); };
-  const handleZonaChange = (val) => { setSelectedZona(val); setAfter(null); setHistory([]); };
-  const handleTipoChange = (val) => { setSelectedTipo(val); setAfter(null); setHistory([]); };
-  const handleRegimenChange = (val) => { setSelectedRegimen(val); setAfter(null); setHistory([]); };
-  const handleNivelChange = (val) => { setSelectedNivel(val); setAfter(null); setHistory([]); };
-  const handleCiudadChange = (val) => { setSelectedCiudad(val); setAfter(null); setHistory([]); };
-  const handleMunicipioChange = (val) => { setSelectedMunicipio(val); setAfter(null); setHistory([]); };
-  const handleVelocidadChange = (val) => { setSelectedVelocidad(val); setAfter(null); setHistory([]); };
-  const handleProveedorChange = (val) => { setSelectedProveedor(val); setAfter(null); setHistory([]); };
-  const handleMonitorearChange = (val) => { setSelectedMonitorear(val); setAfter(null); setHistory([]); };
+  const handleJumpToPage = (e) => { e.preventDefault(); const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= (typeof totalPages !== 'undefined' ? totalPages : 9999)) { setCurrentPage(p); } setPageInput(''); };
+  const handleSearch = (val) => { setSearch(val); setCurrentPage(1); };
+  const handleZonaChange = (val) => { setSelectedZona(val); setCurrentPage(1); };
+  const handleTipoChange = (val) => { setSelectedTipo(val); setCurrentPage(1); };
+  const handleRegimenChange = (val) => { setSelectedRegimen(val); setCurrentPage(1); };
+  const handleNivelChange = (val) => { setSelectedNivel(val); setCurrentPage(1); };
+  const handleCiudadChange = (val) => { setSelectedCiudad(val); setCurrentPage(1); };
+  const handleMunicipioChange = (val) => { setSelectedMunicipio(val); setCurrentPage(1); };
+  const handleVelocidadChange = (val) => { setSelectedVelocidad(val); setCurrentPage(1); };
+  const handleProveedorChange = (val) => { setSelectedProveedor(val); setCurrentPage(1); };
+  const handleMonitorearChange = (val) => { setSelectedMonitorear(val); setCurrentPage(1); };
 
   const handleSort = (column) => {
     if (sortBy === column) {
@@ -123,8 +94,8 @@ export default function Unidades() {
       setSortBy(column);
       setSortOrder('asc');
     }
-    setAfter(null);
-    setHistory([]);
+    
+    setCurrentPage(1);
   };
 
   const SortIcon = ({ column }) => {
@@ -143,8 +114,8 @@ export default function Unidades() {
     setSelectedVelocidad([]);
     setSelectedProveedor([]);
     setSelectedMonitorear('');
-    setAfter(null);
-    setHistory([]);
+    
+    setCurrentPage(1);
   };
   const handleDeleteClick = (u) => { setUnidadToDelete(u); setIsDeleteModalOpen(true); };
 
@@ -466,7 +437,7 @@ export default function Unidades() {
           <div className="flex items-center gap-2 justify-center flex-wrap">
             <button
               onClick={handlePrevPage}
-              disabled={history.length === 0}
+              disabled={currentPage === 1}
               className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
               title="Página anterior"
             >
@@ -476,7 +447,12 @@ export default function Unidades() {
             <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
               {/* Páginas: anterior, actual, siguiente */}
               {currentPage > 2 && (
-                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">1</span>
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  1
+                </button>
               )}
               {currentPage > 3 && (
                 <span className="px-1 text-gray-400 text-xs">...</span>
@@ -494,7 +470,7 @@ export default function Unidades() {
               >
                 {currentPage}
               </button>
-              {pageInfo?.hasNextPage && (
+              {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
                 <button
                   onClick={handleNextPage}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
@@ -506,9 +482,12 @@ export default function Unidades() {
                 <span className="px-1 text-gray-400 text-xs">...</span>
               )}
               {currentPage < totalPages - 1 && totalPages > 1 && (
-                <span className="w-8 h-8 flex items-center justify-center text-xs text-gray-400">
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
                   {totalPages}
-                </span>
+                </button>
               )}
             </div>
 
@@ -526,7 +505,7 @@ export default function Unidades() {
               <input
                 type="number"
                 min="1"
-                max={currentPage}
+                max={totalPages || 1}
                 value={pageInput}
                 onChange={(e) => setPageInput(e.target.value)}
                 placeholder="Ir a..."
