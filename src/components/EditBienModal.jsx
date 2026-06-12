@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { useBienes, mapBienNode } from '../hooks/useBienes';
 import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
-import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI, useCreateCuentaPC, useUpdateCuentaPC } from '../hooks/useBienMutations';
+import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI, useCreateCuentaPC, useUpdateCuentaPC, useDeleteCuentaPC } from '../hooks/useBienMutations';
 import { useCreateNotaBien } from '../hooks/useEscaner';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
@@ -902,8 +902,11 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   const idRol = usuario?.id_rol ?? 3;
   
   
-  // Need this for deleteCuentaPC if it's a mutation:
-  const deleteCuentaPC = () => { showToast('Borrado de cuenta PC no implementado localmente', 'warning') };
+  const { mutate: deleteCuentaPCMutation } = useDeleteCuentaPC({
+    onSuccess: () => showToast('Cuenta PC eliminada', 'success'),
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al eliminar cuenta PC', 'error'),
+  });
+  const deleteCuentaPC = (id) => deleteCuentaPCMutation(id);
   
   // States
   const [formTab, setFormTab]           = useState(idRol === 3 ? 'tecnico' : 'general'); // 'general' | 'tecnico'
@@ -1104,7 +1107,15 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
       version_office: bien.especificacionTI?.version_office ?? '',
       puerto_red: bien.especificacionTI?.puerto_red ?? '',
       switch_red: bien.especificacionTI?.switch_red ?? '',
-      last_scan: bien.especificacionTI?.last_scan ?? '',
+      last_scan: bien.especificacionTI?.last_scan ? (() => {
+        try {
+          const val = bien.especificacionTI.last_scan;
+          const d = new Date(isNaN(Number(val)) ? val : Number(val));
+          if (d.getFullYear() < 2000) return '';
+          const localD = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+          return localD.toISOString().slice(0, 16);
+        } catch(e) { return ''; }
+      })() : '',
       windows_serial: bien.especificacionTI?.windows_serial ?? '',
     });
     // Cargar todas las cuentas PC
@@ -2007,7 +2018,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                                 >{c._editing ? 'Cerrar' : 'Editar'}</button>
                                 <button type="button"
                                   onClick={() => {
-                                    if (c.id_cuenta && !c._new) { deleteCuentaPC({ id_cuenta: c.id_cuenta }); }
+                                    if (c.id_cuenta && !c._new) { deleteCuentaPC(c.id_cuenta); }
                                     setCuentasList(prev => prev.filter((_, i) => i !== idx));
                                   }}
                                   className="text-[10px] px-2 py-0.5 rounded bg-white border border-red-200 text-red-500 hover:bg-red-50 font-semibold"
