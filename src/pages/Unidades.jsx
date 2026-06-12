@@ -41,6 +41,9 @@ export default function Unidades() {
   const [selectedProveedor, setSelectedProveedor] = useState([]);
   const [selectedMonitorear, setSelectedMonitorear] = useState('');
 
+  const [sortBy, setSortBy] = useState('clave');
+  const [sortOrder, setSortOrder] = useState('asc');
+
   const { data, isLoading } = useUnidades({
     search,
     clave_zona: selectedZona.length > 0 ? selectedZona : undefined,
@@ -52,12 +55,14 @@ export default function Unidades() {
     segmento_velocidad: selectedVelocidad.length > 0 ? selectedVelocidad : undefined,
     segmento_proveedor: selectedProveedor.length > 0 ? selectedProveedor : undefined,
     segmento_monitorear: selectedMonitorear !== '' ? parseInt(selectedMonitorear) : undefined,
-    pagination: { first: 10, after }
+    sortBy,
+    sortOrder,
+    pagination: { first: 30, after }
   });
   const edges = data?.edges || [];
   const pageInfo = data?.pageInfo || {};
   const totalCount = pageInfo.totalCount || 0;
-  const totalPages = Math.ceil(totalCount / 10);
+  const totalPages = Math.ceil(totalCount / 30);
 
   const createUnidad = useCreateUnidad();
   const updateUnidad = useUpdateUnidad();
@@ -110,6 +115,22 @@ export default function Unidades() {
   const handleVelocidadChange = (val) => { setSelectedVelocidad(val); setAfter(null); setHistory([]); };
   const handleProveedorChange = (val) => { setSelectedProveedor(val); setAfter(null); setHistory([]); };
   const handleMonitorearChange = (val) => { setSelectedMonitorear(val); setAfter(null); setHistory([]); };
+
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+    setAfter(null);
+    setHistory([]);
+  };
+
+  const SortIcon = ({ column }) => {
+    if (sortBy !== column) return <span className="opacity-0 group-hover:opacity-50 text-[10px]">▼</span>;
+    return <span className="text-blue-500 text-[10px]">{sortOrder === 'asc' ? '▲' : '▼'}</span>;
+  };
 
   const handleClearFilters = () => {
     setSearch('');
@@ -338,10 +359,18 @@ export default function Unidades() {
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Unidad / Clave</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Ubicación</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Encargado</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Clasificación</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => handleSort('descripcion')}>
+                  <div className="flex items-center gap-1">Unidad / Clave <SortIcon column="descripcion" /></div>
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => handleSort('ciudad')}>
+                  <div className="flex items-center gap-1">Ubicación <SortIcon column="ciudad" /></div>
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => handleSort('encargado')}>
+                  <div className="flex items-center gap-1">Encargado <SortIcon column="encargado" /></div>
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 transition-colors" onClick={() => handleSort('tipo_unidad')}>
+                  <div className="flex items-center gap-1">Clasificación <SortIcon column="tipo_unidad" /></div>
+                </th>
                 {isPrivileged && <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>}
               </tr>
             </thead>
@@ -426,7 +455,7 @@ export default function Unidades() {
           {/* Info total */}
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-gray-700">
-              Total: {totalCount} registros.
+              Total: {totalCount} registros (Mostrando {edges.length} en esta página).
             </span>
             <span className="font-bold text-gray-400 uppercase tracking-wider">
               Pág. {currentPage}/{totalPages || 1}

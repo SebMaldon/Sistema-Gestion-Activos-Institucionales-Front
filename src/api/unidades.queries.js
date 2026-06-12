@@ -14,6 +14,8 @@ export const GET_UNIDADES_FISICAS_QUERY = gql`
     $segmento_velocidad: [String!]
     $segmento_proveedor: [String!]
     $segmento_monitorear: Int
+    $sortBy: String
+    $sortOrder: String
     $pagination: PaginationInput
   ) {
     unidades(
@@ -27,6 +29,8 @@ export const GET_UNIDADES_FISICAS_QUERY = gql`
       segmento_velocidad: $segmento_velocidad
       segmento_proveedor: $segmento_proveedor
       segmento_monitorear: $segmento_monitorear
+      sortBy: $sortBy
+      sortOrder: $sortOrder
       pagination: $pagination
     ) {
       edges {
