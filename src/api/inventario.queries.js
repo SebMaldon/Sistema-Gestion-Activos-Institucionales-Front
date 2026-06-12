@@ -201,17 +201,43 @@ export const GET_BIENES_QUERY = gql`
   }
 `;
 
-export const GET_DASHBOARD_BIENES_QUERY = gql`
-  query GetDashboardBienes($pagination: PaginationInput) {
-    bienes(pagination: $pagination) {
+export const GET_DASHBOARD_METRICS_QUERY = gql`
+  query GetDashboardMetrics {
+    dashboardMetrics {
+      clave_unidad
+      jefatura
+      tipo_disp
+      nombre_tipo
+      estatus_operativo
+      count
+    }
+  }
+`;
+
+export const GET_DASHBOARD_STATS_QUERY = gql`
+  query GetDashboardStats {
+    dashboardStats {
+      totalBienes
+      bienesActivos
+      bienesInactivos
+      bienesEnReparacion
+      incidenciasPendientes
+      incidenciasEnProceso
+      garantiasVigentes
+      garantiasPorVencer
+      movimientosHoy
+      totalUsuarios
+    }
+  }
+`;
+
+export const GET_DESGLOSE_UNIDAD_QUERY = gql`
+  query GetDesgloseUnidad($clave_unidad: [String!]) {
+    bienes(filter: { clave_unidad_ref: $clave_unidad }, pagination: { first: 5000 }) {
       edges {
         node {
           id_bien
           estatus_operativo
-          unidad {
-            desc_corta
-            descripcion
-          }
           modelo {
             tipoDispositivo {
               tipo_disp

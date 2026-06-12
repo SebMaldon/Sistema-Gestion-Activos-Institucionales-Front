@@ -11,8 +11,7 @@ import {
   LogIn, LogOut, Edit3, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
-import { GET_DASHBOARD_BIENES_QUERY } from '../api/inventario.queries';
-import { GET_DASHBOARD_INCIDENCIAS_QUERY } from '../api/incidencias.queries';
+import { GET_DASHBOARD_METRICS_QUERY, GET_DASHBOARD_STATS_QUERY } from '../api/inventario.queries';
 import { GET_GARANTIAS } from '../api/garantias.queries';
 import { GET_BITACORA } from '../api/bitacora.queries';
 import AnimatedCounter from '../components/AnimatedCounter';
@@ -87,7 +86,45 @@ function lightenHex(hex, amount = 0.45) {
 }
 
 // ─── Barra horizontal segmentada por tipo de dispositivo ─────────────────────
-function DeviceTypeBar({ drilldownData, selectedDrilldownUnit }) {
+function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
+  const unidadData = allUnits?.find(u => u.jefatura === selectedDrilldownUnit);
+  const clave = unidadData?.clave;
+
+  const drilldownData = React.useMemo(() => {
+    if (!metricsRawData || !selectedDrilldownUnit) return [];
+    const typeMap = {};
+    
+    metricsRawData.forEach(row => {
+      // Filtrar por la unidad seleccionada
+      if (row.jefatura !== selectedDrilldownUnit) return;
+
+      const isMonitor = String(row.tipo_disp) === '12' || (row.nombre_tipo || '').toUpperCase().includes('MONITOR');
+      if (isMonitor) return;
+
+      const t = row.nombre_tipo || 'Otro';
+      const st = (row.estatus_operativo || '').toUpperCase();
+      const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+
+      if (!isActive) return;
+
+      if (!typeMap[t]) typeMap[t] = { activo: 0, prestamo: 0 };
+      if (st === 'PRÉSTAMO' || st === 'PRESTAMO') {
+        typeMap[t].prestamo += row.count;
+      } else {
+        typeMap[t].activo += row.count;
+      }
+    });
+
+    return Object.entries(typeMap)
+      .map(([tipo, { activo, prestamo }]) => ({
+        tipo,
+        activo,
+        prestamo,
+        count: activo + prestamo,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [metricsRawData, selectedDrilldownUnit]);
+
   const total = drilldownData.reduce((s, d) => s + d.count, 0);
   const totalPrestamo = drilldownData.reduce((s, d) => s + (d.prestamo || 0), 0);
   const [hovered, setHovered] = React.useState(null);
@@ -300,18 +337,18 @@ export default function Dashboard() {
   const isPrivileged = isMaestro || isAdmin;
 
   // --- DATA FETCHING ---
-  const { data: bienesData, isLoading: loadBienes } = useQuery({
-    queryKey: ['dashboard_bienes'],
-    queryFn: () => gqlClient.request(GET_DASHBOARD_BIENES_QUERY, { pagination: { first: 10000 } }),
-    select: d => d.bienes.edges.map(e => e.node),
+  const { data: statsData, isLoading: loadStats } = useQuery({
+    queryKey: ['dashboard_stats'],
+    queryFn: () => gqlClient.request(GET_DASHBOARD_STATS_QUERY),
+    select: d => d.dashboardStats,
     refetchInterval: 10000,
   });
 
-  const { data: incidenciasData, isLoading: loadIncidencias } = useQuery({
-    queryKey: ['dashboard_incidencias'],
-    queryFn: () => gqlClient.request(GET_DASHBOARD_INCIDENCIAS_QUERY, { first: 5000 }),
-    select: d => d.incidencias.edges.map(e => e.node),
-    refetchInterval: 10000,
+  const { data: metricsRawData, isLoading: loadMetrics } = useQuery({
+    queryKey: ['dashboard_metrics'],
+    queryFn: () => gqlClient.request(GET_DASHBOARD_METRICS_QUERY),
+    select: d => d.dashboardMetrics,
+    refetchInterval: 60000,
   });
 
   const { data: garantiasData, isLoading: loadGarantias } = useQuery({
@@ -330,62 +367,38 @@ export default function Dashboard() {
     refetchInterval: 5000,
   });
 
-  const isLoading = loadBienes || loadIncidencias || (isPrivileged && loadGarantias) || (isMaestro && loadBitacora);
-
-  const bienes = bienesData || [];
-  const incidencias = incidenciasData || [];
   const garantias = garantiasData || [];
   const bitacora = bitacoraData || [];
 
   // --- METRICS ---
-  const activosList = useMemo(() => {
-    return bienes.filter(b => {
-      const st = (b.estatus_operativo || '').toUpperCase();
-      const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
-      const td = b.modelo?.tipoDispositivo;
-      const isMonitor = String(td?.tipo_disp) === '12' || (td?.nombre_tipo || '').toUpperCase().includes('MONITOR');
-      return isActive && !isMonitor;
-    });
-  }, [bienes]);
-  const totalActivos = activosList.length;
-
-  const incidenciasActivasList = useMemo(() => {
-    return incidencias.filter(i => {
-      const st = (i.estatus_reparacion || '').toUpperCase();
-      return st === 'PENDIENTE' || st === 'EN PROCESO' || st === 'ACTIVA' || st === 'EN_PROCESO';
-    });
-  }, [incidencias]);
-  const incidenciasActivas = incidenciasActivasList.length;
-
-  const garantiasVencerList = useMemo(() => {
-    return garantias.filter(g => {
-      if (g.estado_garantia !== 'VIGENTE') return false;
-      const d = new Date(g.fecha_fin);
-      const now = new Date();
-      const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-      return diffDays >= 0 && diffDays <= 62;
-    });
-  }, [garantias]);
-  const garantiasVencer = garantiasVencerList.length;
-
-  const inactivosCount = useMemo(() => {
-    return bienes.filter(b => (b.estatus_operativo || '').toUpperCase() === 'INACTIVO').length;
-  }, [bienes]);
-
-  const tasaDisponibilidad = useMemo(() => {
-    if (bienes.length === 0) return "0.00";
-    return ((inactivosCount / bienes.length) * 100).toFixed(2);
-  }, [inactivosCount, bienes.length]);
+  const totalActivos = statsData?.bienesActivos ?? 0;
+  const incidenciasActivas = (statsData?.incidenciasPendientes ?? 0) + (statsData?.incidenciasEnProceso ?? 0);
+  const garantiasVencer = statsData?.garantiasPorVencer ?? 0;
+  const inactivosCount = statsData?.bienesInactivos ?? 0;
+  const totalBienesCount = statsData?.totalBienes ?? 0;
+  const tasaDisponibilidad = totalBienesCount === 0 ? "0.00" : ((inactivosCount / totalBienesCount) * 100).toFixed(2);
 
   // --- CHART LOGIC ---
   const allUnits = useMemo(() => {
-    const counts = {};
-    activosList.forEach(b => {
-      const u = b.unidad?.desc_corta || b.unidad?.descripcion || 'Sin Unidad';
-      counts[u] = (counts[u] || 0) + 1;
+    if (!metricsRawData) return [];
+    
+    const unitMap = {};
+    metricsRawData.forEach(row => {
+      const isMonitor = String(row.tipo_disp) === '12' || (row.nombre_tipo || '').toUpperCase().includes('MONITOR');
+      const st = row.estatus_operativo || '';
+      const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+      
+      if (!isMonitor && isActive) {
+        const u = row.jefatura || 'Sin Unidad';
+        if (!unitMap[u]) {
+          unitMap[u] = { jefatura: u, clave: row.clave_unidad, equipos: 0 };
+        }
+        unitMap[u].equipos += row.count;
+      }
     });
-    return Object.entries(counts).map(([jefatura, equipos]) => ({ jefatura, equipos })).sort((a, b) => b.equipos - a.equipos);
-  }, [activosList]);
+
+    return Object.values(unitMap).sort((a, b) => b.equipos - a.equipos);
+  }, [metricsRawData]);
 
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [selectedDrilldownUnit, setSelectedDrilldownUnit] = useState(null);
@@ -420,62 +433,52 @@ export default function Dashboard() {
   const [metricsDropdownOpen, setMetricsDropdownOpen] = useState(false);
   const [metricsSearchInput, setMetricsSearchInput] = useState('');
 
-  const metricsBienes = useMemo(() => {
-    if (!metricsSelectedUnit) return bienes;
-    return bienes.filter(b => {
-      const u = b.unidad?.desc_corta || b.unidad?.descripcion || 'Sin Unidad';
-      return u === metricsSelectedUnit;
+  const getCardMetrics = (tipoCondition) => {
+    let activos = 0, prestamo = 0, inactivos = 0;
+    
+    (metricsRawData || []).forEach(row => {
+      // Filtrar por unidad si hay una seleccionada
+      if (metricsSelectedUnit && row.jefatura !== metricsSelectedUnit) return;
+      
+      // Filtrar por tipo
+      if (!tipoCondition(row.tipo_disp, row.nombre_tipo)) return;
+      
+      const st = row.estatus_operativo || '';
+      if (st === 'ACTIVO') activos += row.count;
+      else if (st === 'PRESTAMO' || st === 'PRÉSTAMO') prestamo += row.count;
+      else if (st === 'INACTIVO') inactivos += row.count;
     });
-  }, [bienes, metricsSelectedUnit]);
+
+    return { total: activos + prestamo + inactivos, activos, prestamo, inactivos };
+  };
+
+  const metricComp = useMemo(() => getCardMetrics((t, n) => {
+    const nUp = (n || '').toUpperCase();
+    return nUp.includes('PC') || nUp.includes('LAPTOP');
+  }), [metricsRawData, metricsSelectedUnit]);
+
+  const metricImpresoras = useMemo(() => getCardMetrics((t, n) => {
+    return String(t) === '1' || (n || '').toUpperCase().includes('IMPRESORA');
+  }), [metricsRawData, metricsSelectedUnit]);
+
+  const metricSwitches = useMemo(() => getCardMetrics((t, n) => {
+    return String(t) === '9' || (n || '').toUpperCase().includes('SWITCH');
+  }), [metricsRawData, metricsSelectedUnit]);
+
+  const metricTelIP = useMemo(() => getCardMetrics((t, n) => {
+    return String(t) === '25' || (n || '').toUpperCase().includes('IP');
+  }), [metricsRawData, metricsSelectedUnit]);
+
+  const metricTelNorm = useMemo(() => getCardMetrics((t, n) => {
+    const nUp = (n || '').toUpperCase();
+    return String(t) === '26' || (nUp.includes('TEL') && !nUp.includes('IP'));
+  }), [metricsRawData, metricsSelectedUnit]);
 
   const filteredMetricsUnits = useMemo(() => {
     if (!metricsSearchInput.trim()) return allUnits;
     const term = normalizeStr(metricsSearchInput);
     return allUnits.filter(u => normalizeStr(u.jefatura).includes(term));
   }, [allUnits, metricsSearchInput]);
-
-  const getCardMetrics = (tipoCondition) => {
-    const matched = metricsBienes.filter(tipoCondition);
-    const total = matched.length;
-    const activos = matched.filter(b => {
-      const st = (b.estatus_operativo || '').toUpperCase();
-      return st === 'ACTIVO';
-    }).length;
-    const prestamo = matched.filter(b => {
-      const st = (b.estatus_operativo || '').toUpperCase();
-      return st === 'PRESTAMO' || st === 'PRÉSTAMO';
-    }).length;
-    const inactivos = matched.filter(b => {
-      const st = (b.estatus_operativo || '').toUpperCase();
-      return st === 'INACTIVO';
-    }).length;
-    return { total, activos, prestamo, inactivos };
-  };
-
-  const metricComp = useMemo(() => getCardMetrics(b => {
-    const n = (b.modelo?.tipoDispositivo?.nombre_tipo || '').toUpperCase();
-    return n.includes('PC') || n.includes('LAPTOP');
-  }), [metricsBienes]);
-
-  const metricImpresoras = useMemo(() => getCardMetrics(b => {
-    const td = b.modelo?.tipoDispositivo;
-    return String(td?.tipo_disp) === '1' || (td?.nombre_tipo || '').toUpperCase().includes('IMPRESORA');
-  }), [metricsBienes]);
-
-  const metricSwitches = useMemo(() => getCardMetrics(b => {
-    const td = b.modelo?.tipoDispositivo;
-    return String(td?.tipo_disp) === '9' || (td?.nombre_tipo || '').toUpperCase().includes('SWITCH');
-  }), [metricsBienes]);
-
-  const metricTelIP = useMemo(() => getCardMetrics(b => {
-    const td = b.modelo?.tipoDispositivo;
-    return String(td?.tipo_disp) === '25' || (td?.nombre_tipo || '').toUpperCase().includes('IP');
-  }), [metricsBienes]);
-
-  const metricTelNorm = useMemo(() => getCardMetrics(b => {
-    const td = b.modelo?.tipoDispositivo;
-    return String(td?.tipo_disp) === '26' || ((td?.nombre_tipo || '').toUpperCase().includes('TEL') && !(td?.nombre_tipo || '').toUpperCase().includes('IP'));
-  }), [metricsBienes]);
 
   const filteredAllUnits = useMemo(() => {
     if (!configSearch) return allUnits;
@@ -486,36 +489,6 @@ export default function Dashboard() {
   const chartData = useMemo(() => {
     return allUnits.filter(u => selectedUnits.includes(u.jefatura));
   }, [allUnits, selectedUnits]);
-
-  const drilldownData = useMemo(() => {
-    if (!selectedDrilldownUnit) return [];
-
-    const bs = activosList.filter(b => {
-      const u = b.unidad?.desc_corta || b.unidad?.descripcion || 'Sin Unidad';
-      return u === selectedDrilldownUnit;
-    });
-
-    const typeMap = {};
-    bs.forEach(b => {
-      const t = b.modelo?.tipoDispositivo?.nombre_tipo || 'Otro';
-      const st = (b.estatus_operativo || '').toUpperCase();
-      if (!typeMap[t]) typeMap[t] = { activo: 0, prestamo: 0 };
-      if (st === 'PRÉSTAMO' || st === 'PRESTAMO') {
-        typeMap[t].prestamo += 1;
-      } else {
-        typeMap[t].activo += 1;
-      }
-    });
-
-    return Object.entries(typeMap)
-      .map(([tipo, { activo, prestamo }]) => ({
-        tipo,
-        activo,
-        prestamo,
-        count: activo + prestamo,
-      }))
-      .sort((a, b) => b.count - a.count);
-  }, [activosList, selectedDrilldownUnit]);
 
   // --- RENDER HELPERS ---
   const CustomTooltip = ({ active, payload, label }) => {
@@ -529,15 +502,6 @@ export default function Dashboard() {
     }
     return null;
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full w-full py-20">
-        <RefreshCw size={32} className="animate-spin text-green-600 mb-4" />
-        <p className="text-gray-500 font-semibold animate-pulse">Cargando datos del panel...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 fade-in pb-20">
@@ -666,6 +630,12 @@ export default function Dashboard() {
       </div>
 
       {/* Advanced Filter and 4 New Metric Cards */}
+      {loadMetrics ? (
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col items-center justify-center h-48">
+          <RefreshCw size={24} className="animate-spin text-green-600 mb-2" />
+          <p className="text-sm text-gray-500">Cargando métricas detalladas...</p>
+        </div>
+      ) : (
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col gap-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">
           <div>
@@ -869,8 +839,15 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Main Charts */}
+      {loadMetrics ? (
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col items-center justify-center h-64 mt-2">
+          <RefreshCw size={24} className="animate-spin text-green-600 mb-2" />
+          <p className="text-sm text-gray-500">Cargando gráfica principal...</p>
+        </div>
+      ) : (
       <div className="flex flex-col gap-5 sm:gap-6 mt-2">
         {/* Main Bar Chart with Sidebar */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full overflow-hidden flex flex-col lg:flex-row lg:h-[420px]">
@@ -979,20 +956,27 @@ export default function Dashboard() {
 
         {/* Drilldown Chart (Para todos los usuarios) */}
         <DeviceTypeBar
-          drilldownData={drilldownData}
           selectedDrilldownUnit={selectedDrilldownUnit}
+          allUnits={allUnits}
+          metricsRawData={metricsRawData}
         />
       </div>
+      )}
 
       {/* Activity Log (Solo Maestro) */}
       {isMaestro && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-5">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-base font-bold text-gray-900">Actividad Reciente</h2>
             <Activity size={18} className="text-gray-400" />
           </div>
           <div className="divide-y divide-gray-50">
-            {bitacora.length > 0 ? bitacora.map((log) => {
+            {loadBitacora ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2">
+                <RefreshCw size={24} className="animate-spin text-green-600 mb-2" />
+                <p className="text-sm">Cargando actividad...</p>
+              </div>
+            ) : bitacora.length > 0 ? bitacora.map((log) => {
               const title = getNaturalTitle(log);
               let conf = LOG_ICONS[log.accion] || LOG_ICONS.EDICION;
               
