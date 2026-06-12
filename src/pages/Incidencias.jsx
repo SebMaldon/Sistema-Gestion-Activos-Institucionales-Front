@@ -102,7 +102,7 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 // memo evita re-renders cuando el padre re-renderiza pero las props no cambian.
 const IncidenciaCard = memo(function IncidenciaCard({
   inc, onStatusChange, onEdit, onDelete, onAddNota, canEdit, canDelete, isMoving,
-  isExpanded, onToggle
+  isExpanded, onToggle, isHighlighted
 }) {
   const { showToast } = useApp();
   const [menuOpen,  setMenuOpen]  = useState(false);
@@ -141,7 +141,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
     <div
       ref={cardRef}
       data-card-status={inc.estatus}
-      className={`group bg-white rounded-2xl border border-gray-50 p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''}`}
+      className={`group bg-white rounded-2xl border p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''} ${isHighlighted ? 'border-[#006341] ring-2 ring-[#006341]/20 shadow-lg shadow-[#006341]/10' : 'border-gray-50'}`}
       onClick={handleCardClick}
     >
       {/* Cabecera */}
@@ -676,6 +676,7 @@ export default function Incidencias() {
   const [incidenciaParaNota,     setIncidenciaParaNota]     = useState(null);
   const [incidenciaDetalle,      setIncidenciaDetalle]      = useState(null);
   const [expandedCards,          setExpandedCards]          = useState({}); // { [estatus]: id_incidencia }
+  const [lastEditedId,           setLastEditedId]           = useState(null);
   const [confirmConfig, setConfirmConfig] = useState({
     isOpen: false,
     title: '',
@@ -690,6 +691,7 @@ export default function Incidencias() {
       ...prev,
       [estatus]: prev[estatus] === id ? null : id
     }));
+    setLastEditedId(prevId => prevId === id ? null : prevId);
   }, []);
 
   // ── useMemo: agrupa incidencias por columna y filtra resueltas por semana ──
@@ -763,6 +765,7 @@ export default function Incidencias() {
     try {
       await updateEstatus.mutateAsync({ id_incidencia: String(inc.id), estatus_reparacion: newStatus });
       showToast(`Incidencia movida a "${newStatus}"`, 'success');
+      setLastEditedId(inc.id);
     } catch {
       showToast('Error al cambiar el estatus', 'error');
     } finally {
@@ -778,6 +781,7 @@ export default function Incidencias() {
         resolucion_textual,
       });
       showToast('Incidencia finalizada correctamente', 'success');
+      setLastEditedId(id);
     } catch {
       showToast('Error al resolver la incidencia', 'error');
     }
@@ -794,6 +798,7 @@ export default function Incidencias() {
     try {
       await agregarNota.mutateAsync({ id_incidencia: String(id), contenido_nota: textoNota });
       showToast('Nota de seguimiento agregada', 'success');
+      setLastEditedId(id);
     } catch {
       showToast('Error al guardar la nota', 'error');
     }
@@ -900,7 +905,7 @@ export default function Incidencias() {
           {canCreateIncident && tab === 'kanban' && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="hidden sm:flex mt-4 sm:mt-5 items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm flex-shrink-0"
+              className="hidden sm:flex mt-4 sm:mt-5 items-center gap-2 bg-[#006341] hover:bg-[#004e33] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm flex-shrink-0"
             >
               <Plus size={16} /><span>Nueva Incidencia</span>
             </button>
@@ -959,6 +964,7 @@ export default function Incidencias() {
                           canDelete={canDelete}
                           isMoving={movingId === inc.id}
                           isExpanded={expandedCards[inc.estatus] === inc.id}
+                          isHighlighted={lastEditedId === inc.id}
                           onToggle={() => handleToggleCard(inc.id, inc.estatus)}
                         />
                       ))
@@ -986,7 +992,7 @@ export default function Incidencias() {
       {canCreateIncident && tab === 'kanban' && (
         <button
           onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-6 right-6 z-50 sm:hidden w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full shadow-xl flex items-center justify-center text-white transition-transform active:scale-95"
+          className="fixed bottom-6 right-6 z-50 sm:hidden w-14 h-14 bg-[#006341] hover:bg-[#004e33] rounded-full shadow-xl flex items-center justify-center text-white transition-transform active:scale-95"
         >
           <Plus size={26} />
         </button>
@@ -1000,7 +1006,10 @@ export default function Incidencias() {
       <EditarIncidenciaModal
         isOpen={isEditarModalOpen}
         onClose={() => { setIsEditarModalOpen(false); setIncidenciaParaEditar(null); }}
-        onUpdated={() => showToast('Incidencia actualizada correctamente', 'success')}
+        onUpdated={() => {
+          showToast('Incidencia actualizada correctamente', 'success');
+          setLastEditedId(incidenciaParaEditar?.id);
+        }}
         incidencia={incidenciaParaEditar}
       />
       <ResolucionModal
