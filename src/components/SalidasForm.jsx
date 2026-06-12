@@ -4,7 +4,7 @@ import { gqlClient } from '../api/client';
 import { GET_BIENES_QUERY, GET_BIEN_BY_SERIE_QUERY } from '../api/inventario.queries';
 import {
   GET_FOLIO_SALIDAS,
-  CONFIRMAR_FOLIO,
+  REGISTRAR_SALIDA,
   SET_FOLIO_MANUAL,
   GET_USUARIO_POR_MATRICULA,
 } from '../api/salidas.queries';
@@ -19,13 +19,10 @@ import {
   User, Package, Monitor
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
-import { PDFDocument, StandardFonts, rgb, PDFName, TextAlignment } from 'pdf-lib';
 import * as XLSX from 'xlsx';
+import { buildPDFBytes, ROWS_PER_PAGE } from '../utils/pdfSalidas';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
-// Por página: 1 slot en la fila del encabezado del PDF (que se borra y rellena)
-//           + 10 slots en los campos f1c1..f10c1 = 11 total por página.
-const ROWS_PER_PAGE = 11;
 const ROLES_MAP     = { MAESTRO: 1 };
 
 // Nombre del campo PDF para fila i (1-indexed), columna col (1-3)
@@ -35,7 +32,7 @@ const pdfRowField = (row, col) => {
 };
 
 // ── Componente ────────────────────────────────────────────────────────────────
-export default function SalidasForm() {
+export default function SalidasForm({ isEditMode = false, initialData = null, onClose, onSuccessCallback }) {
   const { showToast } = useApp();
   const usuario   = useAuthStore((s) => s.usuario);
   const isMaestro = usuario?.id_rol === ROLES_MAP.MAESTRO;
@@ -44,22 +41,35 @@ export default function SalidasForm() {
 
   // ─── Formulario ────────────────────────────────────────────
   const [form, setForm] = useState({
-    solicitante:     '',
-    matricula:       '',
-    adscripcion:     '',
-    identificacion:  '',
-    empresa:         'IMSS',
-    telefono:        '',
-    motivo:          '',
-    observaciones:   '',
-    devolucion:      'NO',
-    fechaDevolucion: '',
-    responsable:     '',
-    origenBienes:    'COORDINACIÓN DE INFORMÁTICA',
-    fechaSalidaDia:  new Date().toISOString().split('T')[0],
+    solicitante:     initialData?.solicitante || '',
+    matricula:       initialData?.matricula || '',
+    adscripcion:     initialData?.adscripcion || '',
+    identificacion:  initialData?.identificacion || '',
+    empresa:         initialData?.empresa || 'IMSS',
+    telefono:        initialData?.telefono || '',
+    motivo:          initialData?.motivo || '',
+    observaciones:   initialData?.observaciones || '',
+    devolucion:      initialData?.sujeto_devolucion ? 'SI' : 'NO',
+    fechaDevolucion: initialData?.fecha_devolucion ? new Date(initialData.fecha_devolucion).toISOString().split('T')[0] : '',
+    responsable:     initialData?.responsable || '',
+    origenBienes:    initialData?.origen_bienes || 'COORDINACIÓN DE INFORMÁTICA',
+    fechaSalidaDia:  initialData?.fecha_salida ? new Date(initialData.fecha_salida).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
   });
 
-  const [bienesSeleccionados, setBienesSeleccionados] = useState([]);
+  const [bienesSeleccionados, setBienesSeleccionados] = useState(
+    initialData?.bienes ? initialData.bienes.map(b => ({
+      id_bien: b.id_bien,
+      originalData: {
+        id_bien: b.id_bien,
+        modelo: b.bienRef?.modelo,
+        num_serie: b.bienRef?.num_serie,
+        num_inv: b.bienRef?.num_inv,
+      },
+      cantidad: b.cantidad_o_id,
+      naturaleza: b.naturaleza,
+      descripcion: b.descripcion,
+    })) : []
+  );
   const fileInputRef = useRef(null);
   const [incluirMonitores, setIncluirMonitores] = useState(false);
   const [bienesSearch, setBienesSearch] = useState('');
@@ -120,9 +130,23 @@ export default function SalidasForm() {
   const usuariosList = usuariosData?.usuarios?.edges?.map((e) => e.node) || [];
 
   // ─── Mutations ────────────────────────────────────────────
-  const confirmarFolioMutation = useMutation({
-    mutationFn: () => gqlClient.request(CONFIRMAR_FOLIO),
+  const registrarSalidaMutation = useMutation({
+    mutationFn: (input) => gqlClient.request(REGISTRAR_SALIDA, { input }),
     onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['folioSalidas'] }),
+  });
+
+  const actualizarSalidaMutation = useMutation({
+    mutationFn: (vars) => gqlClient.request(ACTUALIZAR_SALIDA, vars),
+    onSuccess:  () => {
+      queryClient.invalidateQueries({ queryKey: ['registroSalidas'] });
+      showToast('Registro de salida actualizado exitosamente', 'success');
+      if (onSuccessCallback) onSuccessCallback();
+      if (onClose) onClose();
+    },
+    onError: (e) => {
+      const msg = e?.response?.errors?.[0]?.message || 'Error al actualizar el registro';
+      showToast(msg, 'error');
+    },
   });
 
   const setFolioManualMutation = useMutation({
@@ -420,148 +444,6 @@ export default function SalidasForm() {
     }
   };
 
-  // ─── Generación del PDF ───────────────────────────────────
-  /**
-   * Rellena un PDFDocument cargado desde la plantilla.
-   * - bien en posición 0 de pageItems → dibuja sobre la fila del encabezado estático del PDF.
-   * - bienes en posición 1-10  → campos f1c1..f10c1 normales.
-   */
-  const buildPDFBytes = async (folioStr) => {
-    const templateBytes = await fetch('/Formatos/FormatoRellenableSalidaBienes.pdf').then((r) => {
-      if (!r.ok) throw new Error('No se encontró el archivo PDF base');
-      return r.arrayBuffer();
-    });
-
-    // Dividir bienes en grupos de ROWS_PER_PAGE (11)
-    const pageGroups = [];
-    for (let i = 0; i < bienesSeleccionados.length; i += ROWS_PER_PAGE) {
-      pageGroups.push(bienesSeleccionados.slice(i, i + ROWS_PER_PAGE));
-    }
-    if (pageGroups.length === 0) pageGroups.push([]); // al menos una página
-    const totalPages = pageGroups.length;
-
-    const fillDoc = async (pageItems, pageNum, isFirstPage) => {
-      const doc      = await PDFDocument.load(templateBytes);
-      const pdfForm  = doc.getForm();
-      const boldFont = await doc.embedFont(StandardFonts.HelveticaBold);
-      const regFont  = await doc.embedFont(StandardFonts.Helvetica);
-      const page     = doc.getPages()[0];
-      const { width, height } = page.getSize();
-
-      const setTextField = (name, value, alignCenter = false) => {
-        try {
-          const f = pdfForm.getTextField(name);
-          if (f) {
-            f.setText(value || '');
-            if (alignCenter) f.setAlignment(TextAlignment.Center);
-          }
-        } catch { /* campo no existe en PDF */ }
-      };
-
-      const drawXOnCheckbox = (fieldName, shouldCheck) => {
-        try {
-          const field   = pdfForm.getCheckBox(fieldName);
-          const widgets = field.acroField.getWidgets();
-          if (widgets?.length > 0 && shouldCheck) {
-            const rect = widgets[0].getRectangle();
-            page.drawText('X', { x: rect.x + 3, y: rect.y + 2, size: 10, font: boldFont, color: rgb(0, 0, 0) });
-          }
-          pdfForm.removeField(field);
-        } catch { /* checkbox no existe */ }
-      };
-
-      // ── Folio (esquina superior derecha) ──────────────────
-      const folioFormat = `FOLIO: ${folioStr}`;
-      
-      try {
-        const ff = pdfForm.getTextField('Folio');
-        if (ff) pdfForm.removeField(ff);
-      } catch { /* no existe campo Folio en el PDF */ }
-
-      // Dibujar dentro del CropBox visible (tope Y es 741, borde derecho X es 525)
-      page.drawText(folioFormat, {
-        x: 475, y: 732,
-        size: 9.5, font: regFont, color: rgb(0, 0, 0),
-      });
-
-      // ── Datos generales (en todas las páginas) ────────────
-      const dp = form.fechaSalidaDia.split('-');
-      const fmtDate = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : form.fechaSalidaDia;
-
-      setTextField('Elc',               form.solicitante);
-      setTextField('NombreSolicitante', form.solicitante);
-      setTextField('AdscritoA',         form.adscripcion);
-      setTextField('Identificacion',    form.identificacion);
-      setTextField('TrabajadorDe',      form.empresa);
-      setTextField('Matricula',         form.matricula);
-      setTextField('Telefono',          form.telefono);
-      setTextField('RazonSalida',       form.motivo);
-      setTextField('ObservacionesBienes', form.observaciones);
-      setTextField('FechaSalida',       fmtDate);
-      setTextField('NombreResponsable', form.responsable || 'Usuario Maestro');
-      
-      let originBase = form.origenBienes || '';
-      if (originBase && !originBase.toUpperCase().startsWith('DEL ')) {
-        originBase = `DEL ${originBase}`;
-      }
-      
-      let origin1 = originBase;
-      let origin2 = '';
-      if (origin1.length > 55) {
-        let splitIndex = origin1.lastIndexOf(' ', 55);
-        if (splitIndex === -1 || splitIndex < 20) splitIndex = 55;
-        origin2 = origin1.substring(splitIndex).trim();
-        origin1 = origin1.substring(0, splitIndex).trim();
-      }
-      setTextField('OrigenBienes',      origin1);
-      setTextField('OrigenBienes2',     origin2);
-
-      if (form.devolucion === 'SI') {
-        drawXOnCheckbox('DevolucionCheck1', true);
-        drawXOnCheckbox('DevolucionCheck2', false);
-        const fdp = form.fechaDevolucion.split('-');
-        setTextField('FechaDevolucion',
-          fdp.length === 3 ? `${fdp[2]}/${fdp[1]}/${fdp[0]}` : form.fechaDevolucion);
-      } else {
-        drawXOnCheckbox('DevolucionCheck1', false);
-        drawXOnCheckbox('DevolucionCheck2', true);
-        setTextField('FechaDevolucion', '');
-      }
-      // ── Bienes en campos f0c1..f10c1 (slots 0-10) ─────────
-      pageItems.forEach((bien, i) => {
-        const row = i; // f0 a f10
-        setTextField(pdfRowField(row, 1), String(bien.cantidad || ''), true);
-        setTextField(pdfRowField(row, 2), bien.naturaleza  || '', true);
-        setTextField(pdfRowField(row, 3), bien.descripcion || '', true);
-      });
-
-      // Hacer campos de solo lectura y acoplar al documento
-      pdfForm.getFields().forEach((f) => {
-        try { f.enableReadOnly(); } catch { /* campo ya eliminado */ }
-      });
-
-      pdfForm.flatten();
-
-      return doc.save();
-    };
-
-    // Generar cada página
-    const pageBytesList = [];
-    for (let i = 0; i < pageGroups.length; i++) {
-      pageBytesList.push(await fillDoc(pageGroups[i], i + 1, i === 0));
-    }
-
-    // Combinar páginas sin escalar
-    const finalDoc = await PDFDocument.create();
-    for (const bytes of pageBytesList) {
-      const tempDoc = await PDFDocument.load(bytes);
-      const copiedPages = await finalDoc.copyPages(tempDoc, [0]);
-      finalDoc.addPage(copiedPages[0]);
-    }
-
-    return finalDoc.save();
-  };
-
   // ─── Handlers flujo PDF ────────────────────────────────────
   const handlePrevisualizar = async () => {
     if (bienesSeleccionados.length === 0) {
@@ -571,7 +453,7 @@ export default function SalidasForm() {
     setIsGenerando(true);
     try {
       const siguiente = folioData?.folioSalidas?.siguiente ?? '1';
-      const bytes     = await buildPDFBytes(siguiente);
+      const bytes     = await buildPDFBytes(siguiente, form, bienesSeleccionados);
 
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
@@ -586,13 +468,83 @@ export default function SalidasForm() {
     }
   };
 
+  const handleGuardarCambios = async () => {
+    if (bienesSeleccionados.length === 0) {
+      showToast('Agrega al menos un bien para la salida.', 'warning');
+      return;
+    }
+    
+    // Create input for mutation
+    const input = {
+      folio: initialData?.folio,
+      fecha_salida: form.fechaSalidaDia,
+      matricula: form.matricula,
+      solicitante: form.solicitante,
+      adscripcion: form.adscripcion,
+      empresa: form.empresa,
+      identificacion: form.identificacion,
+      telefono: form.telefono,
+      motivo: form.motivo,
+      origen_bienes: form.origenBienes,
+      responsable: form.responsable,
+      sujeto_devolucion: form.devolucion === 'SI',
+      fecha_devolucion: form.devolucion === 'SI' ? form.fechaDevolucion : null,
+      observaciones: form.observaciones,
+      bienes: bienesSeleccionados.map((b) => ({
+        id_bien: (b.id_bien && b.id_bien.toString().startsWith('manual_')) ? null : b.id_bien,
+        cantidad_o_id: String(b.cantidad),
+        naturaleza: b.naturaleza,
+        descripcion: b.descripcion,
+      })),
+    };
+
+    const user = usuariosList.find(u => u.matricula === form.matricula);
+    if (user) {
+      input.id_usuario_solicitante = parseInt(user.id_usuario);
+    }
+
+    actualizarSalidaMutation.mutate({
+      id_salida: parseInt(initialData.id_salida),
+      input
+    });
+  };
+
   const handleConfirmar = async () => {
     setIsConfirmando(true);
     try {
-      const result   = await confirmarFolioMutation.mutateAsync();
-      const folioReal = result.confirmarFolio.folio_actual;
+      // Create input for mutation
+      const input = {
+        folio: null, // Let backend decide or use provided
+        fecha_salida: form.fechaSalidaDia,
+        matricula: form.matricula,
+        solicitante: form.solicitante,
+        adscripcion: form.adscripcion,
+        empresa: form.empresa,
+        identificacion: form.identificacion,
+        telefono: form.telefono,
+        motivo: form.motivo,
+        origen_bienes: form.origenBienes,
+        responsable: form.responsable,
+        sujeto_devolucion: form.devolucion === 'SI',
+        fecha_devolucion: form.devolucion === 'SI' ? form.fechaDevolucion : null,
+        observaciones: form.observaciones,
+        bienes: bienesSeleccionados.map((b) => ({
+        id_bien: (b.id_bien && b.id_bien.toString().startsWith('manual_')) ? null : b.id_bien,
+          cantidad_o_id: String(b.cantidad),
+          naturaleza: b.naturaleza,
+          descripcion: b.descripcion,
+        })),
+      };
 
-      const bytes = await buildPDFBytes(folioReal);
+      const user = usuariosList.find(u => u.matricula === form.matricula);
+      if (user) {
+        input.id_usuario_solicitante = parseInt(user.id_usuario);
+      }
+
+      const result = await registrarSalidaMutation.mutateAsync(input);
+      const folioReal = result.registrarSalida.folio;
+
+      const bytes = await buildPDFBytes(folioReal, form, bienesSeleccionados);
       if (finalUrl) URL.revokeObjectURL(finalUrl);
       setFinalUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
       setFolioUsado(folioReal);
@@ -600,7 +552,7 @@ export default function SalidasForm() {
       showToast(`✅ Folio ${folioReal} registrado`, 'success');
     } catch (err) {
       console.error(err);
-      showToast('Error al confirmar el folio', 'error');
+      showToast('Error al registrar la salida', 'error');
     } finally {
       setIsConfirmando(false);
     }
@@ -725,8 +677,12 @@ export default function SalidasForm() {
             <Hash size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-xs text-teal-600 font-semibold uppercase tracking-wide">Próximo folio a emitir</p>
-            <p className="text-2xl font-black text-teal-800 leading-none">#{folioSiguiente}</p>
+            <p className="text-xs text-teal-600 font-semibold uppercase tracking-wide">
+              {isEditMode ? 'Editando Folio' : 'Próximo folio a emitir'}
+            </p>
+            <p className="text-2xl font-black text-teal-800 leading-none">
+              #{isEditMode ? initialData?.folio : folioSiguiente}
+            </p>
           </div>
           {paginasNecesarias > 1 && (
             <div className="ml-4 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
@@ -735,7 +691,7 @@ export default function SalidasForm() {
             </div>
           )}
         </div>
-        {isMaestro && (
+        {isMaestro && !isEditMode && (
           <button onClick={() => setShowGestionFolio((v) => !v)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-100 rounded-lg transition-colors border border-teal-200">
             <Edit2 size={13} /> Gestionar folio
@@ -744,7 +700,7 @@ export default function SalidasForm() {
       </div>
 
       {/* ── Panel Maestro ── */}
-      {isMaestro && showGestionFolio && (
+      {isMaestro && !isEditMode && showGestionFolio && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertCircle size={16} className="text-amber-600" />
@@ -1077,15 +1033,32 @@ export default function SalidasForm() {
       </div>
 
       {/* ── FAB ── */}
-      <div className="fixed bottom-6 right-6 z-[90]">
-        <button onClick={handlePrevisualizar}
-          disabled={isGenerando || bienesSeleccionados.length === 0}
-          className="px-6 py-4 rounded-full text-white text-sm font-bold flex items-center gap-3 shadow-[0_8px_30px_rgb(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.25)] disabled:opacity-50 disabled:shadow-none transition-all transform hover:-translate-y-1 active:translate-y-0"
-          style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
-          {isGenerando
-            ? <><Loader2 size={20} className="animate-spin" /> Generando…</>
-            : <><Eye size={20} /> Previsualizar Formato <ChevronRight size={16} /></>}
-        </button>
+      <div className="fixed bottom-6 right-6 z-[90] flex items-center gap-3">
+        {isEditMode ? (
+          <>
+            <button onClick={onClose}
+              className="px-6 py-4 rounded-full bg-white text-gray-700 border border-gray-200 text-sm font-bold shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:bg-gray-50 transition-all">
+              Cancelar
+            </button>
+            <button onClick={handleGuardarCambios}
+              disabled={actualizarSalidaMutation.isPending || bienesSeleccionados.length === 0}
+              className="px-6 py-4 rounded-full text-white text-sm font-bold flex items-center gap-3 shadow-[0_8px_30px_rgb(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.25)] disabled:opacity-50 disabled:shadow-none transition-all transform hover:-translate-y-1 active:translate-y-0"
+              style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+              {actualizarSalidaMutation.isPending
+                ? <><Loader2 size={20} className="animate-spin" /> Guardando…</>
+                : <><Check size={20} /> Guardar Cambios</>}
+            </button>
+          </>
+        ) : (
+          <button onClick={handlePrevisualizar}
+            disabled={isGenerando || bienesSeleccionados.length === 0}
+            className="px-6 py-4 rounded-full text-white text-sm font-bold flex items-center gap-3 shadow-[0_8px_30px_rgb(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.25)] disabled:opacity-50 disabled:shadow-none transition-all transform hover:-translate-y-1 active:translate-y-0"
+            style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+            {isGenerando
+              ? <><Loader2 size={20} className="animate-spin" /> Generando…</>
+              : <><Eye size={20} /> Previsualizar Formato <ChevronRight size={16} /></>}
+          </button>
+        )}
       </div>
     </div>
   );
