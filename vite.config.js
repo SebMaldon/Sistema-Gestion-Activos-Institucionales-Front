@@ -43,14 +43,18 @@ export default defineConfig({
         controlFlowFlatteningThreshold: 0.75,
         deadCodeInjection: true,
         deadCodeInjectionThreshold: 0.4,
-        debugProtection: true,
-        debugProtectionInterval: 2000,
-        disableConsoleOutput: true,
+
+        // --- CAMBIOS PARA DEBUGGING ---
+        debugProtection: false,         // Permite abrir las DevTools sin congelar la pestaña
+        disableConsoleOutput: false,    // Permite que los console.log() funcionen
+        selfDefending: false,           // Evita que el código falle si intentas formatearlo en el navegador
+        // debugProtectionInterval: 2000, (Puedes eliminar esta línea)
+        // ------------------------------
+
         identifierNamesGenerator: 'hexadecimal',
         log: true,
         numbersToExpressions: true,
         renameGlobals: false,
-        selfDefending: true,
         simplify: true,
         splitStrings: true,
         splitStringsChunkLength: 10,
@@ -71,12 +75,14 @@ export default defineConfig({
     }),
   ],
   build: {
-    sourcemap: false,
+    sourcemap: true, // CAMBIO: Necesario para leer tu código original al debugear
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true,
+        // --- CAMBIOS PARA LOGS Y DEBUG ---
+        drop_console: false,  // Evita que Terser borre tus console.log
+        drop_debugger: false, // Evita que Terser borre las sentencias 'debugger'
+        // ---------------------------------
       },
     },
   },
