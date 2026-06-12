@@ -54,8 +54,8 @@ export default function Login() {
           </div>
 
           <h1 className="text-4xl font-bold leading-tight mb-4">
-            SISTEMA INTEGRAL DE<br />
-            <span style={{ color: '#f0c040' }}>INFRAESTRUCTURA TECNOLOGICA</span>
+            Sistema Integral De<br />
+            <span style={{ color: '#f0c040' }}>Infraestructura Tecnologica</span>
           </h1>
           <p className="text-green-100/80 text-lg leading-relaxed">
             Plataforma institucional para el control, seguimiento y auditoría del patrimonio informático de la Delegación Nayarit.

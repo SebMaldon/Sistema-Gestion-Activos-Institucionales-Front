@@ -950,6 +950,19 @@ export default function Inventario() {
     con_notas_recientes: false, inconvenientes: false,
   };
 
+  const filtersContainerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showAdvancedFilters && filtersContainerRef.current && !filtersContainerRef.current.contains(event.target)) {
+        if (event.target.closest('.multi-searchable-select-portal-menu') || event.target.closest('.multiselect-portal-menu')) return;
+        setShowAdvancedFilters(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAdvancedFilters]);
+
   // Contar filtros activos
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -1789,7 +1802,7 @@ export default function Inventario() {
                 const showEAVFilter = advFilters.tipo_disp.length > 0 && hasOtherDevice;
 
                 return (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                  <div ref={filtersContainerRef} className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 overflow-y-auto max-h-[70vh] custom-scrollbar">
                     {/* Sección: Ubicación */}
                     <div>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><MapPin size={11} /> Ubicación</p>

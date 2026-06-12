@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { ChevronDown, Check, X, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -15,7 +15,7 @@ export default function MultiSearchableSelect({
   const [query, setQuery] = useState('');
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
-  const [dropdownStyles, setDropdownStyles] = useState({});
+  const [dropdownStyles, setDropdownStyles] = useState({ opacity: 0, pointerEvents: 'none' });
 
   const filteredOptions = useMemo(() => {
     let opts = options;
@@ -49,7 +49,7 @@ export default function MultiSearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen && containerRef.current) {
       const updatePosition = () => {
         if (!containerRef.current) return;
@@ -63,6 +63,8 @@ export default function MultiSearchableSelect({
             bottom: window.innerHeight - rect.top + 4,
             left: rect.left,
             width: rect.width,
+            opacity: 1,
+            pointerEvents: 'auto'
           });
         } else {
           setDropdownStyles({
@@ -70,6 +72,8 @@ export default function MultiSearchableSelect({
             top: rect.bottom + 4,
             left: rect.left,
             width: rect.width,
+            opacity: 1,
+            pointerEvents: 'auto'
           });
         }
       };
@@ -81,6 +85,8 @@ export default function MultiSearchableSelect({
         window.removeEventListener('scroll', updatePosition, true);
         window.removeEventListener('resize', updatePosition);
       };
+    } else {
+      setDropdownStyles({ opacity: 0, pointerEvents: 'none' });
     }
   }, [isOpen]);
 
