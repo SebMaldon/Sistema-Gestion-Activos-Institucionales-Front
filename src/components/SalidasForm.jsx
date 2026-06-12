@@ -7,6 +7,7 @@ import {
   REGISTRAR_SALIDA,
   SET_FOLIO_MANUAL,
   GET_USUARIO_POR_MATRICULA,
+  ACTUALIZAR_SALIDA,
 } from '../api/salidas.queries';
 import { GET_USUARIOS } from '../api/usuarios.queries';
 import { useAuthStore } from '../store/auth.store';
@@ -144,8 +145,14 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
       if (onClose) onClose();
     },
     onError: (e) => {
-      const msg = e?.response?.errors?.[0]?.message || 'Error al actualizar el registro';
-      showToast(msg, 'error');
+      console.error("Mutation Error:", e);
+      let errorDetail = 'Error al actualizar el registro';
+      if (e?.response?.errors?.length > 0) {
+        errorDetail = e.response.errors[0].message;
+      } else if (e.message) {
+        errorDetail = e.message;
+      }
+      showToast(errorDetail, 'error');
     },
   });
 
@@ -488,7 +495,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
       origen_bienes: form.origenBienes,
       responsable: form.responsable,
       sujeto_devolucion: form.devolucion === 'SI',
-      fecha_devolucion: form.devolucion === 'SI' ? form.fechaDevolucion : null,
+      fecha_devolucion: form.devolucion === 'SI' ? (form.fechaDevolucion || null) : null,
       observaciones: form.observaciones,
       bienes: bienesSeleccionados.map((b) => ({
         id_bien: (b.id_bien && b.id_bien.toString().startsWith('manual_')) ? null : b.id_bien,
@@ -526,7 +533,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
         origen_bienes: form.origenBienes,
         responsable: form.responsable,
         sujeto_devolucion: form.devolucion === 'SI',
-        fecha_devolucion: form.devolucion === 'SI' ? form.fechaDevolucion : null,
+        fecha_devolucion: form.devolucion === 'SI' ? (form.fechaDevolucion || null) : null,
         observaciones: form.observaciones,
         bienes: bienesSeleccionados.map((b) => ({
         id_bien: (b.id_bien && b.id_bien.toString().startsWith('manual_')) ? null : b.id_bien,
@@ -862,8 +869,17 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre Responsable (Autoriza)</label>
-              <input type="text" name="responsable" value={form.responsable} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              <SearchableSelect
+                value={form.responsable}
+                onChange={(val) => setForm(p => ({ ...p, responsable: val }))}
+                options={usuariosList.map((u) => ({
+                  value: u.nombre_completo,
+                  label: `${u.matricula} — ${u.nombre_completo}`,
+                  searchKey: `${u.matricula} ${u.nombre_completo}`
+                }))}
+                placeholder="Seleccionar o escribir..."
+                allowCustom={true}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">¿Sujeto a Devolución?</label>

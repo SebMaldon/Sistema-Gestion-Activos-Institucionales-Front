@@ -51,6 +51,7 @@ export default function HistorialSalidas() {
 
   const [editingSalida, setEditingSalida] = useState(null);
   const [isGeneratingPdfId, setIsGeneratingPdfId] = useState(null);
+  const [pageInput, setPageInput] = useState('');
 
   const PAGE_SIZE = 20;
 
@@ -114,7 +115,7 @@ export default function HistorialSalidas() {
       setTimeout(() => URL.revokeObjectURL(url), 60000); // cleanup
     } catch (err) {
       console.error(err);
-      showToast('Error al regenerar PDF', 'error');
+      showToast(`Error al regenerar PDF: ${err.message}`, 'error');
     } finally {
       setIsGeneratingPdfId(null);
     }
@@ -254,28 +255,88 @@ export default function HistorialSalidas() {
         </div>
 
         {/* Pagination */}
-        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-sm flex-shrink-0">
-          <div className="text-gray-500 font-medium">
-            {totalItems > 0 && `Mostrando ${(currentPage - 1) * PAGE_SIZE + 1} - ${Math.min(currentPage * PAGE_SIZE, totalItems)} de ${totalItems}`}
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || isLoading}
-              className="px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="px-3 font-semibold text-gray-700">
-              {currentPage} / {totalPages}
+        <div className="p-3 border-t border-gray-100 flex flex-col gap-2 bg-gray-50 text-gray-600 flex-shrink-0">
+          {/* Info total */}
+          <div className="flex items-center justify-between text-xs">
+            {totalItems > 0 && (
+              <span className="font-semibold text-gray-700">Total: {totalItems} salidas registradas.</span>
+            )}
+            <span className="font-bold text-gray-400 uppercase tracking-wider">
+              Pág. {currentPage}/{totalPages}
             </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || isLoading || totalPages === 0}
-              className="px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm"
-            >
-              <ChevronRight size={16} />
+          </div>
+
+          {/* Controles de paginación */}
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            {/* Flecha Anterior */}
+            <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1 || isLoading}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
+              <ChevronLeft size={15} />
             </button>
+
+            <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
+              {/* Página actual y páginas cercanas — más compacto en móvil */}
+              {(() => {
+                const pages = [];
+                // Siempre mostrar página 1
+                if (currentPage > 2) pages.push(1);
+                // Separador
+                if (currentPage > 3) pages.push('...-left');
+                // Página anterior (si existe)
+                if (currentPage > 1) pages.push(currentPage - 1);
+                // Página actual
+                pages.push(currentPage);
+                // Página siguiente (si existe)
+                if (currentPage < totalPages) pages.push(currentPage + 1);
+                // Separador
+                if (currentPage < totalPages - 2) pages.push('...-right');
+                // Última página
+                if (currentPage < totalPages - 1) pages.push(totalPages);
+                return pages.map((p, idx) => {
+                  if (typeof p === 'string') {
+                    return <span key={p} className="px-1 text-gray-400 text-xs">...</span>;
+                  }
+                  return (
+                    <button key={`page-${p}-${idx}`} onClick={() => setCurrentPage(p)} disabled={isLoading}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                        currentPage === p ? 'bg-[#006341] text-white shadow-sm' : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-600'
+                      }`}>
+                      {p}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Flecha Siguiente */}
+            <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages || isLoading || totalPages === 0}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0">
+              <ChevronRight size={15} />
+            </button>
+
+            {/* Ir a página */}
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const p = parseInt(pageInput, 10);
+              if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                setCurrentPage(p);
+                setPageInput('');
+              }
+            }} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                placeholder="Ir a..."
+                disabled={isLoading}
+                className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+              />
+              <button type="submit" disabled={!pageInput || isLoading} className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors">
+                Ir
+              </button>
+            </form>
           </div>
         </div>
       </div>
