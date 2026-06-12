@@ -870,7 +870,7 @@ export default function Inventario() {
   const location = useLocation();
 
   // ── Estado de UI ──────────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('Capitalizable');
+  const [activeTab, setActiveTab] = useState('Todos');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [nuevaNotaText, setNuevaNotaText] = useState('');
