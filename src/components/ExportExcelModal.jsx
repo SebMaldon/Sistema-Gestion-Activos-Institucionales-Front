@@ -181,7 +181,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
   // Encabezado institucional (solo con descripción)
   let dataStartRow = 0;
   if (withDescription) {
-    wsData.push(['SISTEMA DE GESTIÓN DE ACTIVOS INSTITUCIONALES — IMSS Delegación Nayarit']);
+    wsData.push(['SISTEMA INTEGRAL DE INFRAESTRUCTURA TECNOLOGICA — IMSS Delegación Nayarit']);
     wsData.push([`Reporte de: ${descripcion}`]);
     wsData.push([`Fecha de exportación: ${new Date().toLocaleString('es-MX')}`]);
     wsData.push([`Total de registros: ${totalCount}`]);

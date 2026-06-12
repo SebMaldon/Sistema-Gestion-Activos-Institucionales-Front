@@ -54,8 +54,8 @@ export default function Login() {
           </div>
 
           <h1 className="text-4xl font-bold leading-tight mb-4">
-            Ecosistema de<br />
-            <span style={{ color: '#f0c040' }}>Gestión de Activos</span>
+            SISTEMA INTEGRAL DE<br />
+            <span style={{ color: '#f0c040' }}>INFRAESTRUCTURA TECNOLOGICA</span>
           </h1>
           <p className="text-green-100/80 text-lg leading-relaxed">
             Plataforma institucional para el control, seguimiento y auditoría del patrimonio informático de la Delegación Nayarit.
@@ -79,7 +79,7 @@ export default function Login() {
           <div className="mt-8 pt-6 border-t border-white/10">
             <div className="flex items-center gap-2">
               <ClipboardList size={14} className="text-yellow-300" />
-              <span className="text-xs font-semibold" style={{ color: '#f0c040' }}>Ecosistema IMSS v2.4.1</span>
+              <span className="text-xs font-semibold" style={{ color: '#f0c040' }}>SIIT v2.4.1</span>
             </div>
             <p className="text-green-200/40 text-xs mt-1">
               Bajo normativa MAAGTIC-SI · Ley Federal de Transparencia
@@ -99,7 +99,7 @@ export default function Login() {
               <img src="/IMSS_logo_blanco.png" alt="IMSS" className="w-6 h-6 object-contain" />
             </div>
             <div>
-              <p className="text-white font-bold text-base">IMSS — Gestión de Activos</p>
+              <p className="text-white font-bold text-base">IMSS — SIIT</p>
               <p className="text-green-200 text-xs">Delegación Nayarit</p>
             </div>
           </div>
