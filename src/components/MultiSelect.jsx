@@ -70,7 +70,7 @@ export default function MultiSelect({
             position: 'fixed',
             bottom: window.innerHeight - rect.top + 4,
             left: rect.left,
-            width: rect.width,
+            width: Math.max(rect.width, 200),
             opacity: 1,
             pointerEvents: 'auto'
           });
@@ -79,7 +79,7 @@ export default function MultiSelect({
             position: 'fixed',
             top: rect.bottom + 4,
             left: rect.left,
-            width: rect.width,
+            width: Math.max(rect.width, 200),
             opacity: 1,
             pointerEvents: 'auto'
           });
@@ -171,24 +171,24 @@ export default function MultiSelect({
               />
             </div>
             
-            <div className="flex items-center justify-between text-[10px] text-gray-400 px-0.5">
-              <span>{safeSelected.length} seleccionados</span>
+            <div className="flex items-center justify-between text-[11px] text-gray-500 px-1 mt-1">
+              <span className="font-medium">{safeSelected.length} marcados</span>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                  className="font-bold text-blue-600 hover:text-blue-700 transition-colors"
                 >
-                  Seleccionar todos
+                  Todos
                 </button>
                 <span className="text-gray-300">|</span>
                 <button
                   type="button"
                   onClick={handleClearAll}
                   disabled={safeSelected.length === 0}
-                  className="font-semibold text-red-500 hover:text-red-600 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+                  className="font-bold text-red-500 hover:text-red-600 disabled:opacity-50 disabled:pointer-events-none transition-colors"
                 >
-                  Limpiar
+                  Ninguno
                 </button>
               </div>
             </div>

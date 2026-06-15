@@ -24,7 +24,17 @@ export const GET_GARANTIAS = gql`
           marca {
             marca
           }
+          tipoDispositivo {
+            nombre_tipo
+          }
         }
+      }
+      reportes {
+        id_reporte_garantia
+        estatus
+        fecha_reporte
+        fecha_resolucion
+        descripcion_falla
       }
     }
   }
@@ -182,5 +192,80 @@ export const UPDATE_PROVEEDOR = gql`
 export const DELETE_PROVEEDOR = gql`
   mutation DeleteProveedor($id_proveedor: ID!) {
     deleteProveedor(id_proveedor: $id_proveedor)
+  }
+`;
+
+// ─── Reportes de Garantía ────────────────────────────────────
+
+export const GET_REPORTES_GARANTIA = gql`
+  query GetReportesPorGarantia($id_garantia: ID!) {
+    reportesPorGarantia(id_garantia: $id_garantia) {
+      id_reporte_garantia
+      id_garantia
+      id_bien
+      num_serie
+      estatus
+      descripcion_falla
+      resolucion
+      fecha_reporte
+      fecha_resolucion
+      id_usuario_registra
+      usuarioRegistra {
+        id_usuario
+        matricula
+        nombre_completo
+      }
+    }
+  }
+`;
+
+export const CREATE_REPORTE_GARANTIA = gql`
+  mutation CreateReporteGarantia(
+    $id_garantia: ID!
+    $id_bien: ID!
+    $num_serie: String
+    $estatus: String
+    $descripcion_falla: String!
+    $resolucion: String
+  ) {
+    createReporteGarantia(
+      id_garantia: $id_garantia
+      id_bien: $id_bien
+      num_serie: $num_serie
+      estatus: $estatus
+      descripcion_falla: $descripcion_falla
+      resolucion: $resolucion
+    ) {
+      id_reporte_garantia
+      estatus
+      fecha_reporte
+      fecha_resolucion
+    }
+  }
+`;
+
+export const UPDATE_REPORTE_GARANTIA = gql`
+  mutation UpdateReporteGarantia(
+    $id_reporte_garantia: ID!
+    $estatus: String
+    $descripcion_falla: String
+    $resolucion: String
+  ) {
+    updateReporteGarantia(
+      id_reporte_garantia: $id_reporte_garantia
+      estatus: $estatus
+      descripcion_falla: $descripcion_falla
+      resolucion: $resolucion
+    ) {
+      id_reporte_garantia
+      estatus
+      fecha_resolucion
+    }
+  }
+`;
+
+export const DELETE_REPORTE_GARANTIA = gql`
+  mutation DeleteReporteGarantia($id_reporte_garantia: ID!) {
+    deleteReporteGarantia(id_reporte_garantia: $id_reporte_garantia)
   }
 `;
