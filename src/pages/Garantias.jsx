@@ -14,7 +14,7 @@ import {
   GET_BIEN_BY_TERMINO,
 } from '../api/garantias.queries';
 import {
-  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter, ChevronLeft, FileText, Download
+  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter, ChevronLeft, FileText, Download, FileSpreadsheet
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
@@ -740,13 +740,13 @@ export default function Garantias() {
   }, [sortedGarantias]);
 
   const handleExportarExcel = () => {
-    const dataToExport = garantiasConReportes.map(g => {
-      let ultimoReporte = null;
-      if (g.reportes && g.reportes.length > 0) {
-        ultimoReporte = g.reportes[0];
-      }
+    let dataToExport = [];
+    let sheetName = '';
+    let fileName = '';
+    let colWidths = [];
 
-      return {
+    if (activeTab === 'GARANTIAS') {
+      dataToExport = filteredGarantias.map(g => ({
         'ID Garantía': g.id_garantia,
         'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
         'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
@@ -755,16 +755,70 @@ export default function Garantias() {
         'Estado Garantía': g.estado_garantia,
         'Inicio Garantía': formatDate(g.fecha_inicio),
         'Fin Garantía': formatDate(g.fecha_fin),
-        'Último Estatus Reporte': ultimoReporte ? ultimoReporte.estatus : 'Sin Reportes',
-        'Fecha Último Reporte': ultimoReporte ? formatDate(ultimoReporte.fecha_reporte) : 'N/A',
-        'Falla Reportada': ultimoReporte ? ultimoReporte.descripcion_falla : 'N/A'
-      };
-    });
+      }));
+
+      colWidths = [
+        { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, 
+        { wch: 28 }, { wch: 18 }, { wch: 15 }, { wch: 15 }
+      ];
+      sheetName = 'Control de Garantías';
+      fileName = 'Control_Garantias.xlsx';
+
+    } else if (activeTab === 'REPORTES') {
+      garantiasConReportes.forEach(g => {
+        const baseInfo = {
+          'ID Garantía': g.id_garantia,
+          'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
+          'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
+          'Número de Serie': g.bien?.num_serie || 'N/A',
+          'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
+          'Estado Garantía': g.estado_garantia,
+          'Inicio Garantía': formatDate(g.fecha_inicio),
+          'Fin Garantía': formatDate(g.fecha_fin),
+        };
+
+        if (g.reportes && g.reportes.length > 0) {
+          g.reportes.forEach(reporte => {
+            dataToExport.push({
+              ...baseInfo,
+              'Estatus Reporte': reporte.estatus,
+              'Fecha Reporte': formatDate(reporte.fecha_reporte),
+              'Fecha Resolución': reporte.fecha_resolucion ? formatDate(reporte.fecha_resolucion) : 'N/A',
+              'Falla Reportada': reporte.descripcion_falla,
+            });
+          });
+        } else {
+          dataToExport.push({
+            ...baseInfo,
+            'Estatus Reporte': 'Sin Reportes',
+            'Fecha Reporte': 'N/A',
+            'Fecha Resolución': 'N/A',
+            'Falla Reportada': 'N/A',
+          });
+        }
+      });
+
+      colWidths = [
+        { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, { wch: 28 }, 
+        { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 16 }, 
+        { wch: 18 }, { wch: 50 }
+      ];
+      sheetName = 'Reportes de Garantía';
+      fileName = 'Reportes_Garantias.xlsx';
+    } else {
+      return; // No hay exportación para PROVEEDORES u otros tabs en este momento
+    }
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    worksheet['!cols'] = colWidths;
+
+    if (worksheet['!ref']) {
+      worksheet['!autofilter'] = { ref: worksheet['!ref'] };
+    }
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reportes de Garantía');
-    XLSX.writeFile(workbook, 'Reportes_Garantias.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    XLSX.writeFile(workbook, fileName);
   };
 
   const totalPages = Math.ceil(sortedGarantias.length / PAGE_SIZE) || 1;
@@ -825,6 +879,19 @@ export default function Garantias() {
           >
             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
           </button>
+
+          {(activeTab === 'REPORTES' || activeTab === 'GARANTIAS') && (
+            <button
+              onClick={handleExportarExcel}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+              style={{ background: 'linear-gradient(135deg, #107c41, #185c37)' }}
+              title="Exportar listado actual a Excel"
+            >
+              <FileSpreadsheet size={16} />
+              <span className="hidden sm:inline">Exportar a Excel</span>
+            </button>
+          )}
+
           {/* Administrador y Maestro pueden crear */}
           {(isMaestro || isAdministrador) && activeTab === 'GARANTIAS' && (
             <button
@@ -953,17 +1020,6 @@ export default function Garantias() {
               <BarChart2 size={14} className={showStats ? "text-blue-600" : "text-gray-500"} />
               <span className="hidden sm:inline">{showStats ? 'Ocultar Resumen' : 'Ver Resumen'}</span>
             </button>
-            )}
-            
-            {activeTab === 'REPORTES' && (
-              <button
-                onClick={handleExportarExcel}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap bg-green-50 border-green-200 text-green-700 hover:bg-green-100 shadow-sm`}
-                title="Exportar listado actual a Excel"
-              >
-                <Download size={14} className="text-green-600" />
-                <span className="hidden sm:inline">Exportar a Excel</span>
-              </button>
             )}
 
             {activeTab === 'GARANTIAS' && (
@@ -1296,7 +1352,6 @@ export default function Garantias() {
                   <th className="px-5 py-4 font-bold tracking-wider">Último Estatus</th>
                   <th className="px-5 py-4 font-bold tracking-wider">Fecha Reporte</th>
                   <th className="px-5 py-4 font-bold tracking-wider">Falla Reportada</th>
-                  <th className="px-5 py-4 font-bold tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1304,7 +1359,12 @@ export default function Garantias() {
                   const ultimoReporte = garantia.reportes && garantia.reportes.length > 0 ? garantia.reportes[0] : null;
 
                   return (
-                  <tr key={garantia.id_garantia} className="hover:bg-blue-50/50 transition-colors group">
+                  <tr 
+                    key={garantia.id_garantia} 
+                    className="hover:bg-blue-50/50 transition-colors group cursor-pointer"
+                    onClick={() => setModalDetalles(garantia)}
+                    title="Haz clic para ver los detalles de la garantía"
+                  >
                     <td className="px-5 py-4">
                       <div className="flex flex-col">
                         <span className="font-bold text-gray-900">
@@ -1360,19 +1420,6 @@ export default function Garantias() {
                       ) : (
                         <span className="text-gray-400 text-xs">N/A</span>
                       )}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => {
-                            setModalDetalles(garantia);
-                          }}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Ver todos los detalles y reportes de la garantía"
-                        >
-                          <Info size={16} />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 )})}
