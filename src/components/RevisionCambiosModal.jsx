@@ -221,6 +221,22 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
           </button>
         </div>
 
+        {/* Info del Equipo */}
+        <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <div>
+            <span className="text-gray-500 font-medium text-xs uppercase tracking-wider">No. Serie:</span>
+            <span className="ml-1.5 font-semibold text-gray-800">{bienActual.num_serie || datosNuevos.num_serie || 'N/A'}</span>
+          </div>
+          <div>
+            <span className="text-gray-500 font-medium text-xs uppercase tracking-wider">No. Inventario:</span>
+            <span className="ml-1.5 font-semibold text-gray-800">{bienActual.num_inv || datosNuevos.num_inv || 'N/A'}</span>
+          </div>
+          <div>
+            <span className="text-gray-500 font-medium text-xs uppercase tracking-wider">Modelo:</span>
+            <span className="ml-1.5 font-semibold text-gray-800">{bienActual.modelo?.descrip_disp || datosNuevos.clave_modelo || 'N/A'}</span>
+          </div>
+        </div>
+
         {/* Body — Comparación */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {camposComparar.length === 0 ? (
