@@ -206,6 +206,12 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
               <p className="text-sm text-gray-500 mt-2 max-w-sm leading-relaxed">
                 El usuario ha autenticado correctamente su identidad y ha accedido al sistema de gestión de activos.
               </p>
+              {parsed?.info && (
+                <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl max-w-md w-full text-left">
+                  <p className="text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1 flex items-center gap-1"><Activity size={12}/> Información Adicional</p>
+                  <p className="text-sm text-indigo-600 font-medium">{parsed.info}</p>
+                </div>
+              )}
               <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                 <Activity size={14} /> Actividad Registrada
               </div>
