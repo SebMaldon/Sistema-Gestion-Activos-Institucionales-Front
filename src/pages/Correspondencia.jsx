@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, Plus, RefreshCw, Loader2, AlertTriangle, FileText,
   ArrowDownCircle, ArrowUpCircle, CheckCircle, ChevronLeft, ChevronRight,
-  Edit, Trash2
+  Edit, Trash2, X
 } from 'lucide-react';
+import ReactDOM from 'react-dom';
 import { getMesaCorrespondencias, eliminarMesaCorrespondencia } from '../api/correspondencia.queries';
 import FormCorrespondenciaModal from '../components/FormCorrespondenciaModal';
 import { parseServerDate } from '../lib/utils';
@@ -35,6 +36,9 @@ export default function Correspondencia() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialData, setInitialData] = useState(null);
   const [expandedDesc, setExpandedDesc] = useState({});
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
 
   const toggleDesc = (folio) => {
     setExpandedDesc(prev => ({ ...prev, [folio]: !prev[folio] }));
@@ -77,9 +81,16 @@ export default function Correspondencia() {
     }
   });
 
-  const handleDelete = (folio) => {
-    if (window.confirm('¿Está seguro de eliminar este registro?')) {
-      deleteMutation.mutate(folio);
+  const handleDelete = (corr) => {
+    setRecordToDelete(corr);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (recordToDelete) {
+      deleteMutation.mutate(recordToDelete.Folio);
+      setIsDeleteModalOpen(false);
+      setRecordToDelete(null);
     }
   };
 
@@ -333,7 +344,7 @@ export default function Correspondencia() {
                             <button onClick={() => handleEdit(corr)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Editar">
                               <Edit size={16} />
                             </button>
-                            <button onClick={() => handleDelete(corr.Folio)} className="text-red-500 hover:text-red-700 transition-colors" title="Eliminar" disabled={deleteMutation.isPending}>
+                            <button onClick={() => handleDelete(corr)} className="text-red-500 hover:text-red-700 transition-colors" title="Eliminar" disabled={deleteMutation.isPending}>
                               <Trash2 size={16} />
                             </button>
                           </div>
@@ -458,6 +469,79 @@ export default function Correspondencia() {
         onClose={() => setIsModalOpen(false)}
         initialData={initialData}
       />
+      {isDeleteModalOpen && recordToDelete && (
+        <Modal onClose={() => setIsDeleteModalOpen(false)} title="Eliminar Registro" subtitle="Esta acción no se puede deshacer" small>
+          <div className="flex flex-col gap-4 text-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 mb-1">
+              <AlertTriangle size={28} />
+            </div>
+            <p className="text-sm text-gray-600">
+              ¿Estás seguro de que deseas eliminar permanentemente la correspondencia con Folio <strong className="text-gray-900">{recordToDelete.Folio}</strong>?
+            </p>
+            <div className="bg-gray-50 p-3 rounded-lg text-left text-xs space-y-1 border border-gray-100">
+              <p><span className="text-gray-400">No. Oficio:</span> <span className="font-mono text-gray-700">{recordToDelete.NoOficio || 'S/N'}</span></p>
+              <p><span className="text-gray-400">Remitente:</span> <span className="font-mono text-gray-700">{recordToDelete.Remitente || 'N/D'}</span></p>
+              <p><span className="text-gray-400">Descripción:</span> <span className="text-gray-700 line-clamp-2">{recordToDelete.Descripcion || 'N/D'}</span></p>
+            </div>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleteMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                {deleteMutation.isPending ? 'Eliminando...' : 'Sí, eliminar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
+  );
+}
+
+// ─── Sub-componentes ───────────────────────────────────────────────────────────
+
+function Modal({ onClose, title, subtitle, children, footer, wide = false, small = false }) {
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-black/50 fade-in pointer-events-none" />
+      <div className={`relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'
+        } fade-in`}>
+        {/* Header */}
+        <div className="bg-[#00472e] px-5 sm:px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
+          <div>
+            <h3 className="text-xl font-bold">{title}</h3>
+            {subtitle && <p className="text-sm text-green-100 mt-0.5">{subtitle}</p>}
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        {/* Body scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+          {children}
+        </div>
+        {/* Footer sticky (opcional) */}
+        {footer && (
+          <div className="px-5 sm:px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 mt-auto">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
   );
 }
