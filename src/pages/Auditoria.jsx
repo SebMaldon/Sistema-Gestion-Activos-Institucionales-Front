@@ -13,6 +13,9 @@ const GET_BITACORA_LOOKUPS = gql`
     catCategoriasActivo { id_categoria nombre_categoria }
     catUnidadesMedida { id_unidad_medida nombre_unidad }
     proveedores { id_proveedor nombre_proveedor }
+    catSegmentos { id_segmento nombre no_ref }
+    catUnidades { clave descripcion desc_corta }
+    catModelos { clave_modelo descrip_disp }
   }
 `;
 
@@ -104,6 +107,10 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
                         id_rol: 'Rol del Sistema',
                         id_unidad: 'Unidad Operativa (ID)',
                         id_inmueble: 'Unidad Física (ID)',
+                        clave_unidad_ref: 'Unidad de Ref. (Clave)',
+                        clave_inmueble_ref: 'Inmueble de Ref. (Clave)',
+                        id_segmento: 'Segmento de Red (ID)',
+                        clave_modelo: 'Modelo de Activo (Clave)',
                         id_proveedor: 'Proveedor (ID)',
                         id_categoria: 'Categoría (ID)',
                         id_unidad_medida: 'Unidad de Medida (ID)',
@@ -149,12 +156,20 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
                             if (u) return <span className="text-indigo-600 font-bold">{u.nombre_completo} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
                           }
                           if (field === 'id_unidad') {
-                            const u = catalogs.unidades?.find(u => String(u.id_unidad) === valStr);
-                            if (u) return <span className="text-indigo-600 font-bold">{u.nombre} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                            const u = catalogs.catUnidades?.find(u => String(u.clave) === valStr) || catalogs.unidades?.find(u => String(u.id_unidad) === valStr);
+                            if (u) return <span className="text-indigo-600 font-bold">{u.descripcion || u.nombre} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
                           }
                           if (field === 'id_inmueble' || field === 'clave_inmueble_ref' || field === 'clave_unidad_ref') {
-                            const i = catalogs.inmuebles?.find(i => String(i.clave) === valStr);
+                            const i = catalogs.catUnidades?.find(u => String(u.clave) === valStr) || catalogs.inmuebles?.find(i => String(i.clave) === valStr);
                             if (i) return <span className="text-indigo-600 font-bold">{i.descripcion} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'id_segmento') {
+                            const s = catalogs.catSegmentos?.find(s => String(s.id_segmento) === valStr);
+                            if (s) return <span className="text-indigo-600 font-bold">{s.nombre || s.no_ref} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
+                          }
+                          if (field === 'clave_modelo') {
+                            const m = catalogs.catModelos?.find(m => String(m.clave_modelo) === valStr);
+                            if (m) return <span className="text-indigo-600 font-bold">{m.descrip_disp} <span className="text-gray-400 font-normal text-[9px]">({val})</span></span>;
                           }
                           if (field === 'id_categoria') {
                             const c = catalogs.catCategoriasActivo?.find(c => String(c.id_categoria) === valStr);
