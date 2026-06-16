@@ -887,7 +887,7 @@ export default function Inventario() {
   const setCursors = () => setCurrentPage(1);
   const cursor = null;
   const cursors = { length: currentPage - 1 };
-  const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 60 : 15;
+  const PAGE_SIZE = activeTab === 'Impresión de Etiquetas' ? 60 : 30;
 
   useEffect(() => {
     if (location.state?.filterStatus) {
@@ -2094,6 +2094,15 @@ export default function Inventario() {
                 />
               ) : !isLoading && !isError && (
                 <div className="hidden md:flex md:flex-col flex-1 min-h-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-4 py-2 border-b border-gray-100 bg-gray-50 flex justify-between items-center text-xs text-gray-500 font-medium">
+                    <div>
+                      Se han cargado {bienes.length} bienes
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="flex items-center gap-1.5" title="Bienes Capitalizables"><span className="w-2 h-2 rounded-full bg-blue-500"></span> {bienes.filter(b => b.esCapitalizable).length} Capitalizables</span>
+                      <span className="flex items-center gap-1.5" title="Bienes No Capitalizables"><span className="w-2 h-2 rounded-full bg-gray-400"></span> {bienes.filter(b => !b.esCapitalizable).length} No Capitalizables</span>
+                    </div>
+                  </div>
                   <div className="flex-1 overflow-y-auto relative">
                     <table className="w-full text-sm text-left">
                       <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
@@ -2109,13 +2118,13 @@ export default function Inventario() {
                             </div>
                           </th>
                           <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            <button onClick={() => toggleSort('modelo_categoria')} className="group flex items-center gap-1 hover:text-gray-700">
-                              Host / Modelo {getSortIcon('modelo_categoria')}
+                            <button onClick={() => toggleSort('host')} className="group flex items-center gap-1 hover:text-gray-700">
+                              Host / Modelo {getSortIcon('host')}
                             </button>
                           </th>
                           <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            <button onClick={() => toggleSort('unidad_ubicacion')} className="group flex items-center gap-1 hover:text-gray-700">
-                              Unidad / Ubicación {getSortIcon('unidad_ubicacion')}
+                            <button onClick={() => toggleSort('unidad')} className="group flex items-center gap-1 hover:text-gray-700">
+                              Unidad / Ubicación {getSortIcon('unidad')}
                             </button>
                           </th>
                           <th className="px-4 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -2166,10 +2175,10 @@ export default function Inventario() {
                                     </p>
 
                                     {(() => {
-                                      const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
+                                      const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split('/').map(i => i.trim()).filter(Boolean) : [];
                                       if (ips.length === 0 || hasWifiConflict) return null;
                                       return (
-                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 w-fit max-w-full" title={`IP(s): ${ips.join(', ')}`}>
+                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 w-fit max-w-full" title={`IP(s): ${ips.join(' / ')}`}>
                                           <Network size={11} className="text-emerald-600 shrink-0" />
                                           <span className="truncate" title={hoverZoomEnabled ? ips[0] : undefined}>{ips[0]}</span>
                                           {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
