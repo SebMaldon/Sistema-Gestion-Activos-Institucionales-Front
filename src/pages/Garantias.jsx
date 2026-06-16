@@ -20,7 +20,7 @@ import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
 import ReportesSeccion from '../components/ReportesSeccion';
 import MultiSelect from '../components/MultiSelect';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 // ─── Componentes reusables de vista ──────────────────────────────────────────
 
@@ -538,6 +538,8 @@ function ConfirmEliminarModal({ garantia, onClose }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Garantias() {
+  const qc = useQueryClient();
+  const { showToast } = useApp();
   const usuario = useAuthStore(s => s.usuario);
   const location = useLocation();
   const idRol = usuario?.id_rol ?? 3;
@@ -799,7 +801,17 @@ export default function Garantias() {
 
     } else if (activeTab === 'REPORTES') {
       garantiasConReportes.forEach(g => {
-        const baseInfo = {
+        const reportesFormateados = g.reportes && g.reportes.length > 0
+          ? g.reportes.map((r, i) => {
+              let autor = 'Usuario desconocido';
+              if (r.usuarioRegistra) {
+                autor = `${r.usuarioRegistra.nombre_completo} (${r.usuarioRegistra.matricula || 'Sin matrícula'})`;
+              }
+              return `${i + 1}. [${r.fecha_reporte ? formatDate(r.fecha_reporte) : 'S/F'}] ${autor} ─ Estatus: ${r.estatus}\nFalla: ${r.descripcion_falla}${r.resolucion ? `\nResolución: ${r.resolucion}` : ''}`;
+            }).join('\n\n')
+          : 'Sin Reportes';
+
+        dataToExport.push({
           'ID Garantía': g.id_garantia,
           'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
           'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
@@ -808,33 +820,13 @@ export default function Garantias() {
           'Estado Garantía': g.estado_garantia,
           'Inicio Garantía': formatDate(g.fecha_inicio),
           'Fin Garantía': formatDate(g.fecha_fin),
-        };
-
-        if (g.reportes && g.reportes.length > 0) {
-          g.reportes.forEach(reporte => {
-            dataToExport.push({
-              ...baseInfo,
-              'Estatus Reporte': reporte.estatus,
-              'Fecha Reporte': formatDate(reporte.fecha_reporte),
-              'Fecha Resolución': reporte.fecha_resolucion ? formatDate(reporte.fecha_resolucion) : 'N/A',
-              'Falla Reportada': reporte.descripcion_falla,
-            });
-          });
-        } else {
-          dataToExport.push({
-            ...baseInfo,
-            'Estatus Reporte': 'Sin Reportes',
-            'Fecha Reporte': 'N/A',
-            'Fecha Resolución': 'N/A',
-            'Falla Reportada': 'N/A',
-          });
-        }
+          'Reportes / Bitácora': reportesFormateados
+        });
       });
 
       colWidths = [
         { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, { wch: 28 }, 
-        { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 16 }, 
-        { wch: 18 }, { wch: 50 }
+        { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 60 }
       ];
       sheetName = 'Reportes de Garantía';
       fileName = 'Reportes_Garantias.xlsx';
@@ -842,16 +834,70 @@ export default function Garantias() {
       return; // No hay exportación para PROVEEDORES u otros tabs en este momento
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const isFiltered = searchFilter || statusFilter !== 'ALL' || (proveedorFilters && proveedorFilters.length > 0) || (tipoDispositivoFilters && tipoDispositivoFilters.length > 0) || showPorVencer || (dateFilterType !== 'NONE' && (startDate || endDate));
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const baseName = activeTab === 'GARANTIAS' ? 'Garantias' : 'Reportes_Garantias';
+    fileName = `${baseName}_${isFiltered ? 'Filtradas' : 'Completas'}_${dateStr}.xlsx`;
+
+    let filtrosTexto = [];
+    if (statusFilter !== 'ALL') filtrosTexto.push(`Estatus: ${statusFilter}`);
+    if (searchFilter) filtrosTexto.push(`Búsqueda: "${searchFilter}"`);
+    if (showPorVencer) filtrosTexto.push(`Filtro: Por Vencer`);
+    if (proveedorFilters && proveedorFilters.length > 0) {
+      const nombresProveedores = proveedorFilters.map(id => {
+        const p = proveedorOptions.find(opt => opt.value === id);
+        return p ? p.label : id;
+      }).join(', ');
+      filtrosTexto.push(`Proveedores: ${nombresProveedores}`);
+    }
+    if (tipoDispositivoFilters && tipoDispositivoFilters.length > 0) {
+      filtrosTexto.push(`Dispositivos: ${tipoDispositivoFilters.join(', ')}`);
+    }
+    if (dateFilterType !== 'NONE' && (startDate || endDate)) {
+      const tipoFecha = dateFilterType === 'INICIO' ? 'Inicio' : 'Vencimiento';
+      filtrosTexto.push(`Fecha de ${tipoFecha}: ${startDate || 'Siempre'} a ${endDate || 'Siempre'}`);
+    }
+
+    const textoFiltrosAplicados = filtrosTexto.length > 0 
+      ? `Filtros aplicados ─ ${filtrosTexto.join(', ')}` 
+      : `Filtros aplicados ─ Ninguno (Todos los registros)`;
+
+    const headerRows = [
+      ['SISTEMA INTEGRAL DE INFRAESTRUCTURA TECNOLOGICA — IMSS Delegación Nayarit'],
+      [`Reporte de: ${activeTab === 'GARANTIAS' ? 'Control de Garantías' : 'Reportes de Garantías'} — ${textoFiltrosAplicados}`],
+      [`Fecha de exportación: ${today.toLocaleString('es-MX')}`],
+      [`Total de registros: ${dataToExport.length}`],
+      [] // Separador
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(headerRows);
+    XLSX.utils.sheet_add_json(worksheet, dataToExport, { origin: 'A6' });
     worksheet['!cols'] = colWidths;
 
-    if (worksheet['!ref']) {
-      worksheet['!autofilter'] = { ref: worksheet['!ref'] };
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    range.s.r = 5; // Start autofilter at row 6
+    worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
+    // Aplicar estilos a todas las celdas
+    for (const key in worksheet) {
+      if (key[0] === '!') continue;
+      const cell = worksheet[key];
+      const rowNum = parseInt(key.replace(/^[A-Z]+/, ''), 10);
+      
+      if (rowNum <= 4) {
+        cell.s = { font: { bold: true }, alignment: { vertical: 'top' } };
+      } else if (rowNum === 6) {
+        cell.s = { font: { bold: true }, alignment: { wrapText: true, vertical: 'top' } };
+      } else {
+        cell.s = { alignment: { wrapText: true, vertical: 'top' } };
+      }
     }
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
     XLSX.writeFile(workbook, fileName);
+    showToast('Exportación completada', 'success');
   };
 
   const totalPages = Math.ceil(sortedGarantias.length / PAGE_SIZE) || 1;

@@ -4,8 +4,9 @@ import { useAuthStore } from '../store/auth.store';
 import {
   AlertTriangle, Clock, CheckCircle, User, Calendar,
   Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft,
-  Hash, FileText, MapPin, Copy
+  Hash, FileText, MapPin, Copy, FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx-js-style';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_INCIDENCIAS_QUERY } from '../api/incidencias.queries';
@@ -403,6 +404,125 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
     }
   };
 
+  const handleExportarExcel = async () => {
+    try {
+      showToast('Exportando datos, por favor espera...', 'info');
+      let f_creacion_desde = undefined;
+      let f_creacion_hasta = undefined;
+      let f_resolucion_desde = undefined;
+      let f_resolucion_hasta = undefined;
+
+      if (fechaFiltroTipo === 'creacion') {
+        if (fechaDesde) f_creacion_desde = new Date(fechaDesde + 'T00:00:00').toISOString();
+        if (fechaHasta) f_creacion_hasta = new Date(fechaHasta + 'T23:59:59').toISOString();
+      } else if (fechaFiltroTipo === 'resolucion') {
+        if (fechaDesde) f_resolucion_desde = new Date(fechaDesde + 'T00:00:00').toISOString();
+        if (fechaHasta) f_resolucion_hasta = new Date(fechaHasta + 'T23:59:59').toISOString();
+      }
+
+      const limit = data?.pageInfo?.totalCount || 5000;
+      
+      const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
+        estatus_reparacion: estatusFiltro || undefined,
+        search: debouncedSearch || undefined,
+        fecha_creacion_desde: f_creacion_desde,
+        fecha_creacion_hasta: f_creacion_hasta,
+        fecha_resolucion_desde: f_resolucion_desde,
+        fecha_resolucion_hasta: f_resolucion_hasta,
+        first: limit === 0 ? 1 : limit,
+        page: 1,
+      });
+
+      const items = res.incidencias.edges.map(e => mapIncidenciaNode(e.node));
+
+      const dataToExport = items.map(inc => {
+        const notasFormateadas = inc.notas && inc.notas.length > 0 
+          ? inc.notas.map((n, i) => `${i + 1}. [${new Date(n.fecha_creacion).toLocaleDateString('es-MX')}] ${n.usuarioAutor?.nombre_completo || 'Usuario'}: ${n.contenido_nota}`).join('\n\n')
+          : 'Sin notas';
+
+        return {
+          'Número de Serie': inc.numSerie,
+          'Alias': inc.alias || 'N/A',
+          'Tipo de Incidencia': inc.tipoIncidencia,
+          'Estatus': inc.estatus,
+          'Falla Reportada': inc.falla,
+          'Requerimiento': inc.requerimiento || 'N/A',
+          'Fecha de Creación': inc.fecha,
+          'Fecha de Resolución': inc.fechaResolucion || 'N/A',
+          'Generado Por': inc.generadoPor || 'N/A',
+          'Equipo': inc.equipo || 'N/A',
+          'Unidad': inc.unidad || 'N/A',
+          'Resolución Textual': inc.resolucion || 'N/A',
+          'Notas de Seguimiento': notasFormateadas
+        };
+      });
+
+      const colWidths = [
+        { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 40 },
+        { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 25 }, { wch: 30 },
+        { wch: 25 }, { wch: 50 }, { wch: 50 }
+      ];
+
+      const isFiltered = estatusFiltro || debouncedSearch || f_creacion_desde || f_resolucion_desde;
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const fileName = `Incidencias_${isFiltered ? 'Filtradas' : 'Completas'}_${dateStr}.xlsx`;
+
+      let filtrosTexto = [];
+      if (estatusFiltro) filtrosTexto.push(`Estatus: ${estatusFiltro}`);
+      if (debouncedSearch) filtrosTexto.push(`Búsqueda: "${debouncedSearch}"`);
+      if (fechaFiltroTipo === 'creacion' && (fechaDesde || fechaHasta)) {
+        filtrosTexto.push(`Creación: ${fechaDesde || 'Inicio'} a ${fechaHasta || 'Hoy'}`);
+      }
+      if (fechaFiltroTipo === 'resolucion' && (fechaDesde || fechaHasta)) {
+        filtrosTexto.push(`Resolución: ${fechaDesde || 'Inicio'} a ${fechaHasta || 'Hoy'}`);
+      }
+      const textoFiltrosAplicados = filtrosTexto.length > 0 
+        ? `Filtros aplicados ─ ${filtrosTexto.join(', ')}` 
+        : `Filtros aplicados ─ Ninguno (Todas las incidencias)`;
+
+      const headerRows = [
+        ['SISTEMA INTEGRAL DE INFRAESTRUCTURA TECNOLOGICA — IMSS Delegación Nayarit'],
+        [`Reporte de: Incidencias — ${textoFiltrosAplicados}`],
+        [`Fecha de exportación: ${today.toLocaleString('es-MX')}`],
+        [`Total de registros: ${items.length}`],
+        [] // Separator
+      ];
+
+      const worksheet = XLSX.utils.aoa_to_sheet(headerRows);
+      XLSX.utils.sheet_add_json(worksheet, dataToExport, { origin: 'A6' });
+
+      worksheet['!cols'] = colWidths;
+      
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      range.s.r = 5; // Start autofilter at row 6 (0-indexed 5)
+      worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+      
+      // Aplicar estilos
+      for (const key in worksheet) {
+        if (key[0] === '!') continue;
+        const cell = worksheet[key];
+        const rowNum = parseInt(key.replace(/^[A-Z]+/, ''), 10);
+        
+        if (rowNum <= 4) {
+          cell.s = { font: { bold: true }, alignment: { vertical: 'top' } };
+        } else if (rowNum === 6) {
+          cell.s = { font: { bold: true }, alignment: { wrapText: true, vertical: 'top' } };
+        } else {
+          cell.s = { alignment: { wrapText: true, vertical: 'top' } };
+        }
+      }
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Incidencias');
+      XLSX.writeFile(workbook, fileName);
+      showToast('Exportación completada', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('Error al exportar a Excel', 'error');
+    }
+  };
+
   if (isError) return <div className="p-4 text-red-500 text-sm">Error cargando incidencias.</div>;
 
   return (
@@ -410,14 +530,26 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
       {/* ─── Cabecera de filtros ─────────────────────────────────── */}
       <div className="p-3 sm:p-4 border-b border-gray-100 flex flex-col gap-3 bg-gray-50/50">
 
-        {/* Título + badge total */}
-        <div className="flex items-center gap-2">
-          <h3 className="font-bold text-gray-800 text-sm sm:text-base">Todas las Incidencias</h3>
-          {data?.pageInfo?.totalCount !== undefined && (
-            <span className="bg-[#006341]/10 text-[#006341] text-xs font-semibold px-2 py-0.5 rounded-full">
-              {data.pageInfo.totalCount} total
-            </span>
-          )}
+        {/* Título + badge total + botón exportar */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-gray-800 text-sm sm:text-base">Todas las Incidencias</h3>
+            {data?.pageInfo?.totalCount !== undefined && (
+              <span className="bg-[#006341]/10 text-[#006341] text-xs font-semibold px-2 py-0.5 rounded-full">
+                {data.pageInfo.totalCount} total
+              </span>
+            )}
+          </div>
+          
+          <button
+            onClick={handleExportarExcel}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-xs font-bold hover:opacity-90 transition-all shadow-sm flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #107c41, #185c37)' }}
+            title="Exportar listado a Excel"
+          >
+            <FileSpreadsheet size={14} />
+            Exportar Excel
+          </button>
         </div>
 
         {/* Filtro estatus + buscador (apilados en móvil, en fila en desktop) */}
@@ -436,7 +568,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Buscar serie, falla o persona..."
+              placeholder="Buscar serie, falla, o requerimiento..."
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -694,6 +826,7 @@ export default function Incidencias() {
 
   const [movingId, setMovingId] = useState(null);
   const [tab, setTab] = useState('kanban'); // 'kanban' | 'historico'
+  const [kanbanSearch, setKanbanSearch] = useState('');
 
   const idRol = usuario?.id_rol ?? 3;
   const canCreateIncident = idRol === 1 || idRol === 2;
@@ -737,7 +870,19 @@ export default function Incidencias() {
     const startOfWeek = new Date(now.setDate(diff));
     startOfWeek.setHours(0, 0, 0, 0);
 
+    const term = kanbanSearch.trim().toLowerCase();
+
     incidencias.forEach(inc => { 
+      if (term) {
+        const match = 
+          (inc.numSerie && inc.numSerie.toLowerCase().includes(term)) ||
+          (inc.falla && inc.falla.toLowerCase().includes(term)) ||
+          (inc.alias && inc.alias.toLowerCase().includes(term)) ||
+          (inc.requerimiento && inc.requerimiento.toLowerCase().includes(term)) ||
+          (inc.generadoPor && inc.generadoPor.toLowerCase().includes(term));
+        if (!match) return;
+      }
+
       if (map[inc.estatus]) {
         if (inc.estatus === 'Resuelto') {
           const resolvedDate = parseServerDate(inc._raw?.fecha_resolucion || inc._raw?.fecha_actualizacion);
@@ -750,7 +895,7 @@ export default function Incidencias() {
       } 
     });
     return map;
-  }, [incidencias]);
+  }, [incidencias, kanbanSearch]);
 
   // ── useCallback: handlers estables (IncidenciaCard no re-renderiza en vano) ──
 
@@ -970,7 +1115,19 @@ export default function Incidencias() {
             </button>
           )}
         </div>
-        <div className="hidden sm:flex items-center gap-3 mt-1">
+        <div className="hidden sm:flex items-center gap-3 mt-1 flex-wrap justify-end">
+          {tab === 'kanban' && (
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar requerimiento, serie..."
+                value={kanbanSearch}
+                onChange={e => setKanbanSearch(e.target.value)}
+                className="w-48 xl:w-64 pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006341] focus:border-[#006341] bg-white transition-all"
+              />
+            </div>
+          )}
           {tab === 'kanban' && contadoresJSX}
           <button
             onClick={() => refetch()}

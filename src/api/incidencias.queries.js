@@ -98,6 +98,13 @@ export const GET_INCIDENCIAS_QUERY = gql`
             nombre_completo
             matricula
           }
+          notas {
+            contenido_nota
+            fecha_creacion
+            usuarioAutor {
+              nombre_completo
+            }
+          }
         }
       }
       pageInfo {

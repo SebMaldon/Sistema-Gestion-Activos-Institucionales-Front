@@ -35,6 +35,11 @@ export const GET_GARANTIAS = gql`
         fecha_reporte
         fecha_resolucion
         descripcion_falla
+        resolucion
+        usuarioRegistra {
+          nombre_completo
+          matricula
+        }
       }
     }
   }
