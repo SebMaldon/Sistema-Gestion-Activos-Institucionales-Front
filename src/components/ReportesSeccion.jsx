@@ -62,6 +62,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
     mutationFn: (vars) => gqlClient.request(CREATE_REPORTE_GARANTIA, vars),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reportesGarantia', garantia.id_garantia] });
+      qc.invalidateQueries({ queryKey: ['garantias'] });
       showToast('Reporte registrado exitosamente', 'success');
       resetForm();
     },
@@ -72,6 +73,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
     mutationFn: (vars) => gqlClient.request(UPDATE_REPORTE_GARANTIA, vars),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reportesGarantia', garantia.id_garantia] });
+      qc.invalidateQueries({ queryKey: ['garantias'] });
       showToast('Reporte actualizado', 'success');
       resetForm();
     },
@@ -82,6 +84,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
     mutationFn: (vars) => gqlClient.request(DELETE_REPORTE_GARANTIA, vars),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reportesGarantia', garantia.id_garantia] });
+      qc.invalidateQueries({ queryKey: ['garantias'] });
       showToast('Reporte eliminado', 'success');
       setReporteToDelete(null);
     },

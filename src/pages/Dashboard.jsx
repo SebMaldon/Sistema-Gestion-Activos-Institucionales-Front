@@ -915,41 +915,47 @@ export default function Dashboard() {
             </div>
             
             <div 
-              className="w-full h-[250px] lg:h-[300px] transition-transform duration-200 ease-out origin-bottom"
-              style={{ transform: `scaleY(${1 + scrollYVelocity * 0.0015})` }}
+              className="w-full h-[250px] lg:h-[300px] transition-transform duration-200 ease-out origin-bottom min-w-0 min-h-0"
+              style={{ transform: `scaleY(${1 + scrollYVelocity * 0.0015})`, minHeight: 250 }}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f8" vertical={false} />
-                  <XAxis 
-                    dataKey="jefatura" 
-                    tick={{ fontSize: 10, fill: '#6b7280' }} 
-                    angle={0} 
-                    textAnchor="middle" 
-                    height={40} 
-                    tickFormatter={(value) => value.length > 12 ? `${value.substring(0, 10)}...` : value}
-                  />
-                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,99,65,0.05)' }} />
-                  <Bar 
-                    dataKey="equipos" 
-                    radius={[6, 6, 0, 0]} 
-                    onClick={(data) => {
-                      if (data && data.jefatura) {
-                        setSelectedDrilldownUnit(data.jefatura);
-                      }
-                    }}
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={selectedDrilldownUnit === entry.jefatura ? '#c9a227' : '#006341'} 
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f8" vertical={false} />
+                    <XAxis 
+                      dataKey="jefatura" 
+                      tick={{ fontSize: 10, fill: '#6b7280' }} 
+                      angle={0} 
+                      textAnchor="middle" 
+                      height={40} 
+                      tickFormatter={(value) => value.length > 12 ? `${value.substring(0, 10)}...` : value}
+                    />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,99,65,0.05)' }} />
+                    <Bar 
+                      dataKey="equipos" 
+                      radius={[6, 6, 0, 0]} 
+                      onClick={(data) => {
+                        if (data && data.jefatura) {
+                          setSelectedDrilldownUnit(data.jefatura);
+                        }
+                      }}
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={selectedDrilldownUnit === entry.jefatura ? '#c9a227' : '#006341'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                  Sin datos para graficar
+                </div>
+              )}
             </div>
           </div>
         </div>
