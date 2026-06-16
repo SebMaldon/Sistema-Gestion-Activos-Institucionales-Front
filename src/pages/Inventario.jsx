@@ -1812,7 +1812,10 @@ export default function Inventario() {
                           <MultiSearchableSelect
                             placeholder="Seleccionar unidades..."
                             value={advFilters.clave_unidad_ref}
-                            onChange={(val) => { setAdvFilters(p => ({ ...p, clave_unidad_ref: val })); setCursor(null); setCursors([]); }}
+                            onChange={(val) => { 
+                              setAdvFilters(p => ({ ...p, clave_unidad_ref: val, id_segmento: [], id_ubicacion: [] })); 
+                              setCursor(null); setCursors([]); 
+                            }}
                             options={(catalogos?.unidades ?? []).map(u => ({
                               value: u.clave,
                               label: u.desc_corta || u.descripcion || u.clave
@@ -1822,20 +1825,24 @@ export default function Inventario() {
                         <div>
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">Segmento</label>
                           <MultiSearchableSelect
-                            placeholder="Seleccionar segmentos..."
+                            placeholder={advFilters.clave_unidad_ref.length === 0 ? "Seleccione unidad primero" : "Seleccionar segmentos..."}
                             value={advFilters.id_segmento}
-                            onChange={(val) => { setAdvFilters(p => ({ ...p, id_segmento: val.map(String) })); setCursor(null); setCursors([]); }}
-                            options={(catalogos?.segmentos ?? []).map(s => ({
-                              value: String(s.id_segmento),
-                              label: s.nombre || s.clave || s.id_segmento
-                            }))}
+                            disabled={advFilters.clave_unidad_ref.length === 0}
+                            onChange={(val) => { setAdvFilters(p => ({ ...p, id_segmento: val.map(String), id_ubicacion: [] })); setCursor(null); setCursors([]); }}
+                            options={(catalogos?.segmentos ?? [])
+                              .filter(s => advFilters.clave_unidad_ref.length === 0 || advFilters.clave_unidad_ref.includes(String(s.clave)))
+                              .map(s => ({
+                                value: String(s.id_segmento),
+                                label: s.nombre || s.clave || s.id_segmento
+                              }))}
                           />
                         </div>
                         <div>
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">Ubicación Física</label>
                           <MultiSearchableSelect
-                            placeholder="Seleccionar ubicaciones..."
+                            placeholder={advFilters.clave_unidad_ref.length === 0 ? "Seleccione unidad primero" : "Seleccionar ubicaciones..."}
                             value={advFilters.id_ubicacion}
+                            disabled={advFilters.clave_unidad_ref.length === 0}
                             onChange={(val) => { setAdvFilters(p => ({ ...p, id_ubicacion: val })); setCursor(null); setCursors([]); }}
                             options={todasLasUbicaciones.map(u => ({
                               value: String(u.id_ubicacion),
