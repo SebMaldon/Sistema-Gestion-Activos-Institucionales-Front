@@ -108,7 +108,7 @@ function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
             </div>
             <div className="col-span-full mt-2">
                <p className="text-gray-500 text-xs font-semibold">Bien Asociado</p>
-               <p className="font-medium text-gray-800 text-sm mt-1">
+               <div className="font-medium text-gray-800 text-sm mt-1">
                   Serie: {garantia.bien?.num_serie || 'N/A'} | Inv: {garantia.bien?.num_inv || 'N/A'}
                   <br />
                   <span className="text-gray-500">
@@ -123,7 +123,7 @@ function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
                       </span>
                     </div>
                   )}
-               </p>
+               </div>
             </div>
           </div>
         </div>
@@ -320,7 +320,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
                 <Info size={18} className="text-green-600 mr-2" />
                 <div>
                   <p className="font-semibold text-green-900">Bien seleccionado:</p>
-                  <p className="text-green-800 text-xs">
+                  <div className="text-green-800 text-xs">
                     Serie: {selectedBien.num_serie || 'N/A'} | Inv: {selectedBien.num_inv || 'N/A'} <br/>
                     {selectedBien.modelo?.marca?.marca} - {selectedBien.modelo?.descrip_disp} <br/>
                     {selectedBien.modelo?.tipoDispositivo?.nombre_tipo && (
@@ -331,7 +331,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
                         </span>
                       </div>
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -343,9 +343,9 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
             <Box size={18} className="text-gray-500 mr-2 flex-shrink-0" />
             <div>
               <p className="font-semibold text-gray-900">Bien Asociado:</p>
-              <p className="text-gray-600 text-xs">
+              <div className="text-gray-600 text-xs">
                     Serie: {selectedBien.num_serie || 'N/A'} | Inv: {selectedBien.num_inv || 'N/A'}
-              </p>
+              </div>
             </div>
           </div>
         )}
@@ -555,6 +555,7 @@ export default function Garantias() {
   const [tipoDispositivoFilters, setTipoDispositivoFilters] = useState([]);
   
   const [showStats, setShowStats] = useState(false);
+  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'bien', direction: 'asc' });
 
   const [modalCrear, setModalCrear] = useState(false);
@@ -567,6 +568,7 @@ export default function Garantias() {
   const [modalEliminarProveedor, setModalEliminarProveedor] = useState(null);
 
   const [pageInput, setPageInput] = useState('');
+  const [pageInputReportes, setPageInputReportes] = useState('');
 
   const deleteProveedorMut = useMutation({
     mutationFn: (vars) => gqlClient.request(DELETE_PROVEEDOR, vars),
@@ -585,6 +587,7 @@ export default function Garantias() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageReportes, setCurrentPageReportes] = useState(1);
   const PAGE_SIZE = 15;
 
   useEffect(() => {
@@ -615,22 +618,24 @@ export default function Garantias() {
     }));
   }, [proveedores]);
 
-  const garantias = (data || []).map(g => {
-    let estado = g.estado_garantia;
-    if (g.fecha_fin) {
-      const parts = g.fecha_fin.split('-');
-      let finLocal = new Date(g.fecha_fin);
-      if (parts.length >= 3) {
-         finLocal = new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+  const garantias = useMemo(() => {
+    return (data || []).map(g => {
+      let estado = g.estado_garantia;
+      if (g.fecha_fin) {
+        const parts = g.fecha_fin.split('-');
+        let finLocal = new Date(g.fecha_fin);
+        if (parts.length >= 3) {
+           finLocal = new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+        }
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        if (finLocal < hoy) {
+          estado = 'VENCIDA';
+        }
       }
-      const hoy = new Date();
-      hoy.setHours(0,0,0,0);
-      if (finLocal < hoy) {
-        estado = 'VENCIDA';
-      }
-    }
-    return { ...g, estado_garantia: estado };
-  });
+      return { ...g, estado_garantia: estado };
+    });
+  }, [data]);
 
   const tipoDispositivoOptions = useMemo(() => {
     const types = new Set();
@@ -643,101 +648,129 @@ export default function Garantias() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [garantias]);
 
-  const filteredGarantias = garantias.filter(g => {
-    // Status Filter
-    if (statusFilter === 'VIGENTE' && g.estado_garantia !== 'VIGENTE') return false;
-    if (statusFilter === 'VENCIDA' && (g.estado_garantia === 'VIGENTE' || g.estado_garantia === 'DESCONOCIDO')) return false;
-    if (statusFilter === 'DESCONOCIDO' && g.estado_garantia !== 'DESCONOCIDO') return false;
+  const filteredGarantias = useMemo(() => {
+    return garantias.filter(g => {
+      // Status Filter
+      if (statusFilter === 'VIGENTE' && g.estado_garantia !== 'VIGENTE') return false;
+      if (statusFilter === 'VENCIDA' && (g.estado_garantia === 'VIGENTE' || g.estado_garantia === 'DESCONOCIDO')) return false;
+      if (statusFilter === 'DESCONOCIDO' && g.estado_garantia !== 'DESCONOCIDO') return false;
 
-    // Por Vencer Filter
-    if (showPorVencer) {
-      if (!g.fecha_fin || g.estado_garantia !== 'VIGENTE') return false;
-      const d = new Date(g.fecha_fin);
-      const now = new Date();
-      const diffTime = d.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays < 0 || diffDays > 62) return false; // 2 meses aprox
-    }
+      // Por Vencer Filter
+      if (showPorVencer) {
+        if (!g.fecha_fin || g.estado_garantia !== 'VIGENTE') return false;
+        const d = new Date(g.fecha_fin);
+        const now = new Date();
+        const diffTime = d.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays < 0 || diffDays > 62) return false; // 2 meses aprox
+      }
 
-    // Date Filter
-    if (dateFilterType !== 'NONE') {
-      let targetDate = null;
-      const dateStr = dateFilterType === 'INICIO' ? g.fecha_inicio : g.fecha_fin;
-      if (dateStr) {
-        const parts = dateStr.split('-');
-        if (parts.length >= 3) {
-            targetDate = new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+      // Date Filter
+      if (dateFilterType !== 'NONE') {
+        let targetDate = null;
+        const dateStr = dateFilterType === 'INICIO' ? g.fecha_inicio : g.fecha_fin;
+        if (dateStr) {
+          const parts = dateStr.split('-');
+          if (parts.length >= 3) {
+              targetDate = new Date(parts[0], parts[1] - 1, parts[2].substring(0,2));
+          }
+        }
+
+        if (!targetDate) return false;
+
+        if (startDate) {
+          const partsS = startDate.split('-');
+          const s = new Date(partsS[0], partsS[1] - 1, partsS[2]);
+          if (targetDate < s) return false;
+        }
+
+        if (endDate) {
+          const partsE = endDate.split('-');
+          const e = new Date(partsE[0], partsE[1] - 1, partsE[2], 23, 59, 59);
+          if (targetDate > e) return false;
         }
       }
 
-      if (!targetDate) return false;
-
-      if (startDate) {
-        const partsS = startDate.split('-');
-        const s = new Date(partsS[0], partsS[1] - 1, partsS[2]);
-        if (targetDate < s) return false;
+      if (proveedorFilters.length > 0) {
+        const gProv = String(g.id_proveedor);
+        if (!proveedorFilters.some(id => String(id) === gProv)) return false;
+      }
+      
+      if (tipoDispositivoFilters.length > 0) {
+        const deviceType = String(g.bien?.modelo?.tipoDispositivo?.nombre_tipo || '');
+        if (!tipoDispositivoFilters.some(t => String(t) === deviceType)) return false;
       }
 
-      if (endDate) {
-        const partsE = endDate.split('-');
-        const e = new Date(partsE[0], partsE[1] - 1, partsE[2], 23, 59, 59);
-        if (targetDate > e) return false;
+      if (!searchFilter) return true;
+      const term = searchFilter.toLowerCase();
+      const proveedorMatch = g.proveedorObj?.nombre_proveedor?.toLowerCase().includes(term);
+      const serieMatch = g.bien?.num_serie?.toLowerCase().includes(term);
+      const invMatch = g.bien?.num_inv?.toLowerCase().includes(term);
+      return proveedorMatch || serieMatch || invMatch;
+    });
+  }, [garantias, statusFilter, showPorVencer, dateFilterType, startDate, endDate, proveedorFilters, tipoDispositivoFilters, searchFilter]);
+
+  const sortedGarantias = useMemo(() => {
+    return [...filteredGarantias].sort((a, b) => {
+      if (!sortConfig.key) return 0;
+      
+      let aValue = '';
+      let bValue = '';
+
+      switch (sortConfig.key) {
+        case 'bien':
+          aValue = a.bien ? `${a.bien.modelo?.marca?.marca} ${a.bien.modelo?.descrip_disp}` : '';
+          bValue = b.bien ? `${b.bien.modelo?.marca?.marca} ${b.bien.modelo?.descrip_disp}` : '';
+          break;
+        case 'periodo':
+          aValue = a.fecha_fin || '';
+          bValue = b.fecha_fin || '';
+          break;
+        case 'proveedor':
+          aValue = a.proveedorObj?.nombre_proveedor || '';
+          bValue = b.proveedorObj?.nombre_proveedor || '';
+          break;
+        case 'estado':
+          aValue = a.estado_garantia || '';
+          bValue = b.estado_garantia || '';
+          break;
+        default:
+          break;
       }
-    }
 
-    if (proveedorFilters.length > 0) {
-      const gProv = String(g.id_proveedor);
-      if (!proveedorFilters.some(id => String(id) === gProv)) return false;
-    }
-    
-    if (tipoDispositivoFilters.length > 0) {
-      const deviceType = String(g.bien?.modelo?.tipoDispositivo?.nombre_tipo || '');
-      if (!tipoDispositivoFilters.some(t => String(t) === deviceType)) return false;
-    }
-
-    if (!searchFilter) return true;
-    const term = searchFilter.toLowerCase();
-    const proveedorMatch = g.proveedorObj?.nombre_proveedor?.toLowerCase().includes(term);
-    const serieMatch = g.bien?.num_serie?.toLowerCase().includes(term);
-    const invMatch = g.bien?.num_inv?.toLowerCase().includes(term);
-    return proveedorMatch || serieMatch || invMatch;
-  });
-
-  const sortedGarantias = [...filteredGarantias].sort((a, b) => {
-    if (!sortConfig.key) return 0;
-    
-    let aValue = '';
-    let bValue = '';
-
-    switch (sortConfig.key) {
-      case 'bien':
-        aValue = a.bien ? `${a.bien.modelo?.marca?.marca} ${a.bien.modelo?.descrip_disp}` : '';
-        bValue = b.bien ? `${b.bien.modelo?.marca?.marca} ${b.bien.modelo?.descrip_disp}` : '';
-        break;
-      case 'periodo':
-        aValue = a.fecha_fin || '';
-        bValue = b.fecha_fin || '';
-        break;
-      case 'proveedor':
-        aValue = a.proveedorObj?.nombre_proveedor || '';
-        bValue = b.proveedorObj?.nombre_proveedor || '';
-        break;
-      case 'estado':
-        aValue = a.estado_garantia || '';
-        bValue = b.estado_garantia || '';
-        break;
-      default:
-        break;
-    }
-
-    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-  });
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredGarantias, sortConfig]);
 
   const garantiasConReportes = useMemo(() => {
     return sortedGarantias.filter(g => g.reportes && g.reportes.length > 0);
   }, [sortedGarantias]);
+
+  const totalPagesReportes = Math.ceil(garantiasConReportes.length / PAGE_SIZE) || 1;
+  useEffect(() => {
+    if (currentPageReportes > totalPagesReportes) {
+      setCurrentPageReportes(1);
+    }
+  }, [garantiasConReportes.length, currentPageReportes, totalPagesReportes]);
+
+  const handleNextPageReportes = () => setCurrentPageReportes(p => Math.min(totalPagesReportes, p + 1));
+  const handlePrevPageReportes = () => setCurrentPageReportes(p => Math.max(1, p - 1));
+
+  const handleJumpToPageReportes = (e) => {
+    e.preventDefault();
+    const p = parseInt(pageInputReportes, 10);
+    if (isNaN(p) || p < 1 || p > totalPagesReportes) {
+      setPageInputReportes('');
+      return;
+    }
+    setCurrentPageReportes(p);
+    setPageInputReportes('');
+  };
+
+  const paginatedReportes = garantiasConReportes.slice((currentPageReportes - 1) * PAGE_SIZE, currentPageReportes * PAGE_SIZE);
+
 
   const handleExportarExcel = () => {
     let dataToExport = [];
@@ -860,7 +893,11 @@ export default function Garantias() {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 sm:p-5 space-y-4 fade-in">
+    <div className={`p-4 sm:p-5 flex flex-col gap-4 fade-in ${
+      activeTab === 'GARANTIAS' || activeTab === 'REPORTES'
+        ? 'min-h-[calc(100dvh-70px)] overflow-y-auto sm:h-[calc(100vh-70px)] sm:overflow-hidden sm:min-h-0'
+        : 'h-[calc(100dvh-70px)] sm:h-[calc(100vh-70px)] overflow-hidden sm:min-h-0'
+    }`}>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -883,7 +920,7 @@ export default function Garantias() {
           {(activeTab === 'REPORTES' || activeTab === 'GARANTIAS') && (
             <button
               onClick={handleExportarExcel}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+              className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
               style={{ background: 'linear-gradient(135deg, #107c41, #185c37)' }}
               title="Exportar listado actual a Excel"
             >
@@ -896,16 +933,16 @@ export default function Garantias() {
           {(isMaestro || isAdministrador) && activeTab === 'GARANTIAS' && (
             <button
               onClick={() => setModalCrear(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+              className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
               style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
-              <Plus size={16} />
+              <Plus size={18} />
               <span className="hidden sm:inline">Agregar Garantía</span>
             </button>
           )}
           {(isMaestro || isAdministrador) && activeTab === 'PROVEEDORES' && (
             <button
               onClick={() => setModalProveedor(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+              className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
               style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
               <Building size={16} />
               <span className="hidden sm:inline">Nuevo Proveedor</span>
@@ -915,22 +952,22 @@ export default function Garantias() {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 border-b border-gray-200">
+      <div className="flex space-x-1 sm:space-x-2 border-b border-gray-200 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
         <button
           onClick={() => setActiveTab('GARANTIAS')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'GARANTIAS' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${activeTab === 'GARANTIAS' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
         >
           Control de Garantías
         </button>
         <button
           onClick={() => setActiveTab('PROVEEDORES')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'PROVEEDORES' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${activeTab === 'PROVEEDORES' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
         >
           Directorio de Proveedores
         </button>
         <button
           onClick={() => setActiveTab('REPORTES')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'REPORTES' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex-shrink-0 ${activeTab === 'REPORTES' ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
         >
           Reportes de Garantías
         </button>
@@ -998,81 +1035,90 @@ export default function Garantias() {
 
       {/* Control Actions & Search */}
       {(activeTab === 'GARANTIAS' || activeTab === 'REPORTES') && (
-      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative z-20 mt-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por equipo, proveedor o número de serie..."
-              value={searchFilter}
-              onChange={e => setSearchFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-            />
+      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-gray-100 shadow-sm relative z-20 mt-2">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex gap-2 w-full sm:w-auto sm:flex-1">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por equipo, proveedor o número de serie..."
+                value={searchFilter}
+                onChange={e => setSearchFilter(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+            {/* Filter Toggle Mobile */}
+            <button 
+              onClick={() => setShowFiltersMobile(!showFiltersMobile)}
+              className={`sm:hidden flex items-center justify-center p-2 border rounded-lg transition-colors ${showFiltersMobile ? 'bg-green-50 border-green-200 text-green-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+              title="Mostrar filtros avanzados"
+            >
+              <Filter size={16} />
+            </button>
           </div>
+          
           <div className="flex gap-2">
             {activeTab === 'GARANTIAS' && (
               <button
                 onClick={() => setShowStats(!showStats)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showStats ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              className={`flex items-center justify-center flex-1 sm:flex-none gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showStats ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
               title="Mostrar u ocultar panel de estadísticas"
             >
               <BarChart2 size={14} className={showStats ? "text-blue-600" : "text-gray-500"} />
-              <span className="hidden sm:inline">{showStats ? 'Ocultar Resumen' : 'Ver Resumen'}</span>
+              <span className="inline">{showStats ? 'Ocultar Resumen' : 'Ver Resumen'}</span>
             </button>
             )}
 
             {activeTab === 'GARANTIAS' && (
             <button
               onClick={() => setShowPorVencer(!showPorVencer)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showPorVencer ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              className={`flex items-center justify-center flex-1 sm:flex-none gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showPorVencer ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
               title="Filtrar garantías por vencer (próximos 2 meses)"
             >
               <AlertCircle size={14} className={showPorVencer ? "text-amber-600" : "text-amber-500"} />
-              <span className="hidden sm:inline">{showPorVencer ? 'Por Vencer (Activo)' : 'Por Vencer'}</span>
+              <span className="inline">{showPorVencer ? 'Por Vencer (Activos)' : 'Por Vencer'}</span>
             </button>
             )}
           </div>
         </div>
         
         {/* Filtros avanzados (Fecha y Proveedor) */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+        <div className={`${showFiltersMobile ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mt-3 pt-3 border-t border-gray-100`}>
           
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Filter size={14} className="text-gray-400" />
-              <span className="text-xs font-bold text-gray-500 tracking-wide uppercase whitespace-nowrap">Proveedor:</span>
-              <div className="w-[200px]">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+              <span className="text-[11px] font-bold text-gray-500 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Proveedor:</span>
+              <div className="w-full sm:w-[200px]">
                 <MultiSelect
                   options={proveedorOptions}
                   selectedValues={proveedorFilters}
                   onChange={setProveedorFilters}
-                  placeholder="Todos los proveedores"
+                  placeholder="Todos"
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Filter size={14} className="text-gray-400" />
-              <span className="text-xs font-bold text-gray-500 tracking-wide uppercase whitespace-nowrap">Dispositivo:</span>
-              <div className="w-[180px]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+              <span className="text-[11px] font-bold text-gray-500 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Dispositivo:</span>
+              <div className="w-full sm:w-[180px]">
                 <MultiSelect
                   options={tipoDispositivoOptions}
                   selectedValues={tipoDispositivoFilters}
                   onChange={setTipoDispositivoFilters}
-                  placeholder="Todos los tipos"
+                  placeholder="Todos"
                 />
               </div>
             </div>
           </div>
 
-          <div className="hidden sm:block w-px h-6 bg-gray-200 mx-2"></div>
+          <div className="hidden sm:block w-px h-6 bg-gray-200 mx-1"></div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0">
             <select
               value={dateFilterType}
               onChange={(e) => setDateFilterType(e.target.value)}
-              className="border-2 border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none bg-white font-medium text-gray-700 appearance-none pr-8 cursor-pointer"
+              className="border border-gray-300 sm:border-2 sm:border-blue-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none bg-white font-medium text-gray-700 appearance-none pr-8 cursor-pointer w-full sm:w-auto"
               style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%233b82f6\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.2em 1.2em' }}
             >
               <option value="NONE">Sin filtro de fecha</option>
@@ -1081,19 +1127,19 @@ export default function Garantias() {
             </select>
             
             {dateFilterType !== 'NONE' && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                 <input 
                   type="date" 
                   value={startDate} 
                   onChange={e => setStartDate(e.target.value)} 
-                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
+                  className="flex-1 sm:flex-none border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" 
                 />
-                <span className="text-gray-400 text-sm font-medium">hasta</span>
+                <span className="text-gray-400 text-xs font-medium">a</span>
                 <input 
                   type="date" 
                   value={endDate} 
                   onChange={e => setEndDate(e.target.value)} 
-                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
+                  className="flex-1 sm:flex-none border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" 
                 />
               </div>
             )}
@@ -1104,7 +1150,7 @@ export default function Garantias() {
 
       {/* Table Data Garantias */}
       {activeTab === 'GARANTIAS' && (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col mt-4">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mt-4 mb-8 sm:mb-0 sm:flex-1 sm:min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
             <Loader2 size={22} className="animate-spin" />
@@ -1116,8 +1162,8 @@ export default function Garantias() {
             No se encontraron registros de garantías con los filtros aplicados.
           </div>
         ) : (
-          <div className="flex-1 overflow-auto relative">
-            <table className="w-full text-sm text-left whitespace-nowrap">
+          <div className="w-full overflow-x-auto sm:flex-1 sm:min-h-0 sm:overflow-y-auto relative">
+            <table className="w-full text-sm text-left whitespace-nowrap" style={{ minWidth: '700px' }}>
               <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100 shadow-sm">
                 <tr>
                   <th 
@@ -1331,7 +1377,7 @@ export default function Garantias() {
 
       {/* Table Data Reportes */}
       {activeTab === 'REPORTES' && (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col mt-4">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col mt-4 mb-8 sm:mb-0 sm:flex-1 sm:min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
             <Loader2 size={22} className="animate-spin" />
@@ -1343,8 +1389,8 @@ export default function Garantias() {
             No se encontraron garantías con reportes registrados con los filtros aplicados.
           </div>
         ) : (
-          <div className="flex-1 overflow-auto relative">
-            <table className="w-full text-sm text-left whitespace-nowrap">
+          <div className="w-full overflow-x-auto sm:flex-1 sm:min-h-0 sm:overflow-y-auto relative">
+            <table className="w-full text-sm text-left whitespace-nowrap" style={{ minWidth: '700px' }}>
               <thead className="text-xs text-gray-500 uppercase bg-gray-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-gray-200">
                 <tr>
                   <th className="px-5 py-4 font-bold tracking-wider">Equipo / Bien</th>
@@ -1355,7 +1401,7 @@ export default function Garantias() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {garantiasConReportes.map(garantia => {
+                {paginatedReportes.map(garantia => {
                   const ultimoReporte = garantia.reportes && garantia.reportes.length > 0 ? garantia.reportes[0] : null;
 
                   return (
@@ -1425,6 +1471,110 @@ export default function Garantias() {
                 )})}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Paginación Reportes */}
+        {!isLoading && garantiasConReportes.length > 0 && (
+          <div className="p-3 border-t border-gray-100 flex flex-col gap-2 bg-gray-50 flex-shrink-0">
+            {/* Info total */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-gray-700">
+                Total: {garantiasConReportes.length} registros.
+              </span>
+              <span className="font-bold text-gray-400 uppercase tracking-wider">
+                Pág. {currentPageReportes}/{totalPagesReportes}
+              </span>
+            </div>
+
+            {/* Botones de paginación */}
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              <button
+                onClick={handlePrevPageReportes}
+                disabled={currentPageReportes === 1}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+                title="Página anterior"
+              >
+                <ChevronLeft size={15} />
+              </button>
+
+              <div className="flex items-center justify-center gap-1 sm:gap-2 w-full sm:w-[260px] order-last sm:order-none mt-2 sm:mt-0">
+                {/* Páginas: anterior, actual, siguiente */}
+                {currentPageReportes > 2 && (
+                <button
+                  onClick={() => setCurrentPageReportes(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  1
+                </button>
+              )}
+                {currentPageReportes > 3 && (
+                  <span className="px-1 text-gray-400 text-xs">...</span>
+                )}
+                {currentPageReportes > 1 && (
+                  <button
+                    onClick={handlePrevPageReportes}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                  >
+                    {currentPageReportes - 1}
+                  </button>
+                )}
+                <button
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0"
+                >
+                  {currentPageReportes}
+                </button>
+                {currentPageReportes < totalPagesReportes && (
+                  <button
+                    onClick={handleNextPageReportes}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                  >
+                    {currentPageReportes + 1}
+                  </button>
+                )}
+                {currentPageReportes < totalPagesReportes - 2 && (
+                  <span className="px-1 text-gray-400 text-xs">...</span>
+                )}
+                {currentPageReportes < totalPagesReportes - 1 && totalPagesReportes > 1 && (
+                <button
+                  onClick={() => setCurrentPageReportes(totalPagesReportes)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 flex-shrink-0"
+                >
+                  {totalPagesReportes}
+                </button>
+              )}
+              </div>
+
+              <button
+                onClick={handleNextPageReportes}
+                disabled={currentPageReportes === totalPagesReportes}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors flex-shrink-0"
+                title="Página siguiente"
+              >
+                <ChevronRight size={15} />
+              </button>
+
+              {/* Ir a página */}
+              <form onSubmit={handleJumpToPageReportes} className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPagesReportes}
+                  value={pageInputReportes}
+                  onChange={(e) => setPageInputReportes(e.target.value)}
+                  placeholder="Ir a..."
+                  title={`Ingresa un número entre 1 y ${totalPagesReportes}`}
+                  className="w-14 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white text-center"
+                />
+                <button
+                  type="submit"
+                  disabled={!pageInputReportes}
+                  className="px-2 py-1.5 bg-[#006341]/10 text-[#006341] font-semibold text-xs rounded-lg hover:bg-[#006341]/20 disabled:opacity-50 transition-colors"
+                >
+                  Ir
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
