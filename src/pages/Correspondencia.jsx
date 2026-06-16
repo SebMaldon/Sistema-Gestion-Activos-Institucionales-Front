@@ -253,7 +253,6 @@ export default function Correspondencia() {
             ) : (
               <table className="w-full text-left text-xs table-fixed" style={{ minWidth: '1000px' }}>
                 <colgroup>
-                  <col style={{ width: '2.5rem' }} />
                   <col style={{ width: '3.5rem' }} />
                   <col style={{ width: '5rem' }} />
                   <col style={{ width: '7.5rem' }} />
@@ -268,7 +267,6 @@ export default function Correspondencia() {
                 </colgroup>
                 <thead className="bg-gray-100 text-gray-600 uppercase tracking-wider font-bold shadow-sm">
                   <tr>
-                    <th className="px-3 py-2.5 text-center w-10"></th>
                     <th className="px-3 py-2.5 whitespace-nowrap">Folio</th>
                     <th className="px-3 py-2.5 whitespace-nowrap">NoOficio</th>
                     <th className="px-3 py-2.5 whitespace-nowrap">F. Recepción</th>
@@ -285,9 +283,6 @@ export default function Correspondencia() {
                 <tbody className="divide-y divide-gray-100">
                   {correspondencias.map(corr => (
                     <tr key={corr.Folio} className="hover:bg-gray-50/80 transition-colors group">
-                      <td className="px-3 py-2.5 text-center">
-                        <CheckCircle size={16} className="text-green-500 inline-block" />
-                      </td>
                       <td className="px-3 py-2.5 font-bold text-gray-800">{corr.Folio}</td>
                       <td className="px-3 py-2.5 text-blue-600 font-semibold">
                         <HighlightText text={corr.NoOficio || '—'} highlight={activeFilters.NoOficio || activeFilters.PalabraClave} />
