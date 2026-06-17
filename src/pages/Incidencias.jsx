@@ -15,6 +15,7 @@ import EditarIncidenciaModal from '../components/EditarIncidenciaModal';
 import ResolucionModal from '../components/ResolucionModal';
 import NotaModal from '../components/NotasModal';
 import DetalleIncidenciaModal from '../components/DetalleIncidenciaModal';
+import DetalleBienVisualModal from '../components/DetalleBienVisualModal';
 import ConfirmModal from '../components/ConfirmModal';
 import {
   useIncidencias,
@@ -112,7 +113,7 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 // ─── Tarjeta de Incidencia ────────────────────────────────────────────────────
 const IncidenciaCard = memo(function IncidenciaCard({
   inc, onStatusChange, onEdit, onDelete, onAddNota, onDeleteNota, canEdit, canDelete, isMoving,
-  isExpanded, onToggle, isHighlighted
+  isExpanded, onToggle, isHighlighted, onVerBien
 }) {
   const { showToast } = useApp();
   const [menuOpen,  setMenuOpen]  = useState(false);
@@ -130,9 +131,6 @@ const IncidenciaCard = memo(function IncidenciaCard({
       if (isOutside) {
         // Siempre cerrar el menú al hacer clic fuera
         if (menuOpen) setMenuOpen(false);
-        // NOTA: Ya no cerramos automáticamente 'expanded' para evitar que las tarjetas
-        // den saltos (layout shift) y el usuario pierda su lugar. 
-        // Solo se cerrará cuando el usuario vuelva a hacer clic sobre la tarjeta abierta.
       }
     };
     if (menuOpen) document.addEventListener('mousedown', handleOutsideClick);
@@ -249,8 +247,6 @@ const IncidenciaCard = memo(function IncidenciaCard({
           </div>
           <span className="truncate font-bold tracking-tight">{inc.unidad || 'Ubicación General'}</span>
         </div>
-        
-
       </div>
 
       {/* Ver más indicador */}
@@ -265,11 +261,15 @@ const IncidenciaCard = memo(function IncidenciaCard({
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-gray-100 space-y-4 fade-in">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 border border-gray-100 shadow-sm min-w-0">
+            <div 
+              onClick={(e) => { e.stopPropagation(); if (inc.id_bien) onVerBien(inc.id_bien); }}
+              className={`bg-gradient-to-br from-gray-50 to-white rounded-2xl p-3 border border-gray-100 shadow-sm min-w-0 ${inc.id_bien ? 'cursor-pointer hover:border-green-300 hover:shadow-md transition-all' : ''}`}
+              title={inc.id_bien ? "Ver Ficha Técnica" : ""}
+            >
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <Hash size={10} /> Dispositivo
               </p>
-              <p className="text-xs text-gray-800 font-bold leading-tight break-words" title={inc.equipo}>{inc.equipo}</p>
+              <p className="text-xs text-gray-800 font-bold leading-tight break-words">{inc.equipo}</p>
               <p className="text-[10px] text-gray-400 mt-1 font-mono">ID: {inc.id}</p>
             </div>
             <div className="bg-gradient-to-br from-blue-50/50 to-white rounded-2xl p-3 border border-blue-50 shadow-sm min-w-0">
@@ -330,7 +330,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
 
 // ─── Componente Tabla Histórico ────────────────────────────────────────────────
 
-function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, onStatusChange }) {
+function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, onStatusChange, onVerBien }) {
   const { showToast } = useApp();
   const [estatusFiltro, setEstatusFiltro] = useState('');
   const [fechaFiltroTipo, setFechaFiltroTipo] = useState(''); // 'creacion' o 'resolucion'
@@ -451,6 +451,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
           'Fecha de Resolución': inc.fechaResolucion || 'N/A',
           'Generado Por': inc.generadoPor || 'N/A',
           'Equipo': inc.equipo || 'N/A',
+          'Serie/Inv': inc.numSerie || 'N/A',
           'Unidad': inc.unidad || 'N/A',
           'Resolución Textual': inc.resolucion || 'N/A',
           'Notas de Seguimiento': notasFormateadas
@@ -629,7 +630,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
               <tr>
                 <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Num Serie</th>
                 <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Alias</th>
-                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Tipo</th>
+                <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Dispositivo</th>
                 <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Estatus</th>
                 <th className="px-3 py-2.5 font-semibold">Falla</th>
                 <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Requerimiento</th>
@@ -643,7 +644,15 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
                 <tr key={inc.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-3 py-2.5 font-semibold text-gray-800 whitespace-nowrap max-w-[110px] truncate" title={inc.numSerie}>{inc.numSerie}</td>
                   <td className="px-3 py-2.5 text-blue-600 font-medium whitespace-nowrap max-w-[100px] truncate" title={inc.alias}>{inc.alias || '—'}</td>
-                  <td className="px-3 py-2.5 text-blue-600 font-medium whitespace-nowrap max-w-[90px] truncate" title={inc.tipoIncidencia}>{inc.tipoIncidencia}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div 
+                      className={`text-xs font-medium text-gray-900 ${inc.id_bien ? 'cursor-pointer hover:text-green-700 underline decoration-green-300 decoration-2 underline-offset-2' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); if (inc.id_bien) onVerBien(inc.id_bien); }}
+                      title={inc.id_bien ? "Ver Ficha Técnica" : ""}
+                    >
+                      {inc.equipo}
+                    </div>
+                  </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {canEdit ? (
                       <select
@@ -836,8 +845,10 @@ export default function Incidencias() {
   const [isModalOpen,            setIsModalOpen]            = useState(false);
   const [isEditarModalOpen,      setIsEditarModalOpen]      = useState(false);
   const [incidenciaParaEditar,   setIncidenciaParaEditar]   = useState(null);
-  const [isResolucionModalOpen,  setIsResolucionModalOpen]  = useState(false);
+  const [isResolucionModalOpen, setIsResolucionModalOpen] = useState(false);
   const [incidenciaParaResolver, setIncidenciaParaResolver] = useState(null);
+  
+  const [visualModalBienId, setVisualModalBienId] = useState(null);
   const [isNotaModalOpen,        setIsNotaModalOpen]        = useState(false);
   const [incidenciaParaNota,     setIncidenciaParaNota]     = useState(null);
   const [incidenciaDetalle,      setIncidenciaDetalle]      = useState(null);
@@ -1183,6 +1194,7 @@ export default function Incidencias() {
                           isExpanded={expandedCards[inc.estatus] === inc.id}
                           isHighlighted={lastEditedId === inc.id}
                           onToggle={() => handleToggleCard(inc.id, inc.estatus)}
+                          onVerBien={setVisualModalBienId}
                         />
                       ))
                     )}
@@ -1203,6 +1215,7 @@ export default function Incidencias() {
             onDelete={handleDelete} 
             onViewDetail={handleVerDetalle}
             onStatusChange={handleStatusChange}
+            onVerBien={setVisualModalBienId}
           />
         </div>
       )}
@@ -1255,6 +1268,13 @@ export default function Incidencias() {
         onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
         isLoading={deleteIncidencia.isPending || pasarAEnProceso.isPending}
       />
+
+      {visualModalBienId && (
+        <DetalleBienVisualModal 
+          id_bien={visualModalBienId} 
+          onClose={() => setVisualModalBienId(null)} 
+        />
+      )}
     </div>
   );
 }

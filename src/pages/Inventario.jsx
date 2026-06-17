@@ -56,7 +56,7 @@ const fallbackCopyTextToClipboard = (text) => {
   document.body.removeChild(textArea);
 };
 
-export const copyTextFallback = (text) => {
+const copyTextFallback = (text) => {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).catch(() => fallbackCopyTextToClipboard(text));
   } else {
@@ -938,6 +938,8 @@ export default function Inventario() {
     // Quick filters
     con_notas_recientes: false,
     inconvenientes: false,
+    // Agent
+    tiene_agente: '', // '' | 'true' | 'false'
   });
 
   const EMPTY_ADV = {
@@ -947,7 +949,7 @@ export default function Inventario() {
     modelo_so: '', version_office: '', cpu_info: '', dir_ip: '',
     tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: '',
     atributo_id: '', atributo_valor: '',
-    con_notas_recientes: false, inconvenientes: false,
+    con_notas_recientes: false, inconvenientes: false, tiene_agente: '',
   };
 
   const filtersContainerRef = useRef(null);
@@ -983,6 +985,7 @@ export default function Inventario() {
     if (advFilters.atributo_id && advFilters.atributo_valor) count++;
     if (advFilters.con_notas_recientes) count++;
     if (advFilters.inconvenientes) count++;
+    if (advFilters.tiene_agente !== '') count++;
     return count;
   }, [advFilters]);
 
@@ -1026,6 +1029,8 @@ export default function Inventario() {
     }
     if (advFilters.con_notas_recientes) f.con_notas_recientes = true;
     if (advFilters.inconvenientes) f.inconvenientes = true;
+    if (advFilters.tiene_agente === 'true') f.tiene_agente = true;
+    if (advFilters.tiene_agente === 'false') f.tiene_agente = false;
     return f;
   }, [debouncedSearch, filterStatus, activeTab, advFilters, sortBy, sortDir]);
 
@@ -1614,7 +1619,7 @@ export default function Inventario() {
 
         {/* ── Pestañas ────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between flex-wrap gap-4 w-full">
-          <div className="flex flex-wrap sm:flex-nowrap gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-full sm:w-fit overflow-x-auto scroll-smooth" style={{ scrollbarWidth: 'none' }}>
             {[
               { key: 'Todos', label: 'Todos los bienes' },
               { key: 'Capitalizable', label: 'Bienes Capitalizables' },
@@ -1632,7 +1637,7 @@ export default function Inventario() {
                     setAdvFilters(prev => ({ ...prev, inconvenientes: false }));
                   }
                 }}
-                className={`flex-1 sm:flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${activeTab === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                className={`flex-none px-3 sm:px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap text-center ${activeTab === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
                 {tab.label}
@@ -1669,11 +1674,11 @@ export default function Inventario() {
                     className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scroll-smooth" style={{ scrollbarWidth: 'none' }}>
                   <select
                     value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setCursor(null); setCursors([]); }}
-                    className="flex-1 sm:flex-none text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
+                    className="flex-none text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white"
                   >
                     <option value="">Todos los estatus</option>
                     {catalogos?.catEstatusBienes?.map(status => (
@@ -1682,7 +1687,7 @@ export default function Inventario() {
                   </select>
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, con_notas_recientes: !p.con_notas_recientes })); setCursor(null); setCursors([]); }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${advFilters.con_notas_recientes
+                    className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${advFilters.con_notas_recientes
                       ? 'bg-amber-100 border-amber-200 text-amber-800 shadow-sm'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
@@ -1692,7 +1697,7 @@ export default function Inventario() {
                   </button>
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, inconvenientes: !p.inconvenientes })); setCursor(null); setCursors([]); }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${advFilters.inconvenientes
+                    className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${advFilters.inconvenientes
                       ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
@@ -1701,8 +1706,18 @@ export default function Inventario() {
                     <AlertTriangle size={14} /> Inconvenientes
                   </button>
                   <button
+                    onClick={() => { setAdvFilters(p => ({ ...p, tiene_agente: p.tiene_agente === 'true' ? '' : 'true' })); setCursor(null); setCursors([]); }}
+                    className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${advFilters.tiene_agente === 'true'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    title="Mostrar solo bienes que tienen el agente (.exe) instalado"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Agente Instalado
+                  </button>
+                  <button
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showAdvancedFilters || activeFilterCount > 0
+                    className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${showAdvancedFilters || activeFilterCount > 0
                       ? 'bg-green-50 border-green-300 text-green-700 shadow-sm'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
@@ -1710,14 +1725,14 @@ export default function Inventario() {
                     <SlidersHorizontal size={14} />
                     Filtros
                     {activeFilterCount > 0 && (
-                      <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-600 text-white font-bold">{activeFilterCount}</span>
+                      <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded-full bg-green-600 text-white font-bold">{activeFilterCount}</span>
                     )}
                   </button>
                   {/* Botón Reporte */}
                   {(activeTab === 'Todos' || activeTab === 'Capitalizable' || activeTab === 'No Capitalizable') && (
                     <button
                       onClick={() => { setShowReporte(r => !r); if (showAdvancedFilters) setShowAdvancedFilters(false); }}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all whitespace-nowrap ${showReporte
+                      className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${showReporte
                         ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}

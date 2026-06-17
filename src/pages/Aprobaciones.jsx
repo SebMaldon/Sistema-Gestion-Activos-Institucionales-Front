@@ -7,6 +7,7 @@ import {
 } from '../api/aprobaciones.queries';
 import { useApp } from '../context/AppContext';
 import RevisionCambiosModal from '../components/RevisionCambiosModal';
+import DetalleBienVisualModal from '../components/DetalleBienVisualModal';
 import { ClipboardCheck, Clock, User, Monitor, Search, RefreshCcw, Inbox } from 'lucide-react';
 
 export default function Aprobaciones() {
@@ -14,6 +15,7 @@ export default function Aprobaciones() {
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSolicitud, setSelectedSolicitud] = useState(null);
+  const [visualModalBienId, setVisualModalBienId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchSolicitudes = useCallback(async (showLoader = true) => {
@@ -182,8 +184,16 @@ export default function Aprobaciones() {
                       <div className="flex items-center gap-2">
                         <Monitor className="w-4 h-4 text-gray-400" />
                         <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            {sol.bien?.num_inv || sol.bien?.num_serie || datosP.num_serie || sol.bien_id?.substring(0, 8) + '...'}
+                          <p 
+                            className="text-sm font-medium text-blue-600 cursor-pointer hover:underline"
+                            onClick={() => {
+                              if (sol.bien_id && sol.bien_id !== 'N/A') {
+                                setVisualModalBienId(sol.bien_id);
+                              }
+                            }}
+                            title="Ver detalles del bien"
+                          >
+                            {sol.bien?.num_inv || sol.bien?.num_serie || datosP.num_serie || (sol.bien_id && sol.bien_id !== 'N/A' ? sol.bien_id.substring(0, 8) + '...' : 'N/A')}
                           </p>
                           <p className="text-xs text-gray-400">
                             {sol.bien?.modelo?.descrip_disp || datosP.clave_modelo || 'Sin modelo'}
@@ -223,6 +233,13 @@ export default function Aprobaciones() {
           onAprobar={handleAprobar}
           onRechazar={handleRechazar}
           onClose={() => setSelectedSolicitud(null)}
+        />
+      )}
+
+      {visualModalBienId && (
+        <DetalleBienVisualModal 
+          id_bien={visualModalBienId} 
+          onClose={() => setVisualModalBienId(null)} 
         />
       )}
     </div>

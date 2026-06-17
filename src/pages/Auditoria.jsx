@@ -6,6 +6,8 @@ import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Ac
 import { formatDateTime } from '../lib/utils';
 import { gql } from 'graphql-request';
 import MultiSelect from '../components/MultiSelect';
+import DetalleBienVisualModal from '../components/DetalleBienVisualModal';
+import DetalleIncidenciaWrapperModal from '../components/DetalleIncidenciaWrapperModal';
 
 const GET_BITACORA_LOOKUPS = gql`
   query GetBitacoraLookups {
@@ -37,7 +39,9 @@ function parseDetalles(jsonStr) {
   }
 }
 
-function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
+function DetalleJSONModal({ isOpen, onClose, log, catalogs, onVerBien, onVerIncidencia }) {
+  const isValidId = (val) => val && val !== 'N/A' && String(val).trim() !== '';
+
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'auto';
@@ -71,7 +75,28 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
           <div className="flex flex-wrap gap-4 mb-6">
             <div className="bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm flex-1 min-w-[200px]">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Módulo Afectado</p>
-              <p className="text-sm font-bold text-gray-800">{log.tabla_afectada} <span className="text-gray-400 ml-1">#{log.registro_afectado || 'N/A'}</span></p>
+              <p className="text-sm font-bold text-gray-800">
+                {log.tabla_afectada}{' '}
+                {isValidId(log.registro_afectado) && (log.tabla_afectada === 'Bienes' || log.tabla_afectada === 'Especificaciones_TI') ? (
+                  <span 
+                    className="text-indigo-500 hover:text-indigo-700 ml-1 cursor-pointer underline decoration-indigo-300 decoration-2 underline-offset-2" 
+                    onClick={() => onVerBien(log.registro_afectado)}
+                    title="Ver Ficha Técnica"
+                  >
+                    #{log.registro_afectado}
+                  </span>
+                ) : isValidId(log.registro_afectado) && log.tabla_afectada === 'Incidencias' ? (
+                  <span 
+                    className="text-indigo-500 hover:text-indigo-700 ml-1 cursor-pointer underline decoration-indigo-300 decoration-2 underline-offset-2" 
+                    onClick={() => onVerIncidencia(log.registro_afectado)}
+                    title="Ver Detalles de Incidencia"
+                  >
+                    #{log.registro_afectado}
+                  </span>
+                ) : (
+                  <span className="text-gray-400 ml-1">#{log.registro_afectado || 'N/A'}</span>
+                )}
+              </p>
             </div>
             <div className="bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm flex-1 min-w-[200px]">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Acción Realizada</p>
@@ -252,6 +277,12 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs }) {
 
 
 export default function Auditoria() {
+  const [modalLog, setModalLog] = useState(null);
+  const [visualModalBienId, setVisualModalBienId] = useState(null);
+  const [visualModalIncidenciaId, setVisualModalIncidenciaId] = useState(null);
+  
+  const isValidId = (val) => val && val !== 'N/A' && String(val).trim() !== '';
+
   const [currentPage, setCurrentPage] = useState(1);
   const setCursor = () => {};
   const setCursors = () => setCurrentPage(1);
@@ -266,7 +297,7 @@ export default function Auditoria() {
   const [filterFechaDesde, setFilterFechaDesde] = useState('');
   const [filterFechaHasta, setFilterFechaHasta] = useState('');
 
-  const [modalLog, setModalLog] = useState(null);
+
   const PAGE_SIZE = 10;
 
   // Cargar catálogos completos para mapear IDs a nombres en la bitácora
@@ -542,7 +573,23 @@ export default function Auditoria() {
                           <span className="font-bold text-[11px] text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200 uppercase tracking-wide flex-shrink-0">
                             {log.tabla_afectada}
                           </span>
-                          {log.registro_afectado && (
+                          {isValidId(log.registro_afectado) && (log.tabla_afectada === 'Bienes' || log.tabla_afectada === 'Especificaciones_TI') ? (
+                            <span 
+                              className="text-[11px] font-mono font-bold text-indigo-500 hover:text-indigo-700 truncate cursor-pointer underline decoration-indigo-300 decoration-2 underline-offset-2" 
+                              title="Ver Ficha Técnica"
+                              onClick={() => setVisualModalBienId(log.registro_afectado)}
+                            >
+                              #{log.registro_afectado}
+                            </span>
+                          ) : isValidId(log.registro_afectado) && log.tabla_afectada === 'Incidencias' ? (
+                            <span 
+                              className="text-[11px] font-mono font-bold text-indigo-500 hover:text-indigo-700 truncate cursor-pointer underline decoration-indigo-300 decoration-2 underline-offset-2" 
+                              title="Ver Detalles de Incidencia"
+                              onClick={() => setVisualModalIncidenciaId(log.registro_afectado)}
+                            >
+                              #{log.registro_afectado}
+                            </span>
+                          ) : isValidId(log.registro_afectado) && (
                             <span 
                               className="text-[11px] font-mono font-bold text-gray-400 truncate" 
                               title={log.registro_afectado}
@@ -594,7 +641,23 @@ export default function Auditoria() {
                       <span className="text-[10px] font-mono text-gray-400">{formatDateTime(log.fecha_movimiento)}</span>
                     </div>
                     <p className="text-xs text-gray-600 font-semibold mt-0.5 truncate">
-                      Módulo: {log.tabla_afectada} {log.registro_afectado ? (
+                      Módulo: {log.tabla_afectada} {isValidId(log.registro_afectado) && (log.tabla_afectada === 'Bienes' || log.tabla_afectada === 'Especificaciones_TI') ? (
+                        <span 
+                          className="font-mono text-indigo-500 hover:text-indigo-700 truncate cursor-pointer underline decoration-indigo-300 decoration-2 underline-offset-2" 
+                          onClick={() => setVisualModalBienId(log.registro_afectado)}
+                          title="Ver Ficha Técnica"
+                        >
+                          #{log.registro_afectado}
+                        </span>
+                      ) : isValidId(log.registro_afectado) && log.tabla_afectada === 'Incidencias' ? (
+                        <span 
+                          className="font-mono text-indigo-500 hover:text-indigo-700 truncate cursor-pointer underline decoration-indigo-300 decoration-2 underline-offset-2" 
+                          onClick={() => setVisualModalIncidenciaId(log.registro_afectado)}
+                          title="Ver Detalles de Incidencia"
+                        >
+                          #{log.registro_afectado}
+                        </span>
+                      ) : isValidId(log.registro_afectado) ? (
                         <span 
                           className="font-mono text-gray-400 truncate" 
                           title={log.registro_afectado}
@@ -724,7 +787,28 @@ export default function Auditoria() {
         </div>
       </div>
 
-      <DetalleJSONModal isOpen={!!modalLog} onClose={() => setModalLog(null)} log={modalLog} catalogs={catalogs} />
+      <DetalleJSONModal 
+        isOpen={!!modalLog} 
+        onClose={() => setModalLog(null)} 
+        log={modalLog} 
+        catalogs={catalogs} 
+        onVerBien={setVisualModalBienId} 
+        onVerIncidencia={setVisualModalIncidenciaId} 
+      />
+      
+      {visualModalBienId && (
+        <DetalleBienVisualModal 
+          id_bien={visualModalBienId} 
+          onClose={() => setVisualModalBienId(null)} 
+        />
+      )}
+
+      {visualModalIncidenciaId && (
+        <DetalleIncidenciaWrapperModal 
+          id_incidencia={visualModalIncidenciaId} 
+          onClose={() => setVisualModalIncidenciaId(null)} 
+        />
+      )}
     </div>
   );
 }

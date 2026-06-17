@@ -116,6 +116,52 @@ export const GET_INCIDENCIAS_QUERY = gql`
   }
 `;
 
+export const GET_INCIDENCIA_BY_ID_QUERY = gql`
+  query GetIncidenciaById($id_incidencia: ID!) {
+    incidencia(id_incidencia: $id_incidencia) {
+      id_incidencia
+      id_bien
+      id_tipo_incidencia
+      descripcion_falla
+      estatus_reparacion
+      fecha_reporte
+      resolucion_textual
+      fecha_resolucion
+      alias
+      requerimiento
+      id_unidad
+      tipoIncidencia {
+        id_tipo_incidencia
+        nombre_tipo
+      }
+      unidad {
+        clave
+        descripcion
+      }
+      bien {
+        num_serie
+        num_inv
+        clave_presupuestal
+        modelo {
+          descrip_disp
+        }
+        categoria {
+          nombre_categoria
+        }
+        unidad {
+          clave
+          descripcion
+        }
+      }
+      usuarioGeneraReporte {
+        id_usuario
+        nombre_completo
+        matricula
+      }
+    }
+  }
+`;
+
 export const GET_DASHBOARD_INCIDENCIAS_QUERY = gql`
   query GetDashboardIncidencias($first: Int) {
     incidencias(pagination: { first: $first }) {
