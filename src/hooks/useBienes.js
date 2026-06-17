@@ -40,6 +40,7 @@ export function mapBienNode(node) {
     equipoAsignado: node.equipoAsignado || null,
     modelo: node.modelo,
     unidad: node.unidad,
+    segmento: node.segmento,
     inmueble: node.inmueble,
     unidadMedida: node.unidadMedida,
     usuarioResguardo: node.usuarioResguardo,

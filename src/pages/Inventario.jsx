@@ -1495,7 +1495,7 @@ export default function Inventario() {
     } else {
       updateBien({ id_bien: modalForm.id_bien, ...vars }, {
         onSuccess: () => {
-          if (showTI && modalForm.id_bien) {
+          if (showTI && modalForm.id_bien && vars.estatus_operativo !== 'INACTIVO') {
             const tiData = parseTI();
             const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
             if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
