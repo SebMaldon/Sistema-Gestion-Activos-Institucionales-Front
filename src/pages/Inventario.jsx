@@ -940,6 +940,11 @@ export default function Inventario() {
     inconvenientes: false,
     // Agent
     tiene_agente: '', // '' | 'true' | 'false'
+    // Fechas
+    fecha_adquisicion_desde: '',
+    fecha_adquisicion_hasta: '',
+    fecha_actualizacion_desde: '',
+    fecha_actualizacion_hasta: '',
   });
 
   const EMPTY_ADV = {
@@ -950,6 +955,7 @@ export default function Inventario() {
     tiene_garantia: '', garantia_vigente: '', garantia_fin_desde: '', garantia_fin_hasta: '',
     atributo_id: '', atributo_valor: '',
     con_notas_recientes: false, inconvenientes: false, tiene_agente: '',
+    fecha_adquisicion_desde: '', fecha_adquisicion_hasta: '', fecha_actualizacion_desde: '', fecha_actualizacion_hasta: '',
   };
 
   const filtersContainerRef = useRef(null);
@@ -986,6 +992,8 @@ export default function Inventario() {
     if (advFilters.con_notas_recientes) count++;
     if (advFilters.inconvenientes) count++;
     if (advFilters.tiene_agente !== '') count++;
+    if (advFilters.fecha_adquisicion_desde || advFilters.fecha_adquisicion_hasta) count++;
+    if (advFilters.fecha_actualizacion_desde || advFilters.fecha_actualizacion_hasta) count++;
     return count;
   }, [advFilters]);
 
@@ -1031,6 +1039,10 @@ export default function Inventario() {
     if (advFilters.inconvenientes) f.inconvenientes = true;
     if (advFilters.tiene_agente === 'true') f.tiene_agente = true;
     if (advFilters.tiene_agente === 'false') f.tiene_agente = false;
+    if (advFilters.fecha_adquisicion_desde) f.fecha_adquisicion_desde = advFilters.fecha_adquisicion_desde;
+    if (advFilters.fecha_adquisicion_hasta) f.fecha_adquisicion_hasta = advFilters.fecha_adquisicion_hasta;
+    if (advFilters.fecha_actualizacion_desde) f.fecha_actualizacion_desde = advFilters.fecha_actualizacion_desde;
+    if (advFilters.fecha_actualizacion_hasta) f.fecha_actualizacion_hasta = advFilters.fecha_actualizacion_hasta;
     return f;
   }, [debouncedSearch, filterStatus, activeTab, advFilters, sortBy, sortDir]);
 
@@ -2028,6 +2040,45 @@ export default function Inventario() {
                       </div>
                     </div>
 
+                    {/* Sección: Fechas */}
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Calendar size={11} /> Fechas de Registro y Actualización</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Adquisición Desde</label>
+                          <input type="date"
+                            value={advFilters.fecha_adquisicion_desde}
+                            onChange={e => { setAdvFilters(p => ({ ...p, fecha_adquisicion_desde: e.target.value })); setCursor(null); setCursors([]); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Adquisición Hasta</label>
+                          <input type="date"
+                            value={advFilters.fecha_adquisicion_hasta}
+                            onChange={e => { setAdvFilters(p => ({ ...p, fecha_adquisicion_hasta: e.target.value })); setCursor(null); setCursors([]); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Actualización Desde</label>
+                          <input type="date"
+                            value={advFilters.fecha_actualizacion_desde}
+                            onChange={e => { setAdvFilters(p => ({ ...p, fecha_actualizacion_desde: e.target.value })); setCursor(null); setCursors([]); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 mb-1">Actualización Hasta</label>
+                          <input type="date"
+                            value={advFilters.fecha_actualizacion_hasta}
+                            onChange={e => { setAdvFilters(p => ({ ...p, fecha_actualizacion_hasta: e.target.value })); setCursor(null); setCursors([]); }}
+                            className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-green-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Sección: Atributos Técnicos (EAV) */}
                     {showEAVFilter && (
                       <div>
@@ -2635,7 +2686,7 @@ export default function Inventario() {
                 {fichaTabs === 'tecnico' && (
                   <div className="space-y-4 fade-in">
                     {/* Especificaciones TI */}
-                    {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
+                    {(fichaMode === 'PC' || fichaMode === 'LAPTOP' || fichaMode === 'OTHER') && (
                       <div className="rounded-xl border border-blue-100 overflow-hidden">
                         <div className="bg-blue-50 px-4 py-2.5 flex items-center gap-2">
                           <Monitor size={15} className="text-blue-600" />
@@ -2644,21 +2695,22 @@ export default function Inventario() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
                           {(() => {
                             const ti = activeFicha.especificacionTI || {};
+                            const show = (val, isNet = false) => fichaMode !== 'OTHER' || isNet || !!val;
                             return (
                               <>
-                                <InfoField icon={<Monitor size={13} />} label="Host Name" value={fmt(ti.nombre_host)} />
-                                <InfoField icon={<Cpu size={13} />} label="CPU" value={fmt(ti.cpu_info)} />
-                                <InfoField icon={<Server size={13} />} label="RAM" value={ti.ram_gb ? `${ti.ram_gb} GB` : '—'} />
-                                <InfoField icon={<HardDrive size={13} />} label="Almacenamiento" value={ti.almacenamiento_gb ? `${ti.almacenamiento_gb} GB` : '—'} />
+                                {show(ti.nombre_host) && <InfoField icon={<Monitor size={13} />} label="Host Name" value={fmt(ti.nombre_host)} />}
+                                {show(ti.cpu_info) && <InfoField icon={<Cpu size={13} />} label="CPU" value={fmt(ti.cpu_info)} />}
+                                {show(ti.ram_gb) && <InfoField icon={<Server size={13} />} label="RAM" value={ti.ram_gb ? `${ti.ram_gb} GB` : '—'} />}
+                                {show(ti.almacenamiento_gb) && <InfoField icon={<HardDrive size={13} />} label="Almacenamiento" value={ti.almacenamiento_gb ? `${ti.almacenamiento_gb} GB` : '—'} />}
                                 <InfoField icon={<Wifi size={13} />} label="Dirección IP" value={fmt(ti.dir_ip)} mono />
                                 <InfoField icon={<Wifi size={13} />} label="MAC Address" value={fmt(ti.mac_address)} mono />
                                 <InfoField icon={<Wifi size={13} />} label="Dir. MAC Alt" value={fmt(ti.dir_mac)} mono />
-                                <InfoField icon={<Monitor size={13} />} label="Sistema Op." value={fmt(ti.modelo_so)} />
-                                <InfoField icon={<Monitor size={13} />} label="Versión Office" value={fmt(ti.version_office)} />
-                                <InfoField icon={<Calendar size={13} />} label="Último Escaneo" value={formatDateTime(ti.last_scan)} />
-                                <InfoField icon={<Tag size={13} />} label="Win Serial" value={fmt(ti.windows_serial)} mono />
-                                <InfoField icon={<Wifi size={13} />} label="Pto. Red" value={fmt(ti.puerto_red)} />
-                                <InfoField icon={<Wifi size={13} />} label="Switch Red" value={fmt(ti.switch_red)} />
+                                {show(ti.modelo_so) && <InfoField icon={<Monitor size={13} />} label="Sistema Op." value={fmt(ti.modelo_so)} />}
+                                {show(ti.version_office) && <InfoField icon={<Monitor size={13} />} label="Versión Office" value={fmt(ti.version_office)} />}
+                                {show(ti.last_scan) && <InfoField icon={<Calendar size={13} />} label="Último Escaneo" value={formatDateTime(ti.last_scan)} />}
+                                {show(ti.windows_serial) && <InfoField icon={<Tag size={13} />} label="Win Serial" value={fmt(ti.windows_serial)} mono />}
+                                {show(ti.puerto_red, true) && <InfoField icon={<Wifi size={13} />} label="Pto. Red" value={fmt(ti.puerto_red)} />}
+                                {show(ti.switch_red, true) && <InfoField icon={<Wifi size={13} />} label="Switch Red" value={fmt(ti.switch_red)} />}
                               </>
                             );
                           })()}

@@ -1124,7 +1124,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
     const nombreTipo = bien.modelo?.tipoDispositivo?.nombre_tipo ?? null;
     const mode = getDeviceMode(nombreTipo, bien.categoria?.nombre_categoria);
     setDeviceMode(mode);
-    setShowTI(mode === 'PC' || mode === 'LAPTOP');
+    setShowTI(mode === 'PC' || mode === 'LAPTOP' || mode === 'OTHER');
     setFormErrors({});
     setPendingEavValues({});
     setPendingMonitors([]);
@@ -1199,7 +1199,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
     const mode = getDeviceMode(tipo?.nombre_tipo ?? null, null);
     console.log('[handleModeloChange]', { clave, tipoDispStr, nombre_tipo: tipo?.nombre_tipo, mode });
     setDeviceMode(mode);
-    setShowTI(mode === 'PC' || mode === 'LAPTOP');
+    setShowTI(mode === 'PC' || mode === 'LAPTOP' || mode === 'OTHER');
     setForm(f => ({ ...f, clave_modelo: clave }));
   }, [catalogos?.modelos, catalogos?.tipos]);
 
@@ -1910,7 +1910,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                         { key: 'puerto_red',         label: 'Puerto de Red',         placeholder: 'Pto. 12', form: 'ti' },
                         { key: 'switch_red',         label: 'Switch (IP/Nombre)',    placeholder: '10.28.X.X', form: 'ti' },
                         { key: 'last_scan',          label: 'Último Escaneo',        placeholder: '', type: 'datetime-local', form: 'ti' },
-                      ].map(({ key, label, placeholder, type = 'text' }) => (
+                      ].filter(({ key }) => deviceMode !== 'OTHER' || key === 'puerto_red' || key === 'switch_red' || !!tiForm[key]).map(({ key, label, placeholder, type = 'text' }) => (
                         <div key={key}>
                           <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>
                           <input
@@ -1986,7 +1986,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
                     </div>
                   )}
                   {/* — Cuentas PC (1:N) — */}
-                  {showTI && (
+                  {showTI && deviceMode !== 'OTHER' && (
                     <div className="border-t border-blue-100 p-4">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide flex items-center gap-1.5">
