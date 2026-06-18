@@ -1209,7 +1209,7 @@ export default function Incidencias() {
       {tab === 'historico' && (
         <div className="sm:flex-1 sm:min-h-0 sm:flex sm:flex-col sm:overflow-hidden">
           <TablaHistorico 
-            canEdit={idRol === 1} 
+            canEdit={canEdit} 
             canDelete={idRol === 1} 
             onEdit={handleEdit} 
             onDelete={handleDelete} 

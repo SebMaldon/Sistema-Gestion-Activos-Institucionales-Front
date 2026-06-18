@@ -16,6 +16,7 @@ export default function Unidades() {
   const usuario = useAuthStore((s) => s.usuario);
   const idRol = usuario?.id_rol ?? 3;
   const isPrivileged = idRol === 1 || idRol === 2;
+  const canDelete = idRol === 1;
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [unidadToShow, setUnidadToShow] = useState(null);
@@ -410,7 +411,7 @@ export default function Unidades() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(node); }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit2 size={18} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(node); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>
+                        {canDelete && <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(node); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar"><Trash2 size={18} /></button>}
                       </div>
                     </td>
                   )}

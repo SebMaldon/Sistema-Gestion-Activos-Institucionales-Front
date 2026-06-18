@@ -30,6 +30,7 @@ const HighlightText = ({ text, highlight }) => {
 export default function Correspondencia() {
   const usuario = useAuthStore((s) => s.usuario);
   const isMaestroAdmin = usuario?.id_rol === 1 || usuario?.id_rol === 2;
+  const canDelete = usuario?.id_rol === 1;
   const queryClient = useQueryClient();
   const { showToast } = useApp();
 
@@ -339,9 +340,11 @@ export default function Correspondencia() {
                             <button onClick={() => handleEdit(corr)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Editar">
                               <Edit size={16} />
                             </button>
-                            <button onClick={() => handleDelete(corr)} className="text-red-500 hover:text-red-700 transition-colors" title="Eliminar" disabled={deleteMutation.isPending}>
-                              <Trash2 size={16} />
-                            </button>
+                            {canDelete && (
+                              <button onClick={() => handleDelete(corr)} className="text-red-500 hover:text-red-700 transition-colors" title="Eliminar" disabled={deleteMutation.isPending}>
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
