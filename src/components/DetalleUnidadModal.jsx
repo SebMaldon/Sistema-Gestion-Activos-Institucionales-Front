@@ -159,6 +159,7 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
                 <DetailItem icon={Layers} label="No. unidad" value={unidad.no_inmueble} color="purple" />
                 <DetailItem icon={Layers} label="Ppal" value={unidad.ppal} color="purple" />
                 <DetailItem icon={Layers} label="Clave A" value={unidad.clave_a} color="purple" />
+                <DetailItem icon={Layers} label="Clave Zona" value={unidad.clave_zona} color="purple" />
                 <DetailItem icon={Layers} label="Zona Reporte" value={unidad.zona_reporte} color="purple" />
               </div>
             </section>
