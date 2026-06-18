@@ -203,9 +203,9 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
     'UBICACIÓN', '', '', '',
     // General (4 cols: Estatus, Fecha Adq., Capitalizable, Cantidad)
     'GENERAL', '', '', '',
-    // TI (13 cols: 18-30)
-    'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '',
-    // Garantía (3 cols: 31-33)
+    // TI (14 cols: 18-31)
+    'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '', '',
+    // Garantía (3 cols: 32-34)
     'GARANTÍA', '', '',
   ];
   wsData.push(groupRow);
@@ -226,6 +226,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
     'CPU', 'RAM (GB)', 'Almacenamiento (GB)', 'Dir. IP', 'Dir. MAC',
     'MAC Address', 'Nombre Host', 'S.O.', 'Office', 'Puerto Red', 'Switch',
     'N° Serie Windows', 'Último Escaneo',
+    'Cuentas Registradas (Usuario | Correo | Tipo)',
     // Garantía
     'Garantía', 'Garantía Vence', 'Proveedor Garantía',
   ];
@@ -285,6 +286,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
       b.especificacionTI?.switch_red || '',
       b.especificacionTI?.windows_serial || '',
       fmtFecha(b.especificacionTI?.last_scan),
+      (b.cuentasPC || []).map(c => `• ${c.cuenta_windows || 'Sin usuario'} | ${c.correo || 'Sin correo'} | ${c.tipo_user || 'Sin rol'}`).join('\n') || '',
       // Garantía
       g ? 'Sí' : 'No',
       g ? fmtFecha(g.fecha_fin) : '',
@@ -310,6 +312,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
     { wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
     { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 },
     { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 22 }, { wch: 18 },
+    { wch: 45 },
     // Garantía
     { wch: 10 }, { wch: 16 }, { wch: 26 },
   ];
@@ -325,10 +328,10 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
   }
 
   // Rangos de grupos: [colStart, colEnd] (0-indexed)
-  // N°(0) | ID(1-3) | DESC(4-9) | UBIC(10-13) | GEN(14-17) | TI(18-30) | GAR(31-33)
+  // N°(0) | ID(1-3) | DESC(4-9) | UBIC(10-13) | GEN(14-17) | TI(18-31) | GAR(32-34)
   const groupRowIdx = dataStartRow;
   const groupRanges = [
-    [1, 3], [4, 9], [10, 13], [14, 17], [18, 30], [31, 33],
+    [1, 3], [4, 9], [10, 13], [14, 17], [18, 31], [32, 34],
   ];
   groupRanges.forEach(([start, end]) => {
     merges.push({ s: { r: groupRowIdx, c: start }, e: { r: groupRowIdx, c: end } });
@@ -397,9 +400,9 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
         font: { sz: 9, color: { rgb: COLOR_TEXT } },
         fill: { fgColor: { rgb: c === 0 ? (isEven ? 'F0FDF4' : 'DCFCE7') : baseFill } },
         alignment: {
-          horizontal: c === 0 ? 'center' : (c >= 18 && c <= 30 ? 'center' : 'left'),
+          horizontal: c === 0 ? 'center' : (c >= 18 && c <= 31 ? 'center' : 'left'),
           vertical: 'center',
-          wrapText: false,
+          wrapText: (c === 31),
         },
         border: {
           right:  { style: 'hair', color: { rgb: 'E5E7EB' } },
