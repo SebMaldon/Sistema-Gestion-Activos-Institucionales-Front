@@ -176,7 +176,7 @@ export default function App() {
             </RoleRoute>
           } />
           <Route path="/movimientos" element={
-            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+            <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO, ROL_USUARIO]}>
               <AppLayout page="movimientos"><Movimientos /></AppLayout>
             </RoleRoute>
           } />
