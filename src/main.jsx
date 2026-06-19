@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      staleTime: 2 * 60 * 1000,      // 2 minutos por defecto
+      staleTime: 0,                  // Cambiado para refrescar siempre
       gcTime: 10 * 60 * 1000,        // 10 minutos en caché
       retry: (failureCount, error) => {
         // No reintentar si es error de autenticación
@@ -28,7 +28,7 @@ const queryClient = new QueryClient({
         if (code === 'UNAUTHENTICATED') return false;
         return failureCount < 1;
       },
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,    // Restaurado para que refresque al cambiar de ventana
     },
   },
 });
