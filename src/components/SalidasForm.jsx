@@ -100,6 +100,14 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
   const [nombreAutoFilled, setNombreAutoFilled] = useState(false);
   const matriculaTimer = useRef(null);
 
+  const [usuarioSearch, setUsuarioSearch] = useState('');
+  const [debouncedUsuarioSearch, setDebouncedUsuarioSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUsuarioSearch(usuarioSearch), 400);
+    return () => clearTimeout(timer);
+  }, [usuarioSearch]);
+
   // ─── Queries ──────────────────────────────────────────────
   const { data: folioData, refetch: refetchFolio } = useQuery({
     queryKey: ['folioSalidas'],
@@ -122,10 +130,11 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
   });
 
   const { data: usuariosData, isLoading: isLoadingUsuarios } = useQuery({
-    queryKey: ['usuariosActivos'],
+    queryKey: ['usuariosActivos', debouncedUsuarioSearch],
     queryFn: () => gqlClient.request(GET_USUARIOS, {
       estatus: true,
-      pagination: { first: 1000 },
+      search: debouncedUsuarioSearch || undefined,
+      pagination: { first: 50 },
     }),
   });
   const usuariosList = usuariosData?.usuarios?.edges?.map((e) => e.node) || [];
@@ -750,34 +759,30 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
             {/* Autocompletado de Usuario */}
             <div className="bg-teal-50/50 p-3 rounded-lg border border-teal-100">
               <label className="block text-xs font-semibold text-teal-800 mb-1">Buscar Usuario (Opcional)</label>
-              {isLoadingUsuarios ? (
-                <div className="flex items-center text-xs text-gray-500">
-                  <Loader2 size={14} className="animate-spin mr-2" /> Cargando usuarios…
-                </div>
-              ) : (
-                <SearchableSelect
-                  value=""
-                  onChange={(matricula) => {
-                    const user = usuariosList.find(u => u.matricula === matricula);
-                    if (user) {
-                      setForm(p => {
-                        const next = { ...p, matricula: user.matricula, solicitante: user.nombre_completo };
-                        if (user.unidadFisica) {
-                          next.adscripcion = user.unidadFisica.descripcion || user.unidadFisica.desc_corta || next.adscripcion;
-                        }
-                        return next;
-                      });
-                      setNombreAutoFilled(true);
-                    }
-                  }}
-                  options={usuariosList.map((u) => ({
-                    value: u.matricula,
-                    label: `${u.matricula} — ${u.nombre_completo}`,
-                    searchKey: `${u.matricula} ${u.nombre_completo}`
-                  }))}
-                  placeholder="Busca por nombre o matrícula para autollenar…"
-                />
-              )}
+              <SearchableSelect
+                value=""
+                onChange={(matricula) => {
+                  const user = usuariosList.find(u => u.matricula === matricula);
+                  if (user) {
+                    setForm(p => {
+                      const next = { ...p, matricula: user.matricula, solicitante: user.nombre_completo };
+                      if (user.unidadFisica) {
+                        next.adscripcion = user.unidadFisica.descripcion || user.unidadFisica.desc_corta || next.adscripcion;
+                      }
+                      return next;
+                    });
+                    setNombreAutoFilled(true);
+                  }
+                }}
+                onInputChange={(val) => setUsuarioSearch(val)}
+                options={usuariosList.map((u) => ({
+                  value: u.matricula,
+                  label: `${u.matricula} — ${u.nombre_completo}`,
+                  searchKey: `${u.matricula} ${u.nombre_completo}`
+                }))}
+                placeholder="Busca por nombre o matrícula para autollenar…"
+                isLoading={isLoadingUsuarios}
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

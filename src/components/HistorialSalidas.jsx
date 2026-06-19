@@ -129,7 +129,7 @@ export default function HistorialSalidas() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por folio, solicitante, motivo, responsable..."
+            placeholder="Buscar por folio, solicitante, motivo, num serie, num inv, modelo..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
