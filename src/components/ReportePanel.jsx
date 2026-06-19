@@ -280,7 +280,7 @@ export default function ReportePanel({ serverFilter, activeTab, onClose }) {
  {view === 'detalle' && (
  <button 
  onClick={() => { setView('lista'); setSelectedUnidad(null); setSearchUbicacion(''); setUbicacionTipoFilter([]); }}
- className="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 transition-colors mr-1"
+ className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors mr-1"
  >
  <ArrowLeft size={18} />
  </button>
@@ -295,7 +295,7 @@ export default function ReportePanel({ serverFilter, activeTab, onClose }) {
  </div>
  </div>
  
- <button onClick={onClose} className="p-2 rounded-xl bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 transition-colors relative z-10">
+ <button onClick={onClose} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors relative z-10">
  <X size={20} />
  </button>
  </div>

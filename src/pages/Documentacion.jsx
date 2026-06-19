@@ -388,7 +388,7 @@ export default function Documentacion() {
  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans">
  {/* Navbar */}
  <nav className="bg-[#00472e] dark:bg-[#002618] text-white shadow-lg px-6 py-4 flex items-center gap-4 sticky top-0 z-50">
- <Link to="/" className="p-2 hover:bg-white dark:bg-gray-800/10 dark:hover:bg-gray-700/10 rounded-xl transition-colors" title="Volver al inicio">
+ <Link to="/" className="p-2 hover:bg-white/20 dark:hover:bg-gray-700/10 rounded-xl transition-colors" title="Volver al inicio">
  <ArrowLeft className="w-5 h-5" />
  </Link>
  <div className="flex items-center gap-3 flex-1">
@@ -398,7 +398,7 @@ export default function Documentacion() {
  <p className="text-green-200/60 text-xs">Ecosistema de Gestión de Activos — IMSS Delegación Nayarit</p>
  </div>
  </div>
- <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 rounded-lg text-xs font-semibold text-green-100">
+ <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-lg text-xs font-semibold text-green-100">
  <Layers size={13} /> v2.4.1
  </span>
  </nav>

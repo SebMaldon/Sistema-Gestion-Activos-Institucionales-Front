@@ -102,7 +102,7 @@ export default function Sidebar() {
           {/* X solo en mobile */}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:bg-white dark:bg-gray-800/10 hover:text-white transition-colors"
+            className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition-colors"
           >
             <X size={18} />
           </button>

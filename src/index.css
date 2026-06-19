@@ -130,6 +130,10 @@ body.zoom-tables-enabled tbody td {
     transition: transform 0.2s ease-in-out, z-index 0s, box-shadow 0.2s;
     transform-origin: left center;
 }
+body.zoom-tables-enabled tbody td:last-child,
+.hover-cell-zoom:last-child {
+    transform-origin: right center;
+}
 body.zoom-tables-enabled tbody td:hover {
     transform: scale(var(--hover-zoom-scale, 1.15));
     z-index: 50;

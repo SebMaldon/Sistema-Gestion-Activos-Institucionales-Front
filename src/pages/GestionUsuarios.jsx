@@ -84,7 +84,7 @@ function ModalHeader({ title, subtitle, onClose }) {
  <h2 className="text-xl font-bold">{title}</h2>
  {subtitle && <p className="text-green-100 text-sm mt-1">{subtitle}</p>}
  </div>
- <button onClick={onClose} className="p-2 bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 rounded-xl transition-colors">
+ <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
  <X size={20} />
  </button>
  </div>

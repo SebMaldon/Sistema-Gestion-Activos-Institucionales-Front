@@ -182,7 +182,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  <p className="text-green-100 text-sm mt-1">{initialData ? `Editando folio ${initialData.Folio}` : 'Registrar un nuevo oficio o correspondencia'}</p>
  </div>
  <Dialog.Close asChild>
- <button className="p-2 bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 rounded-xl transition-colors">
+ <button className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
  <X size={20} />
  </button>
  </Dialog.Close>

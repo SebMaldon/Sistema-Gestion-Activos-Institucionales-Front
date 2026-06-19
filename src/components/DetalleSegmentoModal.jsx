@@ -252,7 +252,7 @@ export default function DetalleSegmentoModal({ isOpen, onClose, segmento }) {
  onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
  >
  <button 
- className="absolute top-4 right-4 p-3 bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 text-white rounded-full transition-colors backdrop-blur-sm"
+ className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-sm"
  onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
  title="Cerrar imagen"
  >

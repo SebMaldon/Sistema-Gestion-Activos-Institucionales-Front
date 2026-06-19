@@ -563,7 +563,7 @@ export default function ExportExcelModal({
  </div>
  <button
  onClick={onClose}
- className="p-1.5 rounded-lg bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 text-white transition-colors"
+ className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
  >
  <X size={16} />
  </button>

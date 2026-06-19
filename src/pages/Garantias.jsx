@@ -55,7 +55,7 @@ function Modal({ onClose, title, subtitle, children, wide = false, small = false
  {subtitle && <p className="text-sm text-green-100 mt-0.5">{subtitle}</p>}
  </div>
  <button onClick={onClose}
- className="w-8 h-8 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 transition-colors">
+ className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
  <X size={20} />
  </button>
  </div>

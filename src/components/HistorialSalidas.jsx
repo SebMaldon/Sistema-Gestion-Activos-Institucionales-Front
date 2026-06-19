@@ -26,7 +26,7 @@ function Modal({ onClose, title, children }) {
  <div className="bg-teal-700 px-5 sm:px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
  <h3 className="text-xl font-bold">{title}</h3>
  <button onClick={onClose}
- className="w-8 h-8 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/20 dark:hover:bg-gray-700/20 transition-colors">
+ className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
  <X size={20} />
  </button>
  </div>
