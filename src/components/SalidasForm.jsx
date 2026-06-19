@@ -24,7 +24,7 @@ import * as XLSX from 'xlsx';
 import { buildPDFBytes, ROWS_PER_PAGE } from '../utils/pdfSalidas';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
-const ROLES_MAP     = { MAESTRO: 1 };
+const ROLES_MAP = { MAESTRO: 1 };
 
 // Nombre del campo PDF para fila i (1-indexed), columna col (1-3)
 const pdfRowField = (row, col) => {
@@ -35,26 +35,26 @@ const pdfRowField = (row, col) => {
 // ── Componente ────────────────────────────────────────────────────────────────
 export default function SalidasForm({ isEditMode = false, initialData = null, onClose, onSuccessCallback }) {
   const { showToast } = useApp();
-  const usuario   = useAuthStore((s) => s.usuario);
+  const usuario = useAuthStore((s) => s.usuario);
   const isMaestro = usuario?.id_rol === ROLES_MAP.MAESTRO;
   const queryClient = useQueryClient();
   const { data: catalogos } = useCatalogosBienes();
 
   // ─── Formulario ────────────────────────────────────────────
   const [form, setForm] = useState({
-    solicitante:     initialData?.solicitante || '',
-    matricula:       initialData?.matricula || '',
-    adscripcion:     initialData?.adscripcion || '',
-    identificacion:  initialData?.identificacion || '',
-    empresa:         initialData?.empresa || 'IMSS',
-    telefono:        initialData?.telefono || '',
-    motivo:          initialData?.motivo || '',
-    observaciones:   initialData?.observaciones || '',
-    devolucion:      initialData?.sujeto_devolucion ? 'SI' : 'NO',
+    solicitante: initialData?.solicitante || '',
+    matricula: initialData?.matricula || '',
+    adscripcion: initialData?.adscripcion || '',
+    identificacion: initialData?.identificacion || '',
+    empresa: initialData?.empresa || 'IMSS',
+    telefono: initialData?.telefono || '',
+    motivo: initialData?.motivo || '',
+    observaciones: initialData?.observaciones || '',
+    devolucion: initialData?.sujeto_devolucion ? 'SI' : 'NO',
     fechaDevolucion: initialData?.fecha_devolucion ? new Date(initialData.fecha_devolucion).toISOString().split('T')[0] : '',
-    responsable:     initialData?.responsable || '',
-    origenBienes:    initialData?.origen_bienes || 'COORDINACIÓN DE INFORMÁTICA',
-    fechaSalidaDia:  initialData?.fecha_salida ? new Date(initialData.fecha_salida).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    responsable: initialData?.responsable || '',
+    origenBienes: initialData?.origen_bienes || 'COORDINACIÓN DELEGACIONAL DE INFORMÁTICA',
+    fechaSalidaDia: initialData?.fecha_salida ? new Date(initialData.fecha_salida).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
   });
 
   const [bienesSeleccionados, setBienesSeleccionados] = useState(
@@ -83,32 +83,32 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
   }, [bienesSearch]);
 
   // ─── Flujo PDF ─────────────────────────────────────────────
-  const [etapa, setEtapa]                 = useState('formulario'); // 'formulario'|'preview'|'confirmado'
-  const [isGenerando, setIsGenerando]     = useState(false);
+  const [etapa, setEtapa] = useState('formulario'); // 'formulario'|'preview'|'confirmado'
+  const [isGenerando, setIsGenerando] = useState(false);
   const [isConfirmando, setIsConfirmando] = useState(false);
-  const [previewUrl, setPreviewUrl]       = useState(null);
-  const [finalUrl, setFinalUrl]           = useState(null);
-  const [folioUsado, setFolioUsado]       = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [finalUrl, setFinalUrl] = useState(null);
+  const [folioUsado, setFolioUsado] = useState(null);
 
   // ─── Panel Maestro ─────────────────────────────────────────
   const [showGestionFolio, setShowGestionFolio] = useState(false);
   const [folioManualInput, setFolioManualInput] = useState('');
-  const [isSettingFolio, setIsSettingFolio]     = useState(false);
+  const [isSettingFolio, setIsSettingFolio] = useState(false);
 
   // ─── Autocompletado matrícula ──────────────────────────────
-  const [matriculaQuery, setMatriculaQuery]     = useState('');
+  const [matriculaQuery, setMatriculaQuery] = useState('');
   const [nombreAutoFilled, setNombreAutoFilled] = useState(false);
   const matriculaTimer = useRef(null);
 
   // ─── Queries ──────────────────────────────────────────────
   const { data: folioData, refetch: refetchFolio } = useQuery({
     queryKey: ['folioSalidas'],
-    queryFn:  () => gqlClient.request(GET_FOLIO_SALIDAS),
+    queryFn: () => gqlClient.request(GET_FOLIO_SALIDAS),
   });
 
   const { data: bienesData, isLoading: isLoadingBienes } = useQuery({
     queryKey: ['bienes', 'TODOS', debouncedBienesSearch],
-    queryFn:  () => gqlClient.request(GET_BIENES_QUERY, {
+    queryFn: () => gqlClient.request(GET_BIENES_QUERY, {
       filter: { search: debouncedBienesSearch },
       pagination: { first: 20 },
     }),
@@ -116,14 +116,14 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
 
   const { data: usuarioMatData } = useQuery({
     queryKey: ['usuarioPorMatricula', matriculaQuery],
-    queryFn:  () => gqlClient.request(GET_USUARIO_POR_MATRICULA, { matricula: matriculaQuery }),
-    enabled:  matriculaQuery.length >= 3,
+    queryFn: () => gqlClient.request(GET_USUARIO_POR_MATRICULA, { matricula: matriculaQuery }),
+    enabled: matriculaQuery.length >= 3,
     staleTime: 30_000,
   });
 
   const { data: usuariosData, isLoading: isLoadingUsuarios } = useQuery({
     queryKey: ['usuariosActivos'],
-    queryFn:  () => gqlClient.request(GET_USUARIOS, {
+    queryFn: () => gqlClient.request(GET_USUARIOS, {
       estatus: true,
       pagination: { first: 1000 },
     }),
@@ -133,12 +133,12 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
   // ─── Mutations ────────────────────────────────────────────
   const registrarSalidaMutation = useMutation({
     mutationFn: (input) => gqlClient.request(REGISTRAR_SALIDA, { input }),
-    onSuccess:  () => queryClient.invalidateQueries({ queryKey: ['folioSalidas'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['folioSalidas'] }),
   });
 
   const actualizarSalidaMutation = useMutation({
     mutationFn: (vars) => gqlClient.request(ACTUALIZAR_SALIDA, vars),
-    onSuccess:  () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['registroSalidas'] });
       showToast('Registro de salida actualizado exitosamente', 'success');
       if (onSuccessCallback) onSuccessCallback();
@@ -195,7 +195,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
-    if (finalUrl)   URL.revokeObjectURL(finalUrl);
+    if (finalUrl) URL.revokeObjectURL(finalUrl);
   }, []);
 
   // ─── Interceptar Ctrl+P para imprimir PDF ─────────────────
@@ -243,9 +243,9 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
         const newItems = [];
         const nat = (bien.num_inv && bien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
         newItems.push({
-          id_bien:     bien.id_bien,
-          cantidad:    '1',
-          naturaleza:  nat,
+          id_bien: bien.id_bien,
+          cantidad: '1',
+          naturaleza: nat,
           descripcion: `${bien.modelo?.descrip_disp || ''}${bien.num_serie ? ` - S/N: ${bien.num_serie}` : ''}${bien.num_inv ? ` - INV: ${bien.num_inv}` : ''}`,
           originalData: bien,
         });
@@ -256,9 +256,9 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
             if (monitorBien && !updated.some(b => b.id_bien === monitorBien.id_bien)) {
               const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
               newItems.push({
-                id_bien:     monitorBien.id_bien,
-                cantidad:    '1',
-                naturaleza:  natMon,
+                id_bien: monitorBien.id_bien,
+                cantidad: '1',
+                naturaleza: natMon,
                 descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_serie ? ` - S/N: ${monitorBien.num_serie}` : ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
                 originalData: monitorBien,
               });
@@ -312,7 +312,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        
+
         let agregados = 0;
         let noEncontrados = [];
 
@@ -320,8 +320,8 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
         const serialsToFetch = [];
         data.forEach(row => {
           const key = Object.keys(row).find(k => {
-             const lower = k.toLowerCase().trim();
-             return lower === 'numero de serie' || lower === 'serie' || lower === 'num_serie' || lower === 'no. serie';
+            const lower = k.toLowerCase().trim();
+            return lower === 'numero de serie' || lower === 'serie' || lower === 'num_serie' || lower === 'no. serie';
           });
           if (key && row[key]) {
             const snStr = String(row[key]).trim();
@@ -341,12 +341,12 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
 
         // 2. Fetch directly from DB to bypass the 1000 items limitation of the local list
         const fetchPromises = serialsToFetch.map(async item => {
-           try {
-             const res = await gqlClient.request(GET_BIEN_BY_SERIE_QUERY, { num_serie: item.rawValue });
-             return { ...item, bienFound: res.bienByNumSerie };
-           } catch(err) {
-             return { ...item, bienFound: null };
-           }
+          try {
+            const res = await gqlClient.request(GET_BIEN_BY_SERIE_QUERY, { num_serie: item.rawValue });
+            return { ...item, bienFound: res.bienByNumSerie };
+          } catch (err) {
+            return { ...item, bienFound: null };
+          }
         });
 
         const results = await Promise.all(fetchPromises);
@@ -369,7 +369,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
                   originalData: bienFound,
                 });
               }
-              
+
               if (incluirMonitores && bienFound.monitores && bienFound.monitores.length > 0) {
                 bienFound.monitores.forEach(rel => {
                   const monitorBien = rel.monitor;
@@ -377,9 +377,9 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
                     monitoresAgregados++;
                     const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
                     newItems.push({
-                      id_bien:     monitorBien.id_bien,
-                      cantidad:    monitorBien.num_serie || '1',
-                      naturaleza:  natMon,
+                      id_bien: monitorBien.id_bien,
+                      cantidad: monitorBien.num_serie || '1',
+                      naturaleza: natMon,
                       descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
                       originalData: monitorBien,
                     });
@@ -431,9 +431,9 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
               agregados++;
               const natMon = (monitorBien.num_inv && monitorBien.num_inv.trim() !== '') ? 'BMC' : 'BMNC';
               newItems.push({
-                id_bien:     monitorBien.id_bien,
-                cantidad:    monitorBien.num_serie || '1',
-                naturaleza:  natMon,
+                id_bien: monitorBien.id_bien,
+                cantidad: monitorBien.num_serie || '1',
+                naturaleza: natMon,
                 descripcion: `${monitorBien.modelo?.descrip_disp || ''}${monitorBien.num_inv ? ` - INV: ${monitorBien.num_inv}` : ''}`,
                 originalData: monitorBien,
               });
@@ -460,7 +460,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
     setIsGenerando(true);
     try {
       const siguiente = folioData?.folioSalidas?.siguiente ?? '1';
-      const bytes     = await buildPDFBytes(siguiente, form, bienesSeleccionados);
+      const bytes = await buildPDFBytes(siguiente, form, bienesSeleccionados);
 
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })));
@@ -480,7 +480,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
       showToast('Agrega al menos un bien para la salida.', 'warning');
       return;
     }
-    
+
     // Create input for mutation
     const input = {
       folio: initialData?.folio,
@@ -536,7 +536,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
         fecha_devolucion: form.devolucion === 'SI' ? (form.fechaDevolucion || null) : null,
         observaciones: form.observaciones,
         bienes: bienesSeleccionados.map((b) => ({
-        id_bien: (b.id_bien && b.id_bien.toString().startsWith('manual_')) ? null : b.id_bien,
+          id_bien: (b.id_bien && b.id_bien.toString().startsWith('manual_')) ? null : b.id_bien,
           cantidad_o_id: String(b.cantidad),
           naturaleza: b.naturaleza,
           descripcion: b.descripcion,
@@ -567,7 +567,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
 
   const handleNuevoFormato = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
-    if (finalUrl)   URL.revokeObjectURL(finalUrl);
+    if (finalUrl) URL.revokeObjectURL(finalUrl);
     setPreviewUrl(null);
     setFinalUrl(null);
     setFolioUsado(null);
@@ -588,9 +588,9 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
   };
 
   // ─── Datos derivados ──────────────────────────────────────
-  const folioSiguiente  = folioData?.folioSalidas?.siguiente    ?? '…';
-  const folioActualDB   = folioData?.folioSalidas?.folio_actual ?? '0';
-  const totalBienes     = bienesSeleccionados.length;
+  const folioSiguiente = folioData?.folioSalidas?.siguiente ?? '…';
+  const folioActualDB = folioData?.folioSalidas?.folio_actual ?? '0';
+  const totalBienes = bienesSeleccionados.length;
   const paginasNecesarias = Math.max(1, Math.ceil(totalBienes / ROWS_PER_PAGE));
 
   // ── Etapa PREVIEW ─────────────────────────────────────────
@@ -741,104 +741,104 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
 
         {/* ─ Izquierda: datos del solicitante ─ */}
         <div className="space-y-6 overflow-y-auto pr-3 pb-8 custom-scrollbar">
-          
+
           <div className="bg-white border border-teal-100/60 shadow-sm rounded-xl p-5 space-y-4">
             <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex items-center gap-2">
               <User size={16} className="text-teal-600" /> Información del Solicitante
             </h3>
 
-          {/* Autocompletado de Usuario */}
-          <div className="bg-teal-50/50 p-3 rounded-lg border border-teal-100">
-            <label className="block text-xs font-semibold text-teal-800 mb-1">Buscar Usuario (Opcional)</label>
-            {isLoadingUsuarios ? (
-              <div className="flex items-center text-xs text-gray-500">
-                <Loader2 size={14} className="animate-spin mr-2" /> Cargando usuarios…
-              </div>
-            ) : (
-              <SearchableSelect
-                value=""
-                onChange={(matricula) => {
-                  const user = usuariosList.find(u => u.matricula === matricula);
-                  if (user) {
-                    setForm(p => {
-                      const next = { ...p, matricula: user.matricula, solicitante: user.nombre_completo };
-                      if (user.unidadFisica) {
-                        next.adscripcion = user.unidadFisica.descripcion || user.unidadFisica.desc_corta || next.adscripcion;
-                      }
-                      return next;
-                    });
-                    setNombreAutoFilled(true);
-                  }
-                }}
-                options={usuariosList.map((u) => ({
-                  value: u.matricula,
-                  label: `${u.matricula} — ${u.nombre_completo}`,
-                  searchKey: `${u.matricula} ${u.nombre_completo}`
-                }))}
-                placeholder="Busca por nombre o matrícula para autollenar…"
-              />
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-            {/* Matrícula + autocompletado */}
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Matrícula <span className="font-normal text-gray-400">(si aplica)</span>
-              </label>
-              <div className="relative">
-                <input type="text" name="matricula" value={form.matricula} onChange={handleChange}
-                  placeholder="Escribe la matrícula para autocompletar el nombre…"
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 pr-9 focus:ring-1 focus:ring-teal-500 outline-none" />
-                {nombreAutoFilled && (
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-green-500">
-                    <UserCheck size={16} />
-                  </span>
-                )}
-              </div>
-              {nombreAutoFilled && (
-                <p className="text-[10px] text-green-600 mt-0.5">
-                  ✓ Nombre autocompletado desde el sistema — puedes editarlo
-                </p>
+            {/* Autocompletado de Usuario */}
+            <div className="bg-teal-50/50 p-3 rounded-lg border border-teal-100">
+              <label className="block text-xs font-semibold text-teal-800 mb-1">Buscar Usuario (Opcional)</label>
+              {isLoadingUsuarios ? (
+                <div className="flex items-center text-xs text-gray-500">
+                  <Loader2 size={14} className="animate-spin mr-2" /> Cargando usuarios…
+                </div>
+              ) : (
+                <SearchableSelect
+                  value=""
+                  onChange={(matricula) => {
+                    const user = usuariosList.find(u => u.matricula === matricula);
+                    if (user) {
+                      setForm(p => {
+                        const next = { ...p, matricula: user.matricula, solicitante: user.nombre_completo };
+                        if (user.unidadFisica) {
+                          next.adscripcion = user.unidadFisica.descripcion || user.unidadFisica.desc_corta || next.adscripcion;
+                        }
+                        return next;
+                      });
+                      setNombreAutoFilled(true);
+                    }
+                  }}
+                  options={usuariosList.map((u) => ({
+                    value: u.matricula,
+                    label: `${u.matricula} — ${u.nombre_completo}`,
+                    searchKey: `${u.matricula} ${u.nombre_completo}`
+                  }))}
+                  placeholder="Busca por nombre o matrícula para autollenar…"
+                />
               )}
             </div>
 
-            {/* Nombre */}
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre (El que suscribe)</label>
-              <input type="text" name="solicitante" value={form.solicitante}
-                onChange={(e) => { handleChange(e); setNombreAutoFilled(false); }}
-                className={`w-full text-sm border rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none transition-colors ${nombreAutoFilled ? 'border-green-300 bg-green-50' : 'border-gray-200'}`} />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Adscrito a</label>
-              <SearchableSelect
-                value={form.adscripcion}
-                onChange={(val) => setForm(p => ({ ...p, adscripcion: val }))}
-                options={catalogos?.unidades?.map(u => ({ value: u.descripcion || u.desc_corta, label: u.descripcion || u.desc_corta })) || []}
-                placeholder="Seleccionar o escribir..."
-                allowCustom={true}
-              />
+              {/* Matrícula + autocompletado */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Matrícula <span className="font-normal text-gray-400">(si aplica)</span>
+                </label>
+                <div className="relative">
+                  <input type="text" name="matricula" value={form.matricula} onChange={handleChange}
+                    placeholder="Escribe la matrícula para autocompletar el nombre…"
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 pr-9 focus:ring-1 focus:ring-teal-500 outline-none" />
+                  {nombreAutoFilled && (
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-green-500">
+                      <UserCheck size={16} />
+                    </span>
+                  )}
+                </div>
+                {nombreAutoFilled && (
+                  <p className="text-[10px] text-green-600 mt-0.5">
+                    ✓ Nombre autocompletado desde el sistema — puedes editarlo
+                  </p>
+                )}
+              </div>
+
+              {/* Nombre */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre (El que suscribe)</label>
+                <input type="text" name="solicitante" value={form.solicitante}
+                  onChange={(e) => { handleChange(e); setNombreAutoFilled(false); }}
+                  className={`w-full text-sm border rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none transition-colors ${nombreAutoFilled ? 'border-green-300 bg-green-50' : 'border-gray-200'}`} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Adscrito a</label>
+                <SearchableSelect
+                  value={form.adscripcion}
+                  onChange={(val) => setForm(p => ({ ...p, adscripcion: val }))}
+                  options={catalogos?.unidades?.map(u => ({ value: u.descripcion || u.desc_corta, label: u.descripcion || u.desc_corta })) || []}
+                  placeholder="Seleccionar o escribir..."
+                  allowCustom={true}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Trabajador de</label>
+                <input type="text" name="empresa" value={form.empresa} onChange={handleChange}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Identificación</label>
+                <input type="text" name="identificacion" value={form.identificacion} onChange={handleChange}
+                  placeholder="INE / Pasaporte / Gafete"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label>
+                <input type="text" name="telefono" value={form.telefono} onChange={handleChange}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Trabajador de</label>
-              <input type="text" name="empresa" value={form.empresa} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Identificación</label>
-              <input type="text" name="identificacion" value={form.identificacion} onChange={handleChange}
-                placeholder="INE / Pasaporte / Gafete"
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label>
-              <input type="text" name="telefono" value={form.telefono} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
-            </div>
-          </div>
           </div>
 
           <div className="bg-white border border-emerald-100/60 shadow-sm rounded-xl p-5 space-y-4">
@@ -846,204 +846,204 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
               <Package size={16} className="text-emerald-600" /> Detalles de Salida
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Motivo / Razón de salida</label>
-              <input type="text" name="motivo" value={form.motivo} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Día de Salida</label>
-              <input type="date" name="fechaSalidaDia" value={form.fechaSalidaDia} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
-            </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Motivo / Razón de salida</label>
+                <input type="text" name="motivo" value={form.motivo} onChange={handleChange}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Día de Salida</label>
+                <input type="date" name="fechaSalidaDia" value={form.fechaSalidaDia} onChange={handleChange}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Retirar bienes del:</label>
-              <SearchableSelect
-                value={form.origenBienes}
-                onChange={(val) => setForm(p => ({ ...p, origenBienes: val }))}
-                options={catalogos?.unidades?.map(u => ({ value: u.descripcion || u.desc_corta, label: u.descripcion || u.desc_corta })) || []}
-                placeholder="Seleccionar o escribir..."
-                allowCustom={true}
-              />
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Retirar bienes del:</label>
+                <SearchableSelect
+                  value={form.origenBienes}
+                  onChange={(val) => setForm(p => ({ ...p, origenBienes: val }))}
+                  options={catalogos?.unidades?.map(u => ({ value: u.descripcion || u.desc_corta, label: u.descripcion || u.desc_corta })) || []}
+                  placeholder="Seleccionar o escribir..."
+                  allowCustom={true}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre Responsable (Autoriza)</label>
+                <SearchableSelect
+                  value={form.responsable}
+                  onChange={(val) => setForm(p => ({ ...p, responsable: val }))}
+                  options={usuariosList.map((u) => ({
+                    value: u.nombre_completo,
+                    label: `${u.matricula} — ${u.nombre_completo}`,
+                    searchKey: `${u.matricula} ${u.nombre_completo}`
+                  }))}
+                  placeholder="Seleccionar o escribir..."
+                  allowCustom={true}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">¿Sujeto a Devolución?</label>
+                <select name="devolucion" value={form.devolucion} onChange={handleChange}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none bg-white">
+                  <option value="SI">SÍ</option>
+                  <option value="NO">NO</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Fecha de Devolución</label>
+                <input type="date" name="fechaDevolucion" value={form.fechaDevolucion} onChange={handleChange}
+                  disabled={form.devolucion === 'NO'}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-gray-100 disabled:text-gray-400" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Observaciones</label>
+                <textarea name="observaciones" value={form.observaciones} onChange={handleChange} rows={2}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre Responsable (Autoriza)</label>
-              <SearchableSelect
-                value={form.responsable}
-                onChange={(val) => setForm(p => ({ ...p, responsable: val }))}
-                options={usuariosList.map((u) => ({
-                  value: u.nombre_completo,
-                  label: `${u.matricula} — ${u.nombre_completo}`,
-                  searchKey: `${u.matricula} ${u.nombre_completo}`
-                }))}
-                placeholder="Seleccionar o escribir..."
-                allowCustom={true}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">¿Sujeto a Devolución?</label>
-              <select name="devolucion" value={form.devolucion} onChange={handleChange}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none bg-white">
-                <option value="SI">SÍ</option>
-                <option value="NO">NO</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Fecha de Devolución</label>
-              <input type="date" name="fechaDevolucion" value={form.fechaDevolucion} onChange={handleChange}
-                disabled={form.devolucion === 'NO'}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-gray-100 disabled:text-gray-400" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Observaciones</label>
-              <textarea name="observaciones" value={form.observaciones} onChange={handleChange} rows={2}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
-            </div>
-          </div>
           </div>
         </div>
 
         {/* ─ Derecha: bienes ─ */}
         <div className="overflow-y-auto pr-3 pb-8 custom-scrollbar flex flex-col">
           <div className="bg-white border border-teal-100/60 shadow-sm rounded-xl p-5 space-y-4 flex flex-col flex-1">
-          <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
-            <div className="flex flex-col">
-              <span className="flex items-center gap-2"><Monitor size={16} className="text-teal-600" /> Bienes a Retirar</span>
-              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-500 font-normal">
-                <HelpCircle size={12} className="text-teal-600" />
-                <span><strong className="text-teal-700">BMC:</strong> C/Inventario</span>
-                <span>• <strong className="text-teal-700">BMNC:</strong> S/Inventario</span>
-                <span>• <strong className="text-teal-700">BC:</strong> Consumo</span>
-                <span>• <strong className="text-teal-700">BPS:</strong> Servicios</span>
+            <h3 className="text-sm font-bold text-teal-800 border-b border-teal-100 pb-2 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-end">
+              <div className="flex flex-col">
+                <span className="flex items-center gap-2"><Monitor size={16} className="text-teal-600" /> Bienes a Retirar</span>
+                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-500 font-normal">
+                  <HelpCircle size={12} className="text-teal-600" />
+                  <span><strong className="text-teal-700">BMC:</strong> C/Inventario</span>
+                  <span>• <strong className="text-teal-700">BMNC:</strong> S/Inventario</span>
+                  <span>• <strong className="text-teal-700">BC:</strong> Consumo</span>
+                  <span>• <strong className="text-teal-700">BPS:</strong> Servicios</span>
+                </div>
               </div>
+              <span className="text-xs font-normal bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full w-max">
+                {totalBienes} bien{totalBienes !== 1 ? 'es' : ''} · {paginasNecesarias} pág.
+              </span>
+            </h3>
+
+            {/* Excel Controls */}
+            <div className="flex flex-col sm:flex-row gap-2 bg-teal-50/50 p-2 rounded-lg border border-teal-100">
+              <button onClick={handleDownloadTemplate}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-teal-200 text-teal-700 rounded-md text-xs font-semibold hover:bg-teal-50 transition-colors">
+                <Download size={14} /> Plantilla Excel
+              </button>
+              <button onClick={() => fileInputRef.current?.click()}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-600 border border-teal-600 text-white rounded-md text-xs font-semibold hover:bg-teal-700 transition-colors">
+                <Upload size={14} /> Importar Excel
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleImportExcel} accept=".xlsx, .xls" className="hidden" />
             </div>
-            <span className="text-xs font-normal bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full w-max">
-              {totalBienes} bien{totalBienes !== 1 ? 'es' : ''} · {paginasNecesarias} pág.
-            </span>
-          </h3>
 
-          {/* Excel Controls */}
-          <div className="flex flex-col sm:flex-row gap-2 bg-teal-50/50 p-2 rounded-lg border border-teal-100">
-            <button onClick={handleDownloadTemplate}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-teal-200 text-teal-700 rounded-md text-xs font-semibold hover:bg-teal-50 transition-colors">
-              <Download size={14} /> Plantilla Excel
-            </button>
-            <button onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-600 border border-teal-600 text-white rounded-md text-xs font-semibold hover:bg-teal-700 transition-colors">
-              <Upload size={14} /> Importar Excel
-            </button>
-            <input type="file" ref={fileInputRef} onChange={handleImportExcel} accept=".xlsx, .xls" className="hidden" />
-          </div>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 pb-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="incluirMonitores"
+                  checked={incluirMonitores}
+                  onChange={(e) => setIncluirMonitores(e.target.checked)}
+                  className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+                />
+                <label htmlFor="incluirMonitores" className="text-xs text-gray-700 cursor-pointer select-none">
+                  Auto-incluir monitores al agregar
+                </label>
+              </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-1 pb-1">
-            <div className="flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                id="incluirMonitores"
-                checked={incluirMonitores}
-                onChange={(e) => setIncluirMonitores(e.target.checked)}
-                className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
-              />
-              <label htmlFor="incluirMonitores" className="text-xs text-gray-700 cursor-pointer select-none">
-                Auto-incluir monitores al agregar
-              </label>
-            </div>
-            
-            <button 
-              onClick={handleAgregarMonitoresFaltantes}
-              disabled={bienesSeleccionados.length === 0}
-              className="flex items-center gap-1 text-[10px] px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded font-semibold transition-colors disabled:opacity-50"
-              title="Añade a la lista los monitores de los equipos que ya tienes seleccionados"
-            >
-              <MonitorUp size={12} /> Traer monitores faltantes
-            </button>
-          </div>
-
-          {/* Selector */}
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-gray-600">Buscar y Agregar Bien (Manual)</label>
               <button
-                type="button"
-                onClick={handleAddManualBien}
-                className="flex items-center gap-1 text-[10px] px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded font-semibold transition-colors"
-                title="Añadir una fila vacía para un bien que no está registrado en el sistema"
+                onClick={handleAgregarMonitoresFaltantes}
+                disabled={bienesSeleccionados.length === 0}
+                className="flex items-center gap-1 text-[10px] px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded font-semibold transition-colors disabled:opacity-50"
+                title="Añade a la lista los monitores de los equipos que ya tienes seleccionados"
               >
-                <Plus size={12} /> Agregar Bien No Registrado
+                <MonitorUp size={12} /> Traer monitores faltantes
               </button>
             </div>
-            <SearchableSelect
-              value=""
-              onChange={handleAddBien}
-              onInputChange={setBienesSearch}
-              options={bienesList.map((b) => ({
-                value: b.id_bien,
-                label: `${b.modelo?.descrip_disp || 'Desconocido'} — S/N: ${b.num_serie || 'N/A'}`,
-              }))}
-              placeholder="Escribe el modelo, serie o inventario..."
-              isLoading={isLoadingBienes}
-            />
-          </div>
 
-          {/* Lista */}
-          <div className="space-y-2 pr-1">
-            {bienesSeleccionados.length === 0 ? (
-              <div className="text-center py-6 text-gray-400 text-xs italic border-2 border-dashed border-gray-200 rounded-xl">
-                No hay bienes seleccionados. Busca y selecciona uno arriba.
+            {/* Selector */}
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-600">Buscar y Agregar Bien (Manual)</label>
+                <button
+                  type="button"
+                  onClick={handleAddManualBien}
+                  className="flex items-center gap-1 text-[10px] px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded font-semibold transition-colors"
+                  title="Añadir una fila vacía para un bien que no está registrado en el sistema"
+                >
+                  <Plus size={12} /> Agregar Bien No Registrado
+                </button>
               </div>
-            ) : (
-              bienesSeleccionados.map((bien, i) => {
-                const pagBien = Math.floor(i / ROWS_PER_PAGE) + 1;
-                const slotBien = (i % ROWS_PER_PAGE) + 1; // 1..11, donde 1 = fila del encabezado
+              <SearchableSelect
+                value=""
+                onChange={handleAddBien}
+                onInputChange={setBienesSearch}
+                options={bienesList.map((b) => ({
+                  value: b.id_bien,
+                  label: `${b.modelo?.descrip_disp || 'Desconocido'} — S/N: ${b.num_serie || 'N/A'}`,
+                }))}
+                placeholder="Escribe el modelo, serie o inventario..."
+                isLoading={isLoadingBienes}
+              />
+            </div>
 
-                return (
-                  <div key={bien.id_bien}
-                    className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative group">
-                    {/* Badges de página */}
-                    {paginasNecesarias > 1 && (
-                      <span className="absolute top-2 left-2 text-[9px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">
-                        Pág. {pagBien}
-                      </span>
-                    )}
-                    <button onClick={() => handleRemoveBien(i)}
-                      className="absolute top-2 right-2 text-red-400 hover:text-red-600 bg-red-50 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 size={14} />
-                    </button>
+            {/* Lista */}
+            <div className="space-y-2 pr-1">
+              {bienesSeleccionados.length === 0 ? (
+                <div className="text-center py-6 text-gray-400 text-xs italic border-2 border-dashed border-gray-200 rounded-xl">
+                  No hay bienes seleccionados. Busca y selecciona uno arriba.
+                </div>
+              ) : (
+                bienesSeleccionados.map((bien, i) => {
+                  const pagBien = Math.floor(i / ROWS_PER_PAGE) + 1;
+                  const slotBien = (i % ROWS_PER_PAGE) + 1; // 1..11, donde 1 = fila del encabezado
 
-                    <p className="text-xs font-bold text-gray-800 mb-2 pr-6 line-clamp-2 pt-4" title={bien.descripcion}>
-                      {bien.descripcion}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-0.5">Identificación o Cant.</label>
-                        <input type="text" value={bien.cantidad}
-                          onChange={(e) => handleUpdateBien(i, 'cantidad', e.target.value)}
+                  return (
+                    <div key={bien.id_bien}
+                      className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative group">
+                      {/* Badges de página */}
+                      {paginasNecesarias > 1 && (
+                        <span className="absolute top-2 left-2 text-[9px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded">
+                          Pág. {pagBien}
+                        </span>
+                      )}
+                      <button onClick={() => handleRemoveBien(i)}
+                        className="absolute top-2 right-2 text-red-400 hover:text-red-600 bg-red-50 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 size={14} />
+                      </button>
+
+                      <p className="text-xs font-bold text-gray-800 mb-2 pr-6 line-clamp-2 pt-4" title={bien.descripcion}>
+                        {bien.descripcion}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">Identificación o Cant.</label>
+                          <input type="text" value={bien.cantidad}
+                            onChange={(e) => handleUpdateBien(i, 'cantidad', e.target.value)}
+                            className="w-full text-xs border border-gray-200 rounded px-2 py-1 outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">Naturaleza</label>
+                          <select value={bien.naturaleza}
+                            onChange={(e) => handleUpdateBien(i, 'naturaleza', e.target.value)}
+                            className="w-full text-xs border border-gray-200 rounded px-1 py-1 outline-none bg-white">
+                            <option value="BMC">BMC</option>
+                            <option value="BC">BC</option>
+                            <option value="BMNC">BMNC</option>
+                            <option value="BPS">BPS</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <label className="block text-[10px] text-gray-500 mb-0.5">Detalle (Visible en PDF)</label>
+                        <input type="text" value={bien.descripcion}
+                          onChange={(e) => handleUpdateBien(i, 'descripcion', e.target.value)}
                           className="w-full text-xs border border-gray-200 rounded px-2 py-1 outline-none" />
                       </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-500 mb-0.5">Naturaleza</label>
-                        <select value={bien.naturaleza}
-                          onChange={(e) => handleUpdateBien(i, 'naturaleza', e.target.value)}
-                          className="w-full text-xs border border-gray-200 rounded px-1 py-1 outline-none bg-white">
-                          <option value="BMC">BMC</option>
-                          <option value="BC">BC</option>
-                          <option value="BMNC">BMNC</option>
-                          <option value="BPS">BPS</option>
-                        </select>
-                      </div>
                     </div>
-                    <div className="mt-2">
-                      <label className="block text-[10px] text-gray-500 mb-0.5">Detalle (Visible en PDF)</label>
-                      <input type="text" value={bien.descripcion}
-                        onChange={(e) => handleUpdateBien(i, 'descripcion', e.target.value)}
-                        className="w-full text-xs border border-gray-200 rounded px-2 py-1 outline-none" />
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>

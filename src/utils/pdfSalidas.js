@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, TextAlignment } from 'pdf-lib';
 
-export const ROWS_PER_PAGE = 11;
+export const ROWS_PER_PAGE = 10;
 
 const pdfRowField = (row, col) => {
   if (col === 1 && row === 5) return 'f451'; // typo histórico en el PDF
@@ -119,7 +119,7 @@ export const buildPDFBytes = async (folioStr, form, bienesSeleccionados) => {
 
     // Bienes
     pageItems.forEach((bien, i) => {
-      const row = i;
+      const row = i + 1;
       setTextField(pdfRowField(row, 1), String(bien.cantidad || bien.cantidad_o_id || ''), true);
       setTextField(pdfRowField(row, 2), bien.naturaleza || '', true);
       setTextField(pdfRowField(row, 3), bien.descripcion || '', true);

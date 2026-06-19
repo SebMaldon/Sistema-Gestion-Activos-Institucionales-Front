@@ -190,8 +190,8 @@ export default function HistorialSalidas() {
                 registros.map((salida) => (
                   <tr key={salida.id_salida} className="hover:bg-gray-50/50 transition-colors group">
                     <td className="px-4 py-3 align-middle">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600 font-bold border border-teal-100">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 min-w-[2rem] px-2 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600 font-bold border border-teal-100">
                           #{salida.folio}
                         </div>
                         <div>
