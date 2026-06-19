@@ -84,7 +84,7 @@ export default function Sidebar() {
       style={{ backgroundColor: '#00472e' }}>
 
       {/* Logo */}
-      <div className="flex-shrink-0 px-5 py-5 border-b border-white/10">
+      <div className="flex-shrink-0 px-5 py-5 border-b border-white/10 dark:border-gray-800/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
             style={{ backgroundColor: '#00472e' }}>
@@ -101,7 +101,7 @@ export default function Sidebar() {
           {/* X solo en mobile */}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+            className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:bg-white dark:bg-gray-800/10 hover:text-white transition-colors"
           >
             <X size={18} />
           </button>
@@ -138,10 +138,10 @@ export default function Sidebar() {
                   key={item.path}
                   onClick={() => handleNav(item.path)}
                   title={sidebarCollapsed ? item.label : undefined}
-                  className={`sidebar-link w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} rounded-lg mb-1 text-sm font-medium group
-                    ${isActive
-                      ? 'bg-white/15 text-white'
-                      : 'text-green-100/80 hover:bg-white/10 hover:text-white'
+                  className={`sidebar-link w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} rounded-lg mb-1 text-sm font-medium group transition-colors
+                  ${isActive
+                      ? 'bg-white/10 text-white font-semibold shadow-sm'
+                      : 'text-green-50/80 hover:bg-white/10 hover:text-white'
                     }`}
                 >
                   <Icon
@@ -158,7 +158,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="flex-shrink-0 p-3 border-t border-white/10">
+      <div className="flex-shrink-0 p-3 border-t border-white/10 dark:border-gray-800/10">
         {/* Info del usuario */}
         {usuario && !sidebarCollapsed && (
           <div className="mb-2 px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>

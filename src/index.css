@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --color-imss-green: #006341;
@@ -35,6 +36,11 @@ body {
   color: #1a202c;
 }
 
+html.dark body {
+  background-color: #111827; /* Tailwind gray-900 */
+  color: #f3f4f6; /* Tailwind gray-100 */
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -42,6 +48,9 @@ body {
 }
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #374151; /* Tailwind gray-700 */
 }
 ::-webkit-scrollbar-thumb {
   background: #006341;
@@ -107,6 +116,10 @@ input[type="password"]::-ms-clear {
   padding: 0.75rem;
   margin: -0.75rem;
   border-color: #e5e7eb;
+}
+html.dark .hover-cell-zoom:hover {
+  background-color: #1f2937; /* Tailwind gray-800 */
+  border-color: #374151; /* Tailwind gray-700 */
 }
 .hover-cell-zoom:hover .truncate {
   white-space: normal;

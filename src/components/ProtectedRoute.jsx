@@ -7,6 +7,6 @@ import { useAuthStore } from '../store/auth.store';
  * Si está logueado → renderiza el Outlet (ruta hija).
  */
 export function ProtectedRoute() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+ const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+ return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
