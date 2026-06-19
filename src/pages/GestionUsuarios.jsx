@@ -132,18 +132,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
   const isLoading = createMut.isPending || updateMut.isPending;
 
   const handleChange = (k, v) => {
-    setForm(p => {
-      const next = { ...p, [k]: v };
-      if (k === 'clave_unidad') {
-        next.id_unidad = '';
-      } else if (k === 'id_unidad' && v) {
-        const selectedSeg = segmentos.find(s => String(s.id_segmento) === String(v));
-        if (selectedSeg && selectedSeg.clave) {
-          next.clave_unidad = selectedSeg.clave;
-        }
-      }
-      return next;
-    });
+    setForm(p => ({ ...p, [k]: v }));
   };
 
   const filteredSegmentos = React.useMemo(() => {
@@ -254,32 +243,8 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
                   }))
                 ]}
                 placeholder="Buscar unidad..."
-                disabled={!!form.id_unidad}
               />
-              <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación {!!form.id_unidad && "(Bloqueado por segmento seleccionado)"}</p>
-            </div>
-
-            {/* Segmento de red */}
-            <div>
-              <label className={labelCls}>
-                <span className="inline-flex items-center gap-1">
-                  <Radio size={11} className="text-blue-500" />
-                  Segmento de Red
-                </span>
-              </label>
-              <SearchableSelect
-                value={form.id_unidad ? String(form.id_unidad) : ''}
-                onChange={val => handleChange('id_unidad', val || '')}
-                options={[
-                  { value: '', label: '— Ninguno —' },
-                  ...filteredSegmentos.map(s => ({
-                    value: String(s.id_segmento),
-                    label: s.nombre || s.no_ref
-                  }))
-                ]}
-                placeholder="Buscar segmento..."
-              />
-              <p className="text-[10px] text-gray-400 mt-0.5">Segmento de red / IP asignado</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación</p>
             </div>
           </div>
         </div>
