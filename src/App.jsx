@@ -24,6 +24,7 @@ import Aprobaciones from './pages/Aprobaciones';
 import Correspondencia from './pages/Correspondencia';
 import SinAcceso from './pages/SinAcceso';
 import { useCurrentUser } from './hooks/useCurrentUser';
+import { useVersionCheck } from './hooks/useVersionCheck';
 
 
 // ─── Roles reales de BD ──────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ export default function App() {
  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
  const { isLoading } = useCurrentUser();
  const initDarkMode = useThemeStore((s) => s.initDarkMode);
+ useVersionCheck();
 
  React.useEffect(() => {
  initDarkMode();

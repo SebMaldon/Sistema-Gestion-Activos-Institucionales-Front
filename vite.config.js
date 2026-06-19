@@ -3,6 +3,21 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import obfuscator from 'vite-plugin-javascript-obfuscator'
+import fs from 'fs'
+import path from 'path'
+
+// Plugin: genera dist/version.json con timestamp único en cada build
+const versionPlugin = () => ({
+  name: 'version-json',
+  closeBundle() {
+    const outDir = path.resolve('dist');
+    if (!fs.existsSync(outDir)) return;
+    fs.writeFileSync(
+      path.join(outDir, 'version.json'),
+      JSON.stringify({ v: Date.now() })
+    );
+  }
+});
 
 const cacheBusterPlugin = () => ({
   name: 'cache-buster',
@@ -31,6 +46,7 @@ const cacheBusterPlugin = () => ({
 export default defineConfig({
   plugins: [
     cacheBusterPlugin(),
+    versionPlugin(),
     react(),
     tailwindcss(),
     obfuscator({
