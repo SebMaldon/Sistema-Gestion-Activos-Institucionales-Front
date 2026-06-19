@@ -1,25 +1,33 @@
-import React, { createContext, useContext, useState, useRef } from 'react';
+  import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
- const [currentRole, setCurrentRole] = useState('admin'); // se sobreescribirá con el rol real del store
- const [currentPage, setCurrentPage] = useState('dashboard');
- const [toast, setToast] = useState(null);
- const [selectedAsset, setSelectedAsset] = useState(null);
- const [isFichaOpen, setIsFichaOpen] = useState(false);
- const [sidebarOpen, setSidebarOpen] = useState(false);
- const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
- 
- const [hoverZoomEnabled, setHoverZoomEnabled] = useState(() => {
- return localStorage.getItem('hoverZoomEnabled') !== 'false';
- });
+  const [currentRole, setCurrentRole] = useState('admin'); // se sobreescribirá con el rol real del store
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [toast, setToast] = useState(null);
+  const [selectedAsset, setSelectedAsset] = useState(null);
+  const [isFichaOpen, setIsFichaOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const [hoverZoomEnabled, setHoverZoomEnabled] = useState(() => {
+    return localStorage.getItem('hoverZoomEnabled') !== 'false';
+  });
 
- const toggleHoverZoom = () => {
- const val = !hoverZoomEnabled;
- setHoverZoomEnabled(val);
- localStorage.setItem('hoverZoomEnabled', val);
- };
+  useEffect(() => {
+    if (hoverZoomEnabled) {
+      document.body.classList.add('zoom-tables-enabled');
+    } else {
+      document.body.classList.remove('zoom-tables-enabled');
+    }
+  }, [hoverZoomEnabled]);
+
+  const toggleHoverZoom = () => {
+    const val = !hoverZoomEnabled;
+    setHoverZoomEnabled(val);
+    localStorage.setItem('hoverZoomEnabled', val);
+  };
  
  const toastTimeoutRef = useRef(null);
 

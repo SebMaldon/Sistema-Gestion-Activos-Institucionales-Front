@@ -103,29 +103,52 @@ input[type="password"]::-ms-clear {
 
 /* Hover cell zoom effect */
 .hover-cell-zoom {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
+    transition: transform 0.2s ease-in-out, z-index 0s, box-shadow 0.2s;
+    transform-origin: left center;
 }
 .hover-cell-zoom:hover {
-  transform: scale(1.15);
-  z-index: 50;
-  position: relative;
-  background-color: white;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  margin: -0.75rem;
-  border-color: #e5e7eb;
+    transform: scale(1.15);
+    z-index: 50;
+    position: relative;
+    background-color: white;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
 }
 html.dark .hover-cell-zoom:hover {
-  background-color: #1f2937; /* Tailwind gray-800 */
-  border-color: #374151; /* Tailwind gray-700 */
+    background-color: #1f2937; /* gray-800 */
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
 }
 .hover-cell-zoom:hover .truncate {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  word-break: break-all;
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Global table zoom when enabled via AppContext */
+body.zoom-tables-enabled tbody td {
+    transition: transform 0.2s ease-in-out, z-index 0s, box-shadow 0.2s;
+    transform-origin: left center;
+}
+body.zoom-tables-enabled tbody td:hover {
+    transform: scale(1.12);
+    z-index: 50;
+    position: relative;
+    background-color: white;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    border-radius: 6px;
+}
+html.dark body.zoom-tables-enabled tbody td:hover {
+    background-color: #1f2937;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+}
+body.zoom-tables-enabled tbody td:hover .truncate {
+    white-space: normal;
+    word-break: break-word;
+}
+body.zoom-tables-enabled tbody td:hover .line-clamp-1,
+body.zoom-tables-enabled tbody td:hover .line-clamp-2 {
+    -webkit-line-clamp: unset;
 }
 
 /* Toast notification */
