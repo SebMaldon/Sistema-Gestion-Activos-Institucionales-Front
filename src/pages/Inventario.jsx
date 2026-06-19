@@ -2228,7 +2228,7 @@ export default function Inventario() {
  <tr key={bien.id} onClick={(e) => { if (window.getSelection().toString().length > 0) return; e.stopPropagation(); setModalFicha(bien); }} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50/70 dark:hover:bg-gray-700/70 cursor-pointer transition-colors group ${isConflictRow ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
  <td className="px-4 py-3.5 relative">
  {isConflictRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
- <div className={`flex items-center justify-between gap-3 w-full ${hoverZoomEnabled ? 'hover-cell-zoom' : ''}`}>
+ <div className="flex items-center justify-between gap-3 w-full">
  <div className="min-w-0">
  <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300 inline-flex items-center gap-1.5 max-w-full">
  <span className="truncate" title={hoverZoomEnabled ? fmt(bien.numSerie) : undefined}>{fmt(bien.numSerie)}</span>
@@ -2267,7 +2267,7 @@ export default function Inventario() {
  </div>
  </td>
  <td className="px-4 py-3.5">
- <div className={`w-full ${hoverZoomEnabled ? 'hover-cell-zoom' : ''}`}>
+ <div className="w-full">
  <div className="flex items-center gap-1.5 max-w-full">
  <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate" title={hoverZoomEnabled ? (bien.especificacionTI?.nombre_host || 'Sin Host') : undefined}>{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
  {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 dark:text-gray-400 shrink-0"><Copy size={12} /></button>}
@@ -2294,13 +2294,13 @@ export default function Inventario() {
  </div>
  </td>
  <td className="px-4 py-3.5 text-xs min-w-[200px]">
- <div className={hoverZoomEnabled ? 'hover-cell-zoom' : ''}>
+ <div className="">
  <p className="font-semibold text-gray-900 dark:text-gray-100 text-[13px] break-words" title={hoverZoomEnabled ? fmt(bien.unidadFisica) : undefined}>{fmt(bien.unidadFisica)}</p>
  <p className="text-[11px] text-gray-400 mt-0.5 break-words" title={hoverZoomEnabled ? fmt(bien.ubicacion) : undefined}>{fmt(bien.ubicacion)}</p>
  </div>
  </td>
  <td className="px-4 py-3.5 text-xs text-gray-600 dark:text-gray-400 min-w-[180px] break-words">
- <div className={hoverZoomEnabled ? 'hover-cell-zoom' : ''}>
+ <div className="">
  {fmt(bien.resguardo)}
  </div>
  </td>
