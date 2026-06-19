@@ -46,6 +46,7 @@ const CATALOGS_QUERY = gql`
     catSegmentos { id_segmento nombre clave }
     ubicaciones { id_ubicacion nombre_ubicacion }
     catCategoriasActivo { id_categoria nombre_categoria }
+    catModelos { clave_modelo descrip_disp }
     usuarios(pagination: { first: 20000 }) {
       edges { node { id_usuario nombre_completo matricula } }
     }
@@ -116,6 +117,10 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
     if (campo === 'id_categoria' && catData?.catCategoriasActivo) {
       const c = catData.catCategoriasActivo.find(x => String(x.id_categoria) === String(valor));
       if (c) return `${valor} - ${c.nombre_categoria}`;
+    }
+    if (campo === 'clave_modelo' && catData?.catModelos) {
+      const m = catData.catModelos.find(x => String(x.clave_modelo) === String(valor));
+      if (m) return m.descrip_disp;
     }
     if (typeof valor === 'object') return JSON.stringify(valor);
     return String(valor);
