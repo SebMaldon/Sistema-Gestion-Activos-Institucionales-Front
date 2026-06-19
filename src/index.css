@@ -107,7 +107,7 @@ input[type="password"]::-ms-clear {
     transform-origin: left center;
 }
 .hover-cell-zoom:hover {
-    transform: scale(1.15);
+    transform: scale(var(--hover-zoom-scale, 1.15));
     z-index: 50;
     position: relative;
     background-color: white;
@@ -131,7 +131,7 @@ body.zoom-tables-enabled tbody td {
     transform-origin: left center;
 }
 body.zoom-tables-enabled tbody td:hover {
-    transform: scale(1.12);
+    transform: scale(var(--hover-zoom-scale, 1.15));
     z-index: 50;
     position: relative;
     background-color: white;

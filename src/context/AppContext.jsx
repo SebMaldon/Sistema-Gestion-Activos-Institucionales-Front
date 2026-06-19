@@ -15,18 +15,29 @@ export function AppProvider({ children }) {
     return localStorage.getItem('hoverZoomEnabled') !== 'false';
   });
 
+  const [hoverZoomScale, setHoverZoomScale] = useState(() => {
+    return localStorage.getItem('hoverZoomScale') || '1.15';
+  });
+
   useEffect(() => {
     if (hoverZoomEnabled) {
       document.body.classList.add('zoom-tables-enabled');
+      document.body.style.setProperty('--hover-zoom-scale', hoverZoomScale);
     } else {
       document.body.classList.remove('zoom-tables-enabled');
+      document.body.style.removeProperty('--hover-zoom-scale');
     }
-  }, [hoverZoomEnabled]);
+  }, [hoverZoomEnabled, hoverZoomScale]);
 
   const toggleHoverZoom = () => {
     const val = !hoverZoomEnabled;
     setHoverZoomEnabled(val);
     localStorage.setItem('hoverZoomEnabled', val);
+  };
+
+  const updateHoverZoomScale = (val) => {
+    setHoverZoomScale(val);
+    localStorage.setItem('hoverZoomScale', val);
   };
  
  const toastTimeoutRef = useRef(null);
@@ -62,6 +73,7 @@ export function AppProvider({ children }) {
  sidebarOpen, setSidebarOpen,
  sidebarCollapsed, setSidebarCollapsed,
  hoverZoomEnabled, toggleHoverZoom,
+ hoverZoomScale, updateHoverZoomScale,
  }}>
  {children}
  </AppContext.Provider>
