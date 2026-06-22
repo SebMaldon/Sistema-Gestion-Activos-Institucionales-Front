@@ -6,9 +6,9 @@ import {
  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import {
- Package, AlertTriangle, ShieldAlert, TrendingUp, Activity,
- CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X, ChevronDown,
- LogIn, LogOut, Edit3, Building2
+  Package, AlertTriangle, ShieldAlert, TrendingUp, Activity,
+  CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X, ChevronDown,
+  LogIn, LogOut, Edit3, Building2, ArrowLeftRight
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { GET_DASHBOARD_METRICS_QUERY, GET_DASHBOARD_STATS_QUERY } from '../api/inventario.queries';
@@ -539,22 +539,40 @@ export default function Dashboard() {
  </div>
  </div>
 
- {/* Card 2: Incidencias Activas */}
- <div 
- onClick={() => navigate('/incidencias')}
- className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
- >
- <div className="flex items-start justify-between">
- <div className="flex-1">
- <p className="text-sm text-gray-500 dark:text-gray-400 font-medium group-hover:text-gray-700 dark:text-gray-300 transition-colors">Incidencias Activas</p>
- <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-gray-100 "><AnimatedCounter value={incidenciasActivas} /></p>
- <p className="text-xs mt-1 text-red-600 dark:text-red-400 font-medium">Activas y En Proceso</p>
- </div>
- <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/20">
- <AlertTriangle size={22} className="text-red-600 dark:text-red-400" />
- </div>
- </div>
- </div>
+        {/* Card 2: Incidencias Activas o Generar Salida */}
+        {isPrivileged ? (
+          <div 
+            onClick={() => navigate('/incidencias')}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium group-hover:text-gray-700 dark:text-gray-300 transition-colors">Incidencias Activas</p>
+                <p className="text-3xl font-bold mt-1 text-gray-900 dark:text-gray-100 "><AnimatedCounter value={incidenciasActivas} /></p>
+                <p className="text-xs mt-1 text-red-600 dark:text-red-400 font-medium">Activas y En Proceso</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/20">
+                <AlertTriangle size={22} className="text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div 
+            onClick={() => navigate('/movimientos')}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium group-hover:text-gray-700 dark:text-gray-300 transition-colors">Salidas de Bienes</p>
+                <p className="text-xl font-bold mt-2 text-gray-900 dark:text-gray-100 ">Generar Salida</p>
+                <p className="text-xs mt-1 text-teal-600 dark:text-teal-400 font-medium">Ir a salidas</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-teal-100 dark:bg-teal-900/20">
+                <ArrowLeftRight size={22} className="text-teal-600 dark:text-teal-400" />
+              </div>
+            </div>
+          </div>
+        )}
 
  {/* Card 3: Garantías o Sustituto QR */}
  {isPrivileged ? (
