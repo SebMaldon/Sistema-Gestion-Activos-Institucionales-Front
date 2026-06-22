@@ -7,7 +7,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 
 export default function Movimientos() {
  const usuario = useAuthStore((s) => s.usuario);
- const isStandardUser = usuario?.id_rol === 3;
+  const isStandardUser = false; // usuario?.id_rol === 3; // Permiso total concedido a usuarios estándar
  const [activeTab, setActiveTab] = useState('generar');
 
  return (

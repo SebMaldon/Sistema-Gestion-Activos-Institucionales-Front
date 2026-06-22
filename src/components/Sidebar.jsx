@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
 import {
-  LayoutDashboard, Package, AlertTriangle, ArrowLeftRight,
+  LayoutDashboard, Package, AlertTriangle, ArrowLeftFromLine,
   QrCode, Users, Settings, ShieldCheck, LogOut, ChevronRight,
   Building2, ClipboardList, X, Mail
 } from 'lucide-react';
@@ -16,7 +16,7 @@ const NAV_BY_ROL = {
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Gestión' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Gestión' },
 
-    { path: '/movimientos', label: 'Salidas', icon: ArrowLeftRight, group: 'Gestión' },
+    { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
@@ -30,7 +30,7 @@ const NAV_BY_ROL = {
     { path: '/inventario', label: 'Inventario de Bienes', icon: Package, group: 'Administración' },
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Administración' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Administración' },
-    { path: '/movimientos', label: 'Salidas', icon: ArrowLeftRight, group: 'Administración' },
+    { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Administración' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Administración' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Administración' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
@@ -39,8 +39,7 @@ const NAV_BY_ROL = {
   3: [ // Usuario Estándar (solo consulta)
     { path: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, group: 'Principal' },
     { path: '/inventario', label: 'Inventario', icon: Package, group: 'Consulta' },
-    { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Consulta' },
-    { path: '/movimientos', label: 'Salidas', icon: ArrowLeftRight, group: 'Gestión' },
+    { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Consulta' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Consulta' },
     { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },
