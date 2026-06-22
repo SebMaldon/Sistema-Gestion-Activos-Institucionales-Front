@@ -8,7 +8,7 @@ import {
 import {
   Package, AlertTriangle, ShieldAlert, TrendingUp, Activity,
   CheckCircle, Plus, ArrowRight, QrCode, RefreshCw, Settings, Search, X, ChevronDown,
-  LogIn, LogOut, Edit3, Building2, ArrowLeftRight
+  LogIn, LogOut, Edit3, Building2, ArrowLeftFromLine
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { GET_DASHBOARD_METRICS_QUERY, GET_DASHBOARD_STATS_QUERY } from '../api/inventario.queries';
@@ -568,7 +568,7 @@ export default function Dashboard() {
                 <p className="text-xs mt-1 text-teal-600 dark:text-teal-400 font-medium">Ir a salidas</p>
               </div>
               <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-teal-100 dark:bg-teal-900/20">
-                <ArrowLeftRight size={22} className="text-teal-600 dark:text-teal-400" />
+                <ArrowLeftFromLine size={22} className="text-teal-600 dark:text-teal-400" />
               </div>
             </div>
           </div>
