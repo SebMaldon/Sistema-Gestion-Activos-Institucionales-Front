@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useAuthStore } from './store/auth.store';
+import { useAuthStore, setQueryClientRef } from './store/auth.store';
 import './index.css';
 import App from './App.jsx';
 
@@ -32,6 +32,9 @@ const queryClient = new QueryClient({
  },
  },
 });
+
+// Registrar referencia para que auth store pueda limpiar cache al cambiar sesión
+setQueryClientRef(queryClient);
 
 createRoot(document.getElementById('root')).render(
  <StrictMode>
