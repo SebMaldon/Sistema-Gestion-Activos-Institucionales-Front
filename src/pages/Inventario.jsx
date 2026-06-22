@@ -79,15 +79,16 @@ const CATEGORIAS_TI = [1, 3];
  * Detecta el modo del dispositivo basado en el nombre_tipo del tipo de dispositivo.
  * Retorna: 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
  */
-function getDeviceMode(nombreTipo, nombreCategoria = null) {
- const n = (nombreTipo || '').toLowerCase();
- const c = (nombreCategoria || '').toLowerCase();
+function getDeviceMode(nombreTipo, nombreCategoria = null, nombreEquipo = null) {
+  const n = (nombreTipo || '').toLowerCase();
+  const c = (nombreCategoria || '').toLowerCase();
+  const e = (nombreEquipo || '').toLowerCase();
 
- if (n.includes('monitor') || c.includes('monitor')) return 'MONITOR';
- if (n.includes('laptop') || n.includes('port') || n.includes('notebook') || c.includes('laptop')) return 'LAPTOP';
- if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio') || n.includes('cómputo') || n.includes('computo') || c.includes('cómputo') || c.includes('computo')) return 'PC';
+  if (n.includes('monitor') || c.includes('monitor') || e.includes('monitor') || e.includes('pantalla')) return 'MONITOR';
+  if (n.includes('laptop') || n.includes('port') || n.includes('notebook') || c.includes('laptop') || e.includes('laptop') || e.includes('notebook')) return 'LAPTOP';
+  if (n.includes('pc') || n.includes('desktop') || n.includes('escritorio') || n.includes('cómputo') || n.includes('computo') || c.includes('cómputo') || c.includes('computo') || e.includes('escritorio') || e.includes('optiplex') || e.includes('prodesk') || e.includes('thinkcentre')) return 'PC';
 
- return 'OTHER';
+  return 'OTHER';
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1093,7 +1094,7 @@ export default function Inventario() {
 
  const handleNextPage = () => { if (currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999)) setCurrentPage(p => p + 1); };
 
- const handlePrevPage = () => { setCurrentPage(p => max(1, p - 1)); };
+ const handlePrevPage = () => { setCurrentPage(p => Math.max(1, p - 1)); };
 
  const [pageInput, setPageInput] = useState('');
 
@@ -1337,7 +1338,7 @@ export default function Inventario() {
  setCuentasList((bien.cuentasPC ?? []).map(c => ({ ...c, _editing: false })));
  // Detectar deviceMode por tipo de dispositivo del modelo
  const nombreTipo = bien.modelo?.tipoDispositivo?.nombre_tipo ?? null;
- const mode = getDeviceMode(nombreTipo, bien.categoria?.nombre_categoria);
+ const mode = getDeviceMode(nombreTipo, bien.categoria?.nombre_categoria, bien.equipo);
  setDeviceMode(mode);
  setShowTI(mode === 'PC' || mode === 'LAPTOP');
  setFormErrors({});
@@ -2212,7 +2213,7 @@ export default function Inventario() {
  No se encontraron bienes con los filtros aplicados.
  </td></tr>
  ) : bienes.map((bien) => {
- const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria);
+ const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria, bien.equipo);
  const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
  const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
  const isConflictRow = (isPcOrLaptop && isMissingInv) || (bien.inconvenientes && bien.inconvenientes.length > 0);
@@ -2269,10 +2270,16 @@ export default function Inventario() {
  <td className="px-4 py-3.5">
  <div className="w-full">
  <div className="flex items-center gap-1.5 max-w-full">
- <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate" title={hoverZoomEnabled ? (bien.especificacionTI?.nombre_host || 'Sin Host') : undefined}>{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
- {bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 dark:text-gray-400 shrink-0"><Copy size={12} /></button>}
+ <p className={`font-semibold text-gray-900 dark:text-gray-100 text-sm truncate ${!isPcOrLaptop ? 'whitespace-normal' : ''}`} title={hoverZoomEnabled ? (isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo) : undefined}>
+ {isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo}
+ </p>
+ {isPcOrLaptop && bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 dark:text-gray-400 shrink-0"><Copy size={12} /></button>}
  </div>
- <p className="text-xs text-gray-400">{bien.equipo}</p>
+ <p className="text-xs text-gray-400 mt-0.5">
+ <span className="font-semibold text-gray-500 dark:text-gray-400">{bien.modelo?.tipoDispositivo?.nombre_tipo || 'Dispositivo'}</span>
+ <span className="mx-1">•</span>
+ {isPcOrLaptop ? bien.equipo : (bien.categoria?.nombre_categoria || 'Accesorio')}
+ </p>
  {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
  <div className="mt-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-md p-1.5 flex flex-col gap-0.5 w-fit shadow-sm">
  <div className="flex items-center gap-1.5 text-xs text-indigo-900 dark:text-indigo-300" title={`Cuenta: ${bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}`}>
@@ -2344,7 +2351,7 @@ export default function Inventario() {
  No se encontraron bienes.
  </div>
  ) : bienes.map((bien) => {
- const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria);
+ const mode = getDeviceMode(bien.modelo?.tipoDispositivo?.nombre_tipo, bien.categoria?.nombre_categoria, bien.equipo);
  const isPcOrLaptop = mode === 'PC' || mode === 'LAPTOP';
  const isMissingInv = !bien.numInv || bien.numInv === 'N/D';
  const isConflictRow = (isPcOrLaptop && isMissingInv) || (bien.inconvenientes && bien.inconvenientes.length > 0);
@@ -2362,11 +2369,17 @@ export default function Inventario() {
  <div className="flex items-start justify-between gap-3 mb-3 pl-1">
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-2">
- <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700 dark:text-red-400 dark:text-red-300' : 'text-gray-900 dark:text-gray-100 '}`}>{bien.especificacionTI?.nombre_host || 'Sin Host'}</p>
+ <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700 dark:text-red-400 dark:text-red-300' : 'text-gray-900 dark:text-gray-100 '}`}>
+ {isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo}
+ </p>
  {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
  {hasWifiConflict && <Wifi size={14} className="text-red-600 dark:text-red-400 animate-pulse" title={wifiConflictMsg} />}
  </div>
- <p className="text-xs text-gray-400 mt-0.5">{bien.equipo}</p>
+ <p className="text-xs text-gray-400 mt-0.5">
+ <span className="font-semibold text-gray-500 dark:text-gray-400">{bien.modelo?.tipoDispositivo?.nombre_tipo || 'Dispositivo'}</span>
+ <span className="mx-1">•</span>
+ {isPcOrLaptop ? bien.equipo : (bien.categoria?.nombre_categoria || 'Accesorio')}
+ </p>
  {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
  <div className="mt-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-md p-1.5 flex flex-col gap-0.5 w-fit max-w-full shadow-sm">
  <div className="flex items-center gap-1.5 text-xs text-indigo-900 dark:text-indigo-300">
