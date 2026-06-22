@@ -572,10 +572,10 @@ export default function ExportExcelModal({
  <div className="p-5 space-y-4">
  {/* Vista previa de descripción */}
  <div className="rounded-xl border border-green-100 dark:border-green-800/50 bg-green-50 dark:bg-green-900/20 p-3">
- <p className="text-[10px] font-bold text-green-700 dark:text-green-400 dark:text-green-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <p className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
  <FileText size={11} /> Descripción del reporte
  </p>
- <p className="text-xs text-green-900 leading-relaxed font-medium">
+ <p className="text-xs text-green-900 dark:text-green-100 leading-relaxed font-medium">
  {descripcion}
  </p>
  </div>
@@ -584,9 +584,9 @@ export default function ExportExcelModal({
  <button
  onClick={() => handleExport(true)}
  disabled={loading}
- className="w-full flex items-start gap-3.5 p-4 rounded-xl border-2 border-green-200 dark:border-green-800/50 dark:border-green-800/50 hover:border-green-400 hover:bg-green-50 transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed"
+ className="w-full flex items-start gap-3.5 p-4 rounded-xl border-2 border-green-200 dark:border-green-800/50 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed"
  >
- <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 transition-colors">
+ <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-800/60 transition-colors">
  {loadingType === 'desc' && loading
  ? <Loader2 size={18} className="text-green-700 dark:text-green-400 dark:text-green-300 animate-spin" />
  : <FileText size={18} className="text-green-700 dark:text-green-400 dark:text-green-300" />}

@@ -92,7 +92,7 @@ function ModalHeader({ title, subtitle, onClose }) {
 }
 
 // ─── Modal Crear / Editar Usuario ────────────────────────────────────────────
-function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFisicas = [] }) {
+function UsuarioModal({ usuario, onClose, roles = [], unidadesFisicas = [] }) {
  const qc = useQueryClient();
  const { showToast } = useApp();
  const isEdit = !!usuario;
@@ -104,7 +104,6 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
  correo_electronico: usuario?.correo_electronico ?? '',
  password: '',
  id_rol: usuario?.id_rol ?? 3,
- id_unidad: usuario?.id_unidad ?? '', // FK segmento de red
  clave_unidad: usuario?.clave_unidad ?? '', // FK unidad física
  });
  const [showPass, setShowPass] = useState(false);
@@ -134,31 +133,14 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
  const handleChange = (k, v) => {
  setForm(p => {
  const next = { ...p, [k]: v };
- if (k === 'clave_unidad') {
- next.id_unidad = '';
- } else if (k === 'id_unidad' && v) {
- const selectedSeg = segmentos.find(s => String(s.id_segmento) === String(v));
- if (selectedSeg && selectedSeg.clave) {
- next.clave_unidad = selectedSeg.clave;
- }
- }
  return next;
  });
  };
-
- const filteredSegmentos = React.useMemo(() => {
- if (!form.clave_unidad) return segmentos;
- return segmentos.filter(s => String(s.clave) === String(form.clave_unidad));
- }, [segmentos, form.clave_unidad]);
 
  const handleSubmit = (e) => {
  e.preventDefault();
  if (!form.nombre_completo) {
  showToast('El nombre es obligatorio', 'warning');
- return;
- }
- if (form.id_unidad && !form.clave_unidad) {
- showToast('Debe seleccionar la Unidad Física correspondiente al segmento', 'warning');
  return;
  }
  const vars = {
@@ -167,7 +149,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
  tipo_usuario: form.tipo_usuario || null,
  correo_electronico: form.correo_electronico || null,
  id_rol: parseInt(form.id_rol),
- id_unidad: form.id_unidad ? parseInt(form.id_unidad) : null,
+ id_unidad: null,
  clave_unidad: form.clave_unidad || null,
  };
  if (isEdit) {
@@ -180,7 +162,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
  }
  };
 
- const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
+ const inputCls = 'w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
  const labelCls = 'block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1';
 
  return (
@@ -232,7 +214,7 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
  </select>
  </div>
 
- {/* Asignación de unidad — separador visual */}
+ {/* Asignación de unidad */}
  <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Asignación de Unidad</p>
  <div className="grid grid-cols-1 gap-4">
@@ -254,32 +236,8 @@ function UsuarioModal({ usuario, onClose, roles = [], segmentos = [], unidadesFi
  }))
  ]}
  placeholder="Buscar unidad..."
- disabled={!!form.id_unidad}
  />
- <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación {!!form.id_unidad && "(Bloqueado por segmento seleccionado)"}</p>
- </div>
-
- {/* Segmento de red */}
- <div>
- <label className={labelCls}>
- <span className="inline-flex items-center gap-1">
- <Radio size={11} className="text-blue-500" />
- Segmento de Red
- </span>
- </label>
- <SearchableSelect
- value={form.id_unidad ? String(form.id_unidad) : ''}
- onChange={val => handleChange('id_unidad', val || '')}
- options={[
- { value: '', label: '— Ninguno —' },
- ...filteredSegmentos.map(s => ({
- value: String(s.id_segmento),
- label: s.nombre || s.no_ref
- }))
- ]}
- placeholder="Buscar segmento..."
- />
- <p className="text-[10px] text-gray-400 mt-0.5">Segmento de red / IP asignado</p>
+ <p className="text-[10px] text-gray-400 mt-0.5">Clínica / Hospital / Delegación</p>
  </div>
  </div>
  </div>
@@ -574,8 +532,6 @@ export default function GestionUsuarios() {
  const [debouncedSearch, setDebouncedSearch] = useState('');
  const [filterEstatus, setFilterEstatus] = useState('');
  const [filterRoles, setFilterRoles] = useState([]);
- // Filtro por segmento de red (id_unidad → segmentos.id_segmento)
- const [filterSegmento, setFilterSegmento] = useState([]);
  // Filtro por unidad física (clave_unidad → unidades.clave) — filtrado en cliente
  const [filterUnidadesFisicas, setFilterUnidadesFisicas] = useState([]);
  const [currentPage, setCurrentPage] = useState(1);
@@ -613,15 +569,6 @@ export default function GestionUsuarios() {
  },
  });
 
- // Catálogo de segmentos de red
- const { data: catSegmentos = [] } = useQuery({
- queryKey: ['catSegmentos'],
- queryFn: async () => {
- const d = await gqlClient.request(GET_CAT_SEGMENTOS);
- return d.catSegmentos ?? [];
- },
- });
-
  // Catálogo de unidades físicas
  const { data: catUnidadesFisicas = [] } = useQuery({
  queryKey: ['catUnidadesFisicas'],
@@ -633,7 +580,7 @@ export default function GestionUsuarios() {
 
  // ── Query principal de usuarios
  const { data: usuariosData, isLoading, isError, refetch, isFetching } = useQuery({
- queryKey: ['usuarios', filterEstatus, filterSegmento, filterRoles, debouncedSearch, currentPage],
+ queryKey: ['usuarios', filterEstatus, filterRoles, debouncedSearch, currentPage],
  queryFn: () => gqlClient.request(GET_USUARIOS, {
  estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
  search: debouncedSearch || undefined,
@@ -643,11 +590,10 @@ export default function GestionUsuarios() {
  select: d => d.usuarios,
  });
 
- // Filtro de unidad física y segmento aplicado en cliente
+ // Filtro de unidad física aplicado en cliente
  const allUsuarios = usuariosData?.edges?.map(e => e.node) ?? [];
  const usuarios = allUsuarios.filter(u => {
  if (filterUnidadesFisicas.length > 0 && !filterUnidadesFisicas.includes(u.clave_unidad)) return false;
- if (filterSegmento.length > 0 && !filterSegmento.includes(String(u.id_unidad))) return false;
  return true;
  });
 
@@ -665,7 +611,6 @@ export default function GestionUsuarios() {
  const qc = useQueryClient();
 
  const isAdmin = idRol <= 2;
- const isMaestro = idRol === 2;
 
  // Ordenar roles: Maestro(1), Admin(2), Estándar(3), Sin Acceso(4)
  const roleOrder = { '1': 1, '2': 2, '3': 3, '4': 4 };
@@ -778,27 +723,10 @@ export default function GestionUsuarios() {
  />
  </div>
 
- <div className="flex-1 min-w-[180px] w-full md:w-auto z-[60]">
- <MultiSelect
- selectedValues={filterSegmento}
- onChange={vals => { setFilterSegmento(vals); resetPage(); }}
- options={[
- ...catSegmentos
- .filter(s => filterUnidadesFisicas.length === 0 || filterUnidadesFisicas.includes(String(s.clave)))
- .map(s => ({
- value: String(s.id_segmento),
- label: s.nombre || s.no_ref
- }))
- ]}
- placeholder="📡 Todos los segmentos"
- />
- </div>
-
  <button onClick={() => {
  setSearch('');
  setDebouncedSearch('');
  setFilterEstatus('');
- setFilterSegmento([]);
  setFilterUnidadesFisicas([]);
  setFilterRoles([]);
  setCursor(null);
@@ -825,11 +753,6 @@ export default function GestionUsuarios() {
  <Building2 size={12} className="text-green-600 dark:text-green-400" /> Unidad Física
  </span>
  </th>
- <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
- <span className="flex items-center gap-1.5">
- <Radio size={12} className="text-blue-500" /> Segmento Red
- </span>
- </th>
  <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Estatus</th>
  {isAdmin && <th className="px-5 py-3.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Acciones</th>}
  </tr>
@@ -837,16 +760,15 @@ export default function GestionUsuarios() {
  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
  {isLoading ? (
  <tr>
- <td colSpan={isAdmin ? 6 : 5} className="py-12 text-center text-sm text-gray-400">Cargando...</td>
+ <td colSpan={isAdmin ? 5 : 4} className="py-12 text-center text-sm text-gray-400">Cargando...</td>
  </tr>
  ) : usuarios.length === 0 ? (
  <tr>
- <td colSpan={isAdmin ? 6 : 5} className="py-12 text-center text-sm text-gray-400">No se encontraron usuarios</td>
+ <td colSpan={isAdmin ? 5 : 4} className="py-12 text-center text-sm text-gray-400">No se encontraron usuarios</td>
  </tr>
  ) : usuarios.map(u => {
  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
  const ufLabel = unidadFisicaLabel(u);
- const segLabel = segmentoLabel(u);
  return (
  <tr key={u.id_usuario} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors">
  <td className="px-5 py-4">
@@ -872,17 +794,6 @@ export default function GestionUsuarios() {
  <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg font-medium">
  <Building2 size={11} />
  {ufLabel}
- </span>
- ) : (
- <span className="text-xs text-gray-300">—</span>
- )}
- </td>
- {/* Segmento de red */}
- <td className="px-5 py-4">
- {segLabel ? (
- <span className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg font-medium">
- <Radio size={11} />
- {segLabel}
  </span>
  ) : (
  <span className="text-xs text-gray-300">—</span>
@@ -935,7 +846,6 @@ export default function GestionUsuarios() {
  ) : usuarios.map(u => {
  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
  const ufLabel = unidadFisicaLabel(u);
- const segLabel = segmentoLabel(u);
  return (
  <div key={u.id_usuario} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
  <div className="flex items-center gap-3 mb-3">
@@ -951,19 +861,14 @@ export default function GestionUsuarios() {
  {badge.label}
  </span>
  </div>
- {/* Unidad y segmento en móvil */}
+ {/* Unidad en móvil */}
  <div className="flex flex-wrap gap-1.5 mb-3">
  {ufLabel && (
  <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-lg font-medium">
  <Building2 size={10} />{ufLabel}
  </span>
  )}
- {segLabel && (
- <span className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg font-medium">
- <Radio size={10} />{segLabel}
- </span>
- )}
- {!ufLabel && !segLabel && (
+ {!ufLabel && (
  <span className="text-xs text-gray-400">Sin unidad asignada</span>
  )}
  </div>
@@ -1076,7 +981,6 @@ export default function GestionUsuarios() {
  {modalCrear && (
  <UsuarioModal
  roles={catRoles}
- segmentos={catSegmentos}
  unidadesFisicas={catUnidadesFisicas}
  onClose={() => setModalCrear(false)}
  />
@@ -1085,7 +989,6 @@ export default function GestionUsuarios() {
  <UsuarioModal
  usuario={modalEditar}
  roles={catRoles}
- segmentos={catSegmentos}
  unidadesFisicas={catUnidadesFisicas}
  onClose={() => setModalEditar(null)}
  />

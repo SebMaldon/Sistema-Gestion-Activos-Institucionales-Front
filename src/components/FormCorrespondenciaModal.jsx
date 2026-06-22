@@ -215,7 +215,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  onChange={handleChange}
  placeholder="Autogenerado..."
  disabled={!isManualFolio && !initialData}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:text-gray-500 disabled:cursor-not-allowed"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:text-gray-500 disabled:cursor-not-allowed"
  />
  </div>
 
@@ -225,7 +225,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  name="Tipo"
  value={formData.Tipo}
  onChange={handleChange}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
  required
  >
  <option value={1}>Enviada</option>
@@ -258,7 +258,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  onChange={handleChange}
  placeholder={formData.Tipo === 1 && !initialData && !isManualNoOficio ? "Autogenerado..." : "Ingrese el número..."}
  disabled={!isManualNoOficio && !initialData && formData.Tipo === 1}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:text-gray-500 disabled:cursor-not-allowed"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:text-gray-500 disabled:cursor-not-allowed"
  required={formData.Tipo === 2}
  />
  </div>
@@ -272,7 +272,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  name="FechaOficio"
  value={formData.FechaOficio}
  onChange={handleChange}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
  required
  />
  </div>
@@ -285,7 +285,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  value={formData.Remitente}
  onChange={handleChange}
  placeholder="Nombre del remitente..."
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
  required
  />
  </div>
@@ -299,7 +299,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  onChange={handleChange}
  rows={8}
  placeholder="Detalles de la correspondencia..."
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
  required
  />
  </div>
@@ -311,7 +311,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  name="Clave_unidad"
  value={formData.Clave_unidad}
  onChange={handleChange}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
  >
  <option value="">Seleccione una unidad (Opcional)</option>
  {loadingUnidades ? (
@@ -337,7 +337,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  name="id_ubicacion"
  value={formData.id_ubicacion}
  onChange={handleChange}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:text-gray-400"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:text-gray-400"
  disabled={!formData.Clave_unidad}
  >
  <option value="">{!formData.Clave_unidad ? 'Primero seleccione una unidad' : 'Seleccione una ubicación (Opcional)'}</option>
@@ -353,7 +353,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
  name="Archivo"
  value={formData.Archivo}
  onChange={handleChange}
- className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+ className="w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
  >
  <option value="">Seleccione un catálogo de archivo (Opcional)</option>
  {loadingArchivos ? (

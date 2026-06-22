@@ -394,7 +394,7 @@ export default function EscanerQR() {
  setSelectedIndex(idx);
  setFichaTabs('info');
  }}
- className="group relative flex flex-col p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-500 hover:bg-green-50/40 hover:shadow-md cursor-pointer transition-all overflow-hidden"
+ className="group relative flex flex-col p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-600 hover:bg-green-50/40 dark:hover:bg-green-900/30 hover:shadow-md cursor-pointer transition-all overflow-hidden"
  >
  <div className="flex justify-between items-start mb-4">
  <div className="pr-8">

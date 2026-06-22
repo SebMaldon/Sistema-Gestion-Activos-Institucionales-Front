@@ -788,7 +788,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  name="tipo_unidad"
  value={formData.tipo_unidad}
  onChange={handleChange}
- className={`w-full px-3 py-2 text-sm border ${errors.tipo_unidad ? 'border-red-500' : 'border-gray-200 dark:border-gray-700 '} rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
+ className={`w-full px-3 py-2 text-sm border ${errors.tipo_unidad ? 'border-red-500' : 'border-gray-200 dark:border-gray-700 '} bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none`}
  disabled={loadingTipos}
  >
  <option value="">-- Seleccionar Tipo --</option>
@@ -1018,7 +1018,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  <select
  value={seg.tipo_enlace || ''}
  onChange={(e) => handleSegmentChange(index, 'tipo_enlace', e.target.value)}
- className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+ className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
  >
  <option value="">-- Seleccionar --</option>
  <option value={1}>Fibra Óptica (1)</option>
@@ -1033,7 +1033,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  <select
  value={seg.estatus}
  onChange={(e) => handleSegmentChange(index, 'estatus', parseInt(e.target.value))}
- className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+ className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
  >
  <option value={1}>Activa</option>
  <option value={0}>Inactiva</option>

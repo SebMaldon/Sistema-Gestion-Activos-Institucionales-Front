@@ -195,7 +195,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
  {canEdit && (
  <button
  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onEdit(inc); }}
- className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-amber-50 hover:text-amber-600 flex items-center gap-3 transition-colors"
+ className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-3 transition-colors"
  >
  <div className="p-1 bg-amber-100 dark:bg-amber-900/20 rounded-lg text-amber-600 dark:text-amber-400"><Edit2 size={14} /></div>
  Editar Registro
@@ -204,7 +204,7 @@ const IncidenciaCard = memo(function IncidenciaCard({
  {canDelete && (
  <button
  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(inc.id); }}
- className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 flex items-center gap-3 transition-colors"
+ className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-300 flex items-center gap-3 transition-colors"
  >
  <div className="p-1 bg-red-100 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400"><Trash2 size={14} /></div>
  Eliminar
