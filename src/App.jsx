@@ -155,9 +155,9 @@ export default function App() {
  <AppLayout page="inventario"><Inventario /></AppLayout>
  </ProtectedRoute>
  } />
- <Route path="/incidencias" element={
+ <Route path="/movimientos" element={
  <ProtectedRoute>
- <AppLayout page="incidencias"><Incidencias /></AppLayout>
+ <AppLayout page="movimientos"><Movimientos /></AppLayout>
  </ProtectedRoute>
  } />
  <Route path="/escaner" element={
@@ -182,9 +182,9 @@ export default function App() {
  <AppLayout page="garantias"><Garantias /></AppLayout>
  </RoleRoute>
  } />
- <Route path="/movimientos" element={
+ <Route path="/incidencias" element={
  <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
- <AppLayout page="movimientos"><Movimientos /></AppLayout>
+ <AppLayout page="incidencias"><Incidencias /></AppLayout>
  </RoleRoute>
  } />
  <Route path="/correspondencia" element={
