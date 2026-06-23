@@ -4,7 +4,7 @@ import { gqlClient } from '../api/client';
 import { GET_BIEN_DETAIL_QUERY } from '../api/inventario.queries';
 import {
  Package, Search, Layers, ChevronLeft, ChevronRight,
- Monitor, Cpu, Server, HardDrive, Wifi, Tag, User, Shield, MapPin, Calendar, X
+ Monitor, Cpu, Server, HardDrive, Wifi, Tag, User, Shield, MapPin, Calendar, X, StickyNote
 } from 'lucide-react';
 import ReactDOM from 'react-dom';
 import BienAtributosPanel from './BienAtributosPanel';
@@ -253,6 +253,29 @@ export default function DetalleBienVisualModal({ id_bien, onClose }) {
  <InfoField icon={<Calendar size={14} />} label="Fecha Adquisición" value={formatDate(activeFicha.fecha_adquisicion)} />
  <InfoField icon={<Calendar size={14} />} label="Última Actualización" value={formatDateTime(activeFicha.fecha_actualizacion)} />
  <InfoField icon={<Package size={14} />} label="Cantidad" value={activeFicha.cantidad} />
+ </div>
+
+ {/* Notas de Observación */}
+ <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+ <div className="bg-gray-50 dark:bg-gray-900 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 ">
+ <StickyNote size={15} className="text-gray-500 dark:text-gray-400 " />
+ <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Notas de Observación</span>
+ </div>
+ <div className="p-4 space-y-3 bg-white dark:bg-gray-800 ">
+ {activeFicha.notas && activeFicha.notas.length > 0 ? (
+ activeFicha.notas.map((nota) => (
+ <div key={nota.id_nota} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 ">
+ <p className="text-sm text-gray-800 dark:text-gray-200 ">{nota.contenido_nota}</p>
+ <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+ <span>{nota.usuarioAutor?.nombre_completo || 'Sistema'}</span>
+ <span>{new Date(isNaN(Number(nota.fecha_creacion)) ? nota.fecha_creacion : Number(nota.fecha_creacion)).toLocaleString('es-MX')}</span>
+ </div>
+ </div>
+ ))
+ ) : (
+ <p className="text-sm text-gray-400 italic">No hay notas registradas para este bien.</p>
+ )}
+ </div>
  </div>
  </div>
  )}

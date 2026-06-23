@@ -246,7 +246,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
  <select 
  value={form.estatus}
  onChange={e => setForm(p => ({ ...p, estatus: e.target.value }))}
- className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600/50 rounded-lg focus:ring-2 focus:ring-[#006341] focus:border-[#006341] outline-none transition-all"
+ className="w-full px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600/50 rounded-lg focus:ring-2 focus:ring-[#006341] focus:border-[#006341] outline-none transition-all"
  >
  {ESTATUS_OPTIONS.map(opt => (
  <option key={opt} value={opt}>{opt}</option>
@@ -260,7 +260,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
  onChange={e => setForm(p => ({ ...p, descripcion_falla: e.target.value }))}
  placeholder="Detalles sobre el problema, envío, revisión, etc..."
  rows={4}
- className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600/50 rounded-lg focus:ring-2 focus:ring-[#006341] focus:border-[#006341] outline-none transition-all resize-none"
+ className="w-full px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600/50 rounded-lg focus:ring-2 focus:ring-[#006341] focus:border-[#006341] outline-none transition-all resize-none"
  />
  </div>
  {['Resuelto / Entregado', 'Listo para recoger'].includes(form.estatus) && (
@@ -271,7 +271,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
  onChange={e => setForm(p => ({ ...p, resolucion: e.target.value }))}
  placeholder="Detalles de la reparación o solución (opcional hasta que se resuelva)..."
  rows={3}
- className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600/50 rounded-lg focus:ring-2 focus:ring-[#006341] focus:border-[#006341] outline-none transition-all resize-none"
+ className="w-full px-3 py-2 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600/50 rounded-lg focus:ring-2 focus:ring-[#006341] focus:border-[#006341] outline-none transition-all resize-none"
  />
  </div>
  )}

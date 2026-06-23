@@ -29,6 +29,7 @@ import {
  CHECK_DUPLICATE_IP_QUERY, CLEAR_IP_FROM_OTHER_BIENES_MUTATION
 } from '../api/inventario.queries';
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA, CREATE_PROVEEDOR } from '../api/garantias.queries';
+import { DELETE_NOTA_MUTATION } from '../api/incidencias.queries';
 import { formatDate, formatDateTime } from '../lib/utils';
 import SearchableSelect from '../components/SearchableSelect';
 import MultiSearchableSelect from '../components/MultiSearchableSelect';
@@ -915,6 +916,8 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  const [deviceMode, setDeviceMode] = useState(null); // 'PC' | 'LAPTOP' | 'MONITOR' | 'OTHER' | null
  const [showCatalogModal, setShowCatalogModal] = useState(false);
  const [showAtributosModal, setShowAtributosModal] = useState(false);
+ const [notaToDelete, setNotaToDelete] = useState(null);
+ const [isDeletingNota, setIsDeletingNota] = useState(false);
  
  const loadingCat = !catalogos;
  const bienes = queryClient.getQueryData(['bienes'])?.items ?? [];
@@ -987,6 +990,54 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  },
  onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar garantía', 'error'),
  });
+
+ const { mutate: deleteNotaMut } = useMutation({
+ mutationFn: (id_nota) => gqlClient.request(DELETE_NOTA_MUTATION, { id_nota }),
+ onSuccess: () => {
+ qc.invalidateQueries({ queryKey: ['bienes'] });
+ showToast('Nota eliminada', 'success');
+ },
+ onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al eliminar nota', 'error'),
+ });
+
+ const { mutate: createNotaMut, isPending: creatingNota } = useCreateNotaBien();
+ const [newNota, setNewNota] = useState('');
+
+ const handleAddNota = () => {
+ if (!newNota.trim()) return;
+ createNotaMut({ id_bien: modalForm.id_bien, contenido_nota: newNota.trim() }, {
+ onSuccess: (newNotaObj) => {
+ showToast('Nota agregada', 'success');
+ setNewNota('');
+ setModalForm(prev => {
+ if (!prev || prev === 'create') return prev;
+ return { ...prev, notas: [...(prev.notas || []), newNotaObj] };
+ });
+ }
+ });
+ };
+
+ const handleDeleteNota = (nota) => {
+ setNotaToDelete(nota);
+ };
+
+ const confirmDeleteNota = () => {
+ if (!notaToDelete) return;
+ setIsDeletingNota(true);
+ deleteNotaMut(notaToDelete.id_nota, {
+ onSuccess: () => {
+ setModalForm(prev => {
+ if (!prev || prev === 'create') return prev;
+ return { ...prev, notas: (prev.notas || []).filter(n => n.id_nota !== notaToDelete.id_nota) };
+ });
+ setIsDeletingNota(false);
+ setNotaToDelete(null);
+ },
+ onError: () => {
+ setIsDeletingNota(false);
+ }
+ });
+ };
 
  const { mutate: createBien, isPending: creating } = useCreateBien({
  onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
@@ -1613,7 +1664,8 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
  {/* ── Tab: General ── */}
  {formTab === 'general' && (
- <fieldset disabled={idRol === 3} className="grid grid-cols-1 sm:grid-cols-2 gap-4 fade-in">
+ <div className="space-y-6 fade-in">
+ <fieldset disabled={idRol === 3} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
  {/* Categoría */}
  <div>
  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
@@ -1880,6 +1932,63 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  />
  </div>
  </fieldset>
+
+ {/* Notas de Observación (solo en edición) */}
+ {modalForm !== 'create' && (
+ <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+ <div className="bg-gray-50 dark:bg-gray-900 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 ">
+ <StickyNote size={15} className="text-gray-500 dark:text-gray-400 " />
+ <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Notas de Observación</span>
+ </div>
+ <div className="p-4 space-y-3 bg-white dark:bg-gray-800 ">
+ {modalForm.notas && modalForm.notas.length > 0 ? (
+ modalForm.notas.map((nota) => (
+ <div key={nota.id_nota} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 relative group/nota">
+ <p className="text-sm text-gray-800 dark:text-gray-200 pr-8">{nota.contenido_nota}</p>
+ <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+ <span>{nota.usuarioAutor?.nombre_completo || 'Sistema'}</span>
+ <span>{new Date(isNaN(Number(nota.fecha_creacion)) ? nota.fecha_creacion : Number(nota.fecha_creacion)).toLocaleString('es-MX')}</span>
+ </div>
+ 
+ {([1, 2].includes(Number(idRol))) && (
+ <button 
+ type="button"
+ onClick={() => handleDeleteNota(nota)}
+ className="absolute right-3 top-3 p-1.5 opacity-0 group-hover/nota:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 transition-all"
+ title="Eliminar Nota"
+ >
+ <Trash2 size={14} />
+ </button>
+ )}
+ </div>
+ ))
+ ) : (
+ <p className="text-sm text-gray-400 italic">No hay notas registradas para este bien.</p>
+ )}
+ 
+ <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 ">
+ <textarea
+ value={newNota}
+ onChange={(e) => setNewNota(e.target.value)}
+ placeholder="Escribe una nueva nota u observación..."
+ className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 focus:ring-1 focus:ring-teal-500 outline-none resize-none bg-white dark:bg-gray-800 "
+ rows={2}
+ />
+ <div className="flex justify-end mt-2">
+ <button
+ type="button"
+ onClick={handleAddNota}
+ disabled={creatingNota || !newNota.trim()}
+ className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+ >
+ {creatingNota ? 'Guardando...' : 'Guardar Nota'}
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
+ </div>
  )}
 
  {/* ── Tab: Técnico ── */}
@@ -2058,8 +2167,6 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  </div>
  </div>
  )}
- </div>
- )}
 
  {/* — Sección Monitores (Solo PC y Laptop) — */}
  {(deviceMode === 'PC' || deviceMode === 'LAPTOP') && (
@@ -2205,6 +2312,8 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  )}
  </div>
  )}
+ </div>
+ )}
  </Modal>
  )}
 
@@ -2221,6 +2330,41 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  <AtributosCatalogModal onClose={() => setShowAtributosModal(false)} />
  )}
 
+ {notaToDelete && (
+ <Modal onClose={() => setNotaToDelete(null)} title="Eliminar Nota" subtitle="Esta acción no se puede deshacer" small>
+ <div className="flex flex-col gap-4 text-center">
+ <div className="w-14 h-14 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto text-red-600 dark:text-red-400 mb-1">
+ <AlertTriangle size={28} />
+ </div>
+ <p className="text-sm text-gray-600 dark:text-gray-400 ">
+ ¿Estás seguro de que deseas eliminar permanentemente esta nota?
+ </p>
+ <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-left text-xs space-y-1 border border-gray-100 dark:border-gray-800 ">
+ <p><span className="text-gray-400">Nota:</span> <span className="font-mono text-gray-700 dark:text-gray-300 ">
+ {notaToDelete.contenido_nota?.substring(0, 50)}
+ {notaToDelete.contenido_nota?.length > 50 ? '...' : ''}
+ </span></p>
+ <p><span className="text-gray-400">Autor:</span> <span className="font-mono text-gray-700 dark:text-gray-300 ">{notaToDelete.usuarioAutor?.nombre_completo || 'Sistema'}</span></p>
+ </div>
+ <div className="flex gap-3 mt-2">
+ <button
+ onClick={() => setNotaToDelete(null)}
+ className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors"
+ >
+ Cancelar
+ </button>
+ <button
+ onClick={confirmDeleteNota}
+ disabled={isDeletingNota}
+ className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+ >
+ {isDeletingNota ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+ {isDeletingNota ? 'Eliminando...' : 'Sí, eliminar'}
+ </button>
+ </div>
+ </div>
+ </Modal>
+ )}
 
  </>
  );
