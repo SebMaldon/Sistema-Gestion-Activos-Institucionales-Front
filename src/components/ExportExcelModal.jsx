@@ -28,7 +28,7 @@ function fmtFecha(val) {
 }
 
 // ── Construir texto descriptivo ───────────────────────────────────────────────
-export function buildDescription({ activeTab, advFilters, filterStatus, search, catalogos }) {
+function buildDescription({ activeTab, advFilters, filterStatus, search, catalogos }) {
  const partes = [];
 
  // Tipo de bien (base)
@@ -189,48 +189,38 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
  dataStartRow = 5;
  }
 
- // Sub-encabezados de grupo (fila de grupo visual)
- // Columnas por grupo:
- // N° (1) | IDENTIFICACIÓN (3) | DESCRIPCIÓN (6) | UBICACIÓN (4) | GENERAL (4) | TI (12) | GARANTÍA (3)
- // col 0 | 1-3 | 4-9 | 10-13 | 14-17 | 18-29 | 30-32
- const groupRow = [
- '', // N°
- // Identificación (3 cols: Serie, Inv, Clave Presupuestal)
- 'IDENTIFICACIÓN', '', '',
- // Descripción (6 cols: Clave Modelo, Descripción Disp., Categoría, Tipo Disp., Marca, Unidad Medida)
- 'DESCRIPCIÓN DEL BIEN', '', '', '', '', '',
- // Ubicación (4 cols: Unidad, Segmento, Ubicación Física, Resguardo)
- 'UBICACIÓN', '', '', '',
- // General (4 cols: Estatus, Fecha Adq., Capitalizable, Cantidad)
- 'GENERAL', '', '', '',
- // TI (14 cols: 18-31)
- 'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '', '',
- // Garantía (3 cols: 32-34)
- 'GARANTÍA', '', '',
- ];
- wsData.push(groupRow);
+  // Sub-encabezados de grupo (fila de grupo visual)
+  // Columnas por grupo:
+  // N° (0) | PRINCIPALES (8) | OTROS DATOS (9) | TI (14) | GARANTÍA (3)
+  const groupRow = [
+    '', // N°
+    // Principales (8 cols: Dispositivo, Marca, Modelo, Num Serie, Num Inv, Unidad, Ubicacion, Estatus)
+    'DATOS PRINCIPALES', '', '', '', '', '', '', '',
+    // Otros Datos Generales (9 cols)
+    'OTROS DATOS GENERALES', '', '', '', '', '', '', '', '',
+    // TI (14 cols)
+    'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '', '',
+    // Garantía (3 cols)
+    'GARANTÍA', '', '',
+  ];
+  wsData.push(groupRow);
 
- // Columnas de datos
- const headers = [
- 'N°',
- // Identificación
- 'N° de Serie', 'N° de Inventario', 'Clave Presupuestal',
- // Descripción
- 'Clave Modelo', 'Descripción Dispositivo', 'Categoría',
- 'Tipo de Dispositivo', 'Marca', 'Unidad de Medida',
- // Ubicación
- 'Unidad', 'Segmento', 'Ubicación Física', 'Resguardo',
- // General
- 'Estatus', 'Fecha Adquisición', 'Capitalizable', 'Cantidad',
- // TI
- 'CPU', 'RAM (GB)', 'Almacenamiento (GB)', 'Dir. IP', 'Dir. MAC',
- 'MAC Address', 'Nombre Host', 'S.O.', 'Office', 'Puerto Red', 'Switch',
- 'N° Serie Windows', 'Último Escaneo',
- 'Cuentas Registradas (Usuario | Correo | Tipo)',
- // Garantía
- 'Garantía', 'Garantía Vence', 'Proveedor Garantía',
- ];
- wsData.push(headers);
+  // Columnas de datos
+  const headers = [
+    'N°',
+    // Principales
+    'Tipo de Dispositivo', 'Marca', 'Descripción Dispositivo', 'N° de Serie', 'N° de Inventario', 'Unidad', 'Ubicación Física', 'Estatus',
+    // Otros Datos Generales
+    'Clave Presupuestal', 'Categoría', 'Clave Modelo', 'Unidad de Medida', 'Segmento', 'Resguardo', 'Fecha Adquisición', 'Capitalizable', 'Cantidad',
+    // TI
+    'CPU', 'RAM (GB)', 'Almacenamiento (GB)', 'Dir. IP', 'Dir. MAC',
+    'MAC Address', 'Nombre Host', 'S.O.', 'Office', 'Puerto Red', 'Switch',
+    'N° Serie Windows', 'Último Escaneo',
+    'Cuentas Registradas (Usuario | Correo | Tipo)',
+    // Garantía
+    'Garantía', 'Garantía Vence', 'Proveedor Garantía',
+  ];
+  wsData.push(headers);
 
  // Filas de datos
  bienes.forEach((b, i) => {
@@ -249,73 +239,67 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
  // Segmento: viene en originalNode.segmento
  const segmentoNombre = b.originalNode?.segmento?.nombre || b.originalNode?.segmento?.clave || '';
 
- wsData.push([
- i + 1,
- // Identificación
- b.numSerie === 'N/D' ? '' : (b.numSerie || ''),
- b.numInv === 'N/D' ? '' : (b.numInv || ''),
- b.clavePresupuestal === '—' ? '' : (b.clavePresupuestal || ''),
- // Descripción
- b.modelo?.clave_modelo || b.claveModelo || '',
- b.modelo?.descrip_disp || '',
- b.categoria?.nombre_categoria || '',
- b.modelo?.tipoDispositivo?.nombre_tipo || '',
- marcaNombre,
- umNombre,
- // Ubicación
- b.unidadFisica || '',
- segmentoNombre,
- b.ubicacion || '',
- b.resguardo || '',
- // General
- b.estatusOperativo || '',
- fmtFecha(b.fechaAdquisicion),
- b.esCapitalizable ? 'Sí' : 'No',
- b.cantidad ?? 1,
- // TI
- b.especificacionTI?.cpu_info || '',
- b.especificacionTI?.ram_gb ?? '',
- b.especificacionTI?.almacenamiento_gb ?? '',
- b.especificacionTI?.dir_ip || '',
- b.especificacionTI?.dir_mac || '',
- b.especificacionTI?.mac_address || '',
- b.especificacionTI?.nombre_host || '',
- b.especificacionTI?.modelo_so || '',
- b.especificacionTI?.version_office || '',
- b.especificacionTI?.puerto_red || '',
- b.especificacionTI?.switch_red || '',
- b.especificacionTI?.windows_serial || '',
- fmtFecha(b.especificacionTI?.last_scan),
- (b.cuentasPC || []).map(c => `• ${c.cuenta_windows || 'Sin usuario'} | ${c.correo || 'Sin correo'} | ${c.tipo_user || 'Sin rol'}`).join('\n') || '',
- // Garantía
- g ? 'Sí' : 'No',
- g ? fmtFecha(g.fecha_fin) : '',
- g?.proveedorObj?.nombre_proveedor || '',
- ]);
+    wsData.push([
+      i + 1,
+      // Principales
+      b.modelo?.tipoDispositivo?.nombre_tipo || '',
+      marcaNombre,
+      b.modelo?.descrip_disp || '',
+      b.numSerie === 'N/D' ? '' : (b.numSerie || ''),
+      b.numInv === 'N/D' ? '' : (b.numInv || ''),
+      b.unidadFisica || '',
+      b.ubicacion || '',
+      b.estatusOperativo || '',
+      // Otros Datos Generales
+      b.clavePresupuestal === '—' ? '' : (b.clavePresupuestal || ''),
+      b.categoria?.nombre_categoria || '',
+      b.modelo?.clave_modelo || b.claveModelo || '',
+      umNombre,
+      segmentoNombre,
+      b.resguardo || '',
+      fmtFecha(b.fechaAdquisicion),
+      b.esCapitalizable ? 'Sí' : 'No',
+      b.cantidad ?? 1,
+      // TI
+      b.especificacionTI?.cpu_info || '',
+      b.especificacionTI?.ram_gb ?? '',
+      b.especificacionTI?.almacenamiento_gb ?? '',
+      b.especificacionTI?.dir_ip || '',
+      b.especificacionTI?.dir_mac || '',
+      b.especificacionTI?.mac_address || '',
+      b.especificacionTI?.nombre_host || '',
+      b.especificacionTI?.modelo_so || '',
+      b.especificacionTI?.version_office || '',
+      b.especificacionTI?.puerto_red || '',
+      b.especificacionTI?.switch_red || '',
+      b.especificacionTI?.windows_serial || '',
+      fmtFecha(b.especificacionTI?.last_scan),
+      (b.cuentasPC || []).map(c => `• ${c.cuenta_windows || 'Sin usuario'} | ${c.correo || 'Sin correo'} | ${c.tipo_user || 'Sin rol'}`).join('\n') || '',
+      // Garantía
+      g ? 'Sí' : 'No',
+      g ? fmtFecha(g.fecha_fin) : '',
+      g?.proveedorObj?.nombre_proveedor || '',
+    ]);
  });
 
  const ws = XLSX.utils.aoa_to_sheet(wsData);
 
  // ── Estilos ───────────────────────────────────────────────────────────────
- // Ancho de columnas
- ws['!cols'] = [
- { wch: 4 }, // N°
- // Identificación
- { wch: 18 }, { wch: 18 }, { wch: 20 },
- // Descripción
- { wch: 16 }, { wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 18 },
- // Ubicación
- { wch: 24 }, { wch: 18 }, { wch: 22 }, { wch: 28 },
- // General
- { wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 10 },
- // TI
- { wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
- { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 },
- { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 22 }, { wch: 18 },
- { wch: 45 },
- // Garantía
- { wch: 10 }, { wch: 16 }, { wch: 26 },
- ];
+  // Ancho de columnas
+  ws['!cols'] = [
+    { wch: 4 }, // N°
+    // Principales
+    { wch: 18 }, { wch: 18 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 22 }, { wch: 14 },
+    // Otros Datos Generales
+    { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 10 },
+    // TI
+    { wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
+    { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 },
+    { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 22 }, { wch: 18 },
+    { wch: 45 },
+    // Garantía
+    { wch: 10 }, { wch: 16 }, { wch: 26 },
+  ];
 
  const totalCols = headers.length;
 
@@ -327,21 +311,20 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
  }
  }
 
- // Rangos de grupos: [colStart, colEnd] (0-indexed)
- // N°(0) | ID(1-3) | DESC(4-9) | UBIC(10-13) | GEN(14-17) | TI(18-31) | GAR(32-34)
- const groupRowIdx = dataStartRow;
- const groupRanges = [
- [1, 3], [4, 9], [10, 13], [14, 17], [18, 31], [32, 34],
- ];
- groupRanges.forEach(([start, end]) => {
- merges.push({ s: { r: groupRowIdx, c: start }, e: { r: groupRowIdx, c: end } });
- });
+  // Rangos de grupos: [colStart, colEnd] (0-indexed)
+  const groupRowIdx = dataStartRow;
+  const groupRanges = [
+    [1, 8], [9, 17], [18, 31], [32, 34],
+  ];
+  groupRanges.forEach(([start, end]) => {
+    merges.push({ s: { r: groupRowIdx, c: start }, e: { r: groupRowIdx, c: end } });
+  });
 
- ws['!merges'] = merges;
+  ws['!merges'] = merges;
 
- // Aplicar estilos celda a celda
- const groupColors = [COLOR_GRIS, COLOR_AZUL, COLOR_CIAN, COLOR_AMBER, COLOR_PURP, COLOR_AZUL];
- const groupBorders = ['006341','1D4ED8','0E7490','B45309','7C3AED','1D4ED8'];
+  // Aplicar estilos celda a celda
+  const groupColors = [COLOR_CIAN, COLOR_GRIS, COLOR_PURP, COLOR_AZUL];
+  const groupBorders = ['0E7490', '6B7280', '7C3AED', '1D4ED8'];
 
  // Estilo: encabezado institucional
  if (withDescription) {
@@ -409,20 +392,28 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
  bottom: { style: 'hair', color: { rgb: 'E5E7EB' } },
  },
  };
- // Resaltar columna Estatus (col 14 en el nuevo layout)
- if (c === 14) {
- const v = String(ws[cellAddr].v || '');
- const colorMap = { 'ACTIVO': '15803D', 'INACTIVO': 'B91C1C', 'DAÑADO': 'D97706', 'DEVOLUCIÓN': '7E22CE', 'OTRO': '374151', 'P_BAJA': 'C2410C', 'PRESTAMO': '1D4ED8', 'SINIESTRADO': '991B1B', 'SUSTITUIDO': '4338CA', 'TRASPASO OOAD': '0F766E', 'TRASPASO_FORANEO': '0369A1' };
- const bgMap = { 'ACTIVO': 'DCFCE7', 'INACTIVO': 'FEE2E2', 'DAÑADO': 'FEF3C7', 'DEVOLUCIÓN': 'F3E8FF', 'OTRO': 'F3F4F6', 'P_BAJA': 'FFEDD5', 'PRESTAMO': 'DBEAFE', 'SINIESTRADO': 'FEF2F2', 'SUSTITUIDO': 'E0E7FF', 'TRASPASO OOAD': 'CCFBF1', 'TRASPASO_FORANEO': 'CFFAFE' };
- ws[cellAddr].s.font.color.rgb = colorMap[v] || COLOR_TEXT;
- ws[cellAddr].s.fill.fgColor.rgb = bgMap[v] || baseFill;
- ws[cellAddr].s.font.bold = true;
+ // Resaltar columna Estatus (col 8 en el nuevo layout)
+ if (c === 8) {
+   const v = String(ws[cellAddr].v || '');
+   const colorMap = { 'ACTIVO': '15803D', 'INACTIVO': 'B91C1C', 'DAÑADO': 'D97706', 'DEVOLUCIÓN': '7E22CE', 'OTRO': '374151', 'P_BAJA': 'C2410C', 'PRESTAMO': '1D4ED8', 'SINIESTRADO': '991B1B', 'SUSTITUIDO': '4338CA', 'TRASPASO OOAD': '0F766E', 'TRASPASO_FORANEO': '0369A1' };
+   const bgMap = { 'ACTIVO': 'DCFCE7', 'INACTIVO': 'FEE2E2', 'DAÑADO': 'FEF3C7', 'DEVOLUCIÓN': 'F3E8FF', 'OTRO': 'F3F4F6', 'P_BAJA': 'FFEDD5', 'PRESTAMO': 'DBEAFE', 'SINIESTRADO': 'FEF2F2', 'SUSTITUIDO': 'E0E7FF', 'TRASPASO OOAD': 'CCFBF1', 'TRASPASO_FORANEO': 'CFFAFE' };
+   ws[cellAddr].s.font.color.rgb = colorMap[v] || COLOR_TEXT;
+   ws[cellAddr].s.fill.fgColor.rgb = bgMap[v] || baseFill;
+   ws[cellAddr].s.font.bold = true;
  }
  }
  }
 
  // Congelar paneles: columnas A-B y filas de header
  ws['!freeze'] = { xSplit: 2, ySplit: dataFirstRow };
+
+  // Agregar filtros automáticos a las columnas
+  ws['!autofilter'] = { 
+    ref: XLSX.utils.encode_range({ 
+      s: { r: headerRowIdx, c: 0 }, 
+      e: { r: headerRowIdx + Math.max(0, bienes.length), c: totalCols - 1 } 
+    }) 
+  };
 
  XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
 
