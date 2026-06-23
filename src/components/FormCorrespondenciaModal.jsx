@@ -122,10 +122,22 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'Tipo' || name === 'Archivo' || name === 'Folio' ? parseInt(value)
- return showToast('La fecha del oficio es requerida', 'error');
+            [name]: name === 'Tipo' || name === 'Archivo' || name === 'Folio' ? parseInt(value) || value : value,
+            ...(name === 'Clave_unidad' ? { id_ubicacion: '' } : {})
+        }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        // Validaciones
+        if (!formData.Tipo) {
+            return showToast('Seleccione un tipo de correspondencia', 'error');
         }
- if (!formData.Remitente?.trim()) {
+        if (!formData.FechaOficio) {
+            return showToast('La fecha del oficio es requerida', 'error');
+        }
+        if (!formData.Remitente?.trim()) {
             return showToast('El remitente es requerido', 'error');
         }
         if (!formData.Descripcion?.trim()) {
@@ -381,16 +393,3 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
         </Dialog.Root>
     );
 }
- || value : value,
- ...(name === 'Clave_unidad' ? { id_ubicacion: '' } : {})
- }));
- };
-
-const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Validaciones
-    if (!formData.Tipo) {
-        return showToast('Seleccione un tipo de correspondencia', 'error');
-    }
-    if (!formData.FechaOficio) {
