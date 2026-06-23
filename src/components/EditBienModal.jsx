@@ -44,8 +44,8 @@ import ReportePanel from '../components/ReportePanel';
 
 import { EditBienModal as Self } from './EditBienModal';
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
-const ROL_ADMIN = 1;
-const ROL_MAESTRO = 2;
+const ROL_ADMIN = 2;
+const ROL_MAESTRO = 1;
 
 // Categorías TI (id_categoria = 1: Equipo de Cómputo, 3: Redes y Telecomunicaciones)
 // NOTA: Esta constante ya no se usa para mostrar/ocultar specs TI; el control ahora
