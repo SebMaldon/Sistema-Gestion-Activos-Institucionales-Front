@@ -269,13 +269,24 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  }
  }
 
+ let nuevoEstado = 'VIGENTE';
+ if (form.fecha_fin) {
+   const partsF = form.fecha_fin.split('-');
+   const endLocal = new Date(partsF[0], partsF[1] - 1, partsF[2]);
+   const today = new Date();
+   today.setHours(0, 0, 0, 0);
+   if (endLocal < today) {
+     nuevoEstado = 'VENCIDA';
+   }
+ }
+
  if (isEditMode) {
     updateMut.mutate({
       id_garantia: currentGarantia.id_garantia,
       fecha_inicio: form.fecha_inicio || null,
       fecha_fin: form.fecha_fin || null,
       id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
-      estado_garantia: form.estado_garantia || 'VIGENTE',
+      estado_garantia: nuevoEstado,
     });
  } else {
  createMut.mutate({
@@ -283,7 +294,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  fecha_inicio: form.fecha_inicio || null,
  fecha_fin: form.fecha_fin || null,
  id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
- estado_garantia: 'VIGENTE',
+ estado_garantia: nuevoEstado,
  });
  }
  };
@@ -390,11 +401,11 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  <div className="grid grid-cols-2 gap-3">
  <div>
  <label className={labelCls}>Fecha Inicio</label>
- <input type="date" className={inputCls} value={form.fecha_inicio} onChange={e => handleChange('fecha_inicio', e.target.value)} />
+ <input type="date" className={inputCls} value={form.fecha_inicio} max={form.fecha_fin} onChange={e => handleChange('fecha_inicio', e.target.value)} />
  </div>
  <div>
  <label className={labelCls}>Fecha Fin</label>
- <input type="date" className={inputCls} value={form.fecha_fin} onChange={e => handleChange('fecha_fin', e.target.value)} />
+ <input type="date" className={inputCls} value={form.fecha_fin} min={form.fecha_inicio} onChange={e => handleChange('fecha_fin', e.target.value)} />
  
  {/* Atajos de cálculo automático */}
  <div className="flex gap-2 mt-2">
