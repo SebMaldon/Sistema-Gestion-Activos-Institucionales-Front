@@ -90,6 +90,7 @@ export function useCreateNotaBien() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bienByQR'] });
       queryClient.invalidateQueries({ queryKey: ['bienes'] });
+      queryClient.invalidateQueries({ queryKey: ['bienDetail'] });
     }
   });
 }

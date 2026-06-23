@@ -995,6 +995,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  mutationFn: (id_nota) => gqlClient.request(DELETE_NOTA_MUTATION, { id_nota }),
  onSuccess: () => {
  qc.invalidateQueries({ queryKey: ['bienes'] });
+ qc.invalidateQueries({ queryKey: ['bienDetail'] });
  showToast('Nota eliminada', 'success');
  },
  onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al eliminar nota', 'error'),

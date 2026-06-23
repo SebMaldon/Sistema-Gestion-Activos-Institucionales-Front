@@ -12,9 +12,10 @@ import {
  UPDATE_GARANTIA,
  DELETE_GARANTIA,
  GET_BIEN_BY_TERMINO,
+ CREATE_REPORTE_GARANTIA,
 } from '../api/garantias.queries';
 import {
- ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter, ChevronLeft, FileText, Download, FileSpreadsheet
+ ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter, ChevronLeft, FileText, Download, FileSpreadsheet, CheckCircle2
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import ProveedorModal from '../components/ProveedorModal';
@@ -30,7 +31,7 @@ function EstatusBadge({ estatus }) {
  'VENCIDA': { bg: 'bg-red-100 dark:bg-red-900/40', color: 'text-red-800 dark:text-red-300', border: 'border-red-200 dark:border-red-800/50', label: 'Vencida' },
  'DESCONOCIDO': { bg: 'bg-slate-100 dark:bg-slate-800/50', color: 'text-slate-700 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-700/50', label: 'Desconocido' },
  };
- const s = map[estatus] ?? { bg: 'bg-gray-100 dark:bg-gray-800/50', color: 'text-gray-800 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700/50', label: estatus };
+ const s = map[estatus] ?? { bg: 'bg-gray-100 dark:gray-800/50', color: 'text-gray-800 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700/50', label: estatus };
  return (
  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${s.bg} ${s.color} ${s.border || ''}`}>
  {s.label}
@@ -72,9 +73,12 @@ function Modal({ onClose, title, subtitle, children, wide = false, small = false
 // ─── Modal Detalles Garantía ───────────────────────────────────────────
 
 function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
- const proveedorFull = proveedores.find(p => String(p.id_proveedor) === String(garantia.id_proveedor)) || garantia.proveedorObj;
+  const proveedorFull = proveedores.find(p => String(p.id_proveedor) === String(garantia.id_proveedor)) || garantia.proveedorObj;
+  const userRole = useAuthStore(state => state.user?.id_rol);
+  const isMaestro = userRole === 1;
+  const isAdministrador = userRole === 2;
 
- return (
+  return (
  <Modal onClose={onClose} title="Detalles de Garantía" subtitle={`Garantía del bien S/N: ${garantia.bien?.num_serie || 'N/A'}`} wide>
  <div className="space-y-6">
  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 ">
@@ -127,9 +131,9 @@ function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
  </div>
  </div>
  
- <div>
- <ReportesSeccion garantia={garantia} readOnly={true} />
- </div>
+  <div>
+    <ReportesSeccion garantia={garantia} readOnly={!(isMaestro || isAdministrador)} />
+  </div>
  </div>
  </Modal>
  );
@@ -153,9 +157,13 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  const [activeTab, setActiveTab] = useState('DATOS');
  const [searchValue, setSearchValue] = useState('');
  const [selectedBien, setSelectedBien] = useState(garantia?.bien ?? null);
+ const [existingGarantia, setExistingGarantia] = useState(null);
  const [isSearching, setIsSearching] = useState(false);
  const [showAddProveedorModal, setShowAddProveedorModal] = useState(false);
  const [multipleMatches, setMultipleMatches] = useState([]);
+ 
+ const isEditMode = isEdit || !!existingGarantia;
+ const currentGarantia = garantia || existingGarantia;
 
  const createMut = useMutation({
  mutationFn: (vars) => gqlClient.request(CREATE_GARANTIA, vars),
@@ -181,32 +189,53 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
 
  const handleChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
- const handleSearchBien = async () => {
- if (!searchValue) return;
- setIsSearching(true);
- setMultipleMatches([]);
- try {
- const res = await gqlClient.request(GET_BIEN_BY_TERMINO, { termino: searchValue.trim() });
- const foundBienes = res.bienByTermino || [];
+  const handleSelectBien = (foundBien) => {
+    setSelectedBien(foundBien);
+    setMultipleMatches([]);
+    
+    const vigente = foundBien.garantias?.find(g => g.estado_garantia === 'VIGENTE') || foundBien.garantias?.[0];
+    
+    if (vigente) {
+      setExistingGarantia(vigente);
+      setForm({
+        id_bien: foundBien.id_bien,
+        fecha_inicio: vigente.fecha_inicio ? new Date(vigente.fecha_inicio).toISOString().split('T')[0] : '',
+        fecha_fin: vigente.fecha_fin ? new Date(vigente.fecha_fin).toISOString().split('T')[0] : '',
+        id_proveedor: vigente.proveedorObj?.id_proveedor || '',
+        estado_garantia: vigente.estado_garantia
+      });
+      showToast(`Este equipo ya tiene una garantía registrada. Cambiando a modo edición...`, 'info');
+    } else {
+      setExistingGarantia(null);
+      setForm(p => ({ ...p, id_bien: foundBien.id_bien, fecha_inicio: '', fecha_fin: '', id_proveedor: '', estado_garantia: 'VIGENTE' }));
+      showToast('Bien encontrado', 'success');
+    }
+  };
 
- if (foundBienes.length === 1) {
- const foundBien = foundBienes[0];
- setSelectedBien(foundBien);
- setForm(p => ({ ...p, id_bien: foundBien.id_bien }));
- showToast('Bien encontrado', 'success');
- } else if (foundBienes.length > 1) {
- setMultipleMatches(foundBienes);
- } else {
- showToast('No se encontró ningún bien con ese número de serie, inventario o IP', 'error');
- setSelectedBien(null);
- setForm(p => ({ ...p, id_bien: '' }));
- }
- } catch (err) {
- showToast('Error al buscar el bien', 'error');
- } finally {
- setIsSearching(false);
- }
- };
+  const handleSearchBien = async () => {
+    if (!searchValue) return;
+    setIsSearching(true);
+    setMultipleMatches([]);
+    try {
+      const res = await gqlClient.request(GET_BIEN_BY_TERMINO, { termino: searchValue.trim() });
+      const foundBienes = res.bienByTermino || [];
+
+      if (foundBienes.length === 1) {
+        handleSelectBien(foundBienes[0]);
+      } else if (foundBienes.length > 1) {
+        setMultipleMatches(foundBienes);
+      } else {
+        showToast('No se encontró ningún bien con ese número de serie, inventario o IP', 'error');
+        setSelectedBien(null);
+        setExistingGarantia(null);
+        setForm(p => ({ ...p, id_bien: '' }));
+      }
+    } catch (err) {
+      showToast('Error al buscar el bien', 'error');
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
  const handleAutoCalc = (years) => {
  if (!form.fecha_inicio) {
@@ -237,14 +266,14 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  }
  }
 
- if (isEdit) {
- updateMut.mutate({
- id_garantia: garantia.id_garantia,
- fecha_inicio: form.fecha_inicio || null,
- fecha_fin: form.fecha_fin || null,
- id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
- estado_garantia: 'VIGENTE',
- });
+ if (isEditMode) {
+    updateMut.mutate({
+      id_garantia: currentGarantia.id_garantia,
+      fecha_inicio: form.fecha_inicio || null,
+      fecha_fin: form.fecha_fin || null,
+      id_proveedor: form.id_proveedor ? parseInt(form.id_proveedor) : null,
+      estado_garantia: form.estado_garantia || 'VIGENTE',
+    });
  } else {
  createMut.mutate({
  id_bien: form.id_bien,
@@ -264,24 +293,24 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  <Modal onClose={onClose} title={isEdit ? 'Editar Garantía' : 'Registrar Garantía'} subtitle="Dar de alta una nueva garantía o póliza" wide={isEdit}>
  <div className="flex flex-col gap-5">
  
- {isEdit && (
- <div className="flex border-b border-gray-200 dark:border-gray-700 ">
- <button 
- type="button"
- className={`px-4 py-2 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'DATOS' ? 'border-[#006341] text-[#006341]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
- onClick={() => setActiveTab('DATOS')}
- >
- Datos de Garantía
- </button>
- <button 
- type="button"
- className={`px-4 py-2 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'REPORTES' ? 'border-[#006341] text-[#006341]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
- onClick={() => setActiveTab('REPORTES')}
- >
- Bitácora de Seguimiento
- </button>
- </div>
- )}
+        {isEditMode && (
+          <div className="flex border-b border-gray-200 dark:border-gray-700 ">
+            <button 
+              type="button"
+              className={`px-4 py-2 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'DATOS' ? 'border-[#006341] text-[#006341]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
+              onClick={() => setActiveTab('DATOS')}
+            >
+              Datos de Garantía
+            </button>
+            <button 
+              type="button"
+              className={`px-4 py-2 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'REPORTES' ? 'border-[#006341] text-[#006341]' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
+              onClick={() => setActiveTab('REPORTES')}
+            >
+              Bitácora de Seguimiento
+            </button>
+          </div>
+        )}
 
  <div className={activeTab === 'DATOS' ? 'block space-y-5' : 'hidden'}>
  {/* Buscador de Bien (Sólo activo en creación) */}
@@ -314,40 +343,45 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  <Search size={20} />
  </button>
  </div>
- {selectedBien && (
- <div className="mt-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 dark:border-green-800/50 p-3 rounded-lg flex items-center text-sm">
- <Info size={18} className="text-green-600 dark:text-green-400 mr-2" />
- <div>
- <p className="font-semibold text-green-900">Bien seleccionado:</p>
- <div className="text-green-800 dark:text-green-300 text-xs">
- Serie: {selectedBien.num_serie || 'N/A'} | Inv: {selectedBien.num_inv || 'N/A'} <br/>
- {selectedBien.modelo?.marca?.marca} - {selectedBien.modelo?.descrip_disp} <br/>
- {selectedBien.modelo?.tipoDispositivo?.nombre_tipo && (
- <div className="mt-1.5">
- <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 dark:text-green-300 text-xs font-semibold border border-green-200 dark:border-green-800/50 dark:border-green-800/50 shadow-sm">
- <Box size={12} />
- {selectedBien.modelo.tipoDispositivo.nombre_tipo}
- </span>
- </div>
- )}
- </div>
- </div>
- </div>
- )}
  </div>
  )}
 
- {isEdit && selectedBien && (
- <div className="mb-5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-3 rounded-xl flex items-center text-sm">
- <Box size={18} className="text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
- <div>
- <p className="font-semibold text-gray-900 dark:text-gray-100 ">Bien Asociado:</p>
- <div className="text-gray-600 dark:text-gray-400 text-xs">
- Serie: {selectedBien.num_serie || 'N/A'} | Inv: {selectedBien.num_inv || 'N/A'}
- </div>
- </div>
- </div>
- )}
+          {selectedBien && !isEditMode && (
+            <div className="mt-4 p-3 bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800/50 rounded-xl flex items-start gap-3 shadow-sm">
+              <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg mt-0.5 border border-green-100 dark:border-green-800/50">
+                <CheckCircle2 size={16} className="text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+                  {selectedBien.modelo?.marca?.marca} {selectedBien.modelo?.descrip_disp}
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  <span>S/N: <span className="text-gray-700 dark:text-gray-300">{selectedBien.num_serie || 'N/D'}</span></span>
+                  <span>Inv: <span className="text-gray-700 dark:text-gray-300">{selectedBien.num_inv || 'N/D'}</span></span>
+                  {selectedBien.especificacionTI?.dir_ip && (
+                    <span className="text-blue-600 dark:text-blue-400">IP: {selectedBien.especificacionTI.dir_ip}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+  {isEditMode && selectedBien && (
+    <div className="mb-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded-xl flex items-start gap-3 shadow-sm">
+      <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded-lg mt-0.5 border border-gray-100 dark:border-gray-800">
+        <Box size={16} className="text-gray-500 dark:text-gray-400" />
+      </div>
+      <div className="flex-1">
+        <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+          {selectedBien.modelo?.marca?.marca} {selectedBien.modelo?.descrip_disp}
+        </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
+          <span>S/N: <span className="text-gray-700 dark:text-gray-300">{selectedBien.num_serie || 'N/D'}</span></span>
+          <span>Inv: <span className="text-gray-700 dark:text-gray-300">{selectedBien.num_inv || 'N/D'}</span></span>
+        </div>
+      </div>
+    </div>
+  )}
 
  <form onSubmit={handleSubmit} className="space-y-4">
  <div className="grid grid-cols-2 gap-3">
@@ -411,9 +445,9 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  </form>
  </div>
 
- {isEdit && (
+ {isEditMode && (
  <div className={activeTab === 'REPORTES' ? 'block' : 'hidden'}>
- <ReportesSeccion garantia={garantia} readOnly={false} />
+ <ReportesSeccion garantia={currentGarantia} readOnly={false} />
  </div>
  )}
  </div>
@@ -430,10 +464,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  <div 
  key={b.id_bien} 
  onClick={() => { 
- setSelectedBien(b); 
- setForm(p => ({ ...p, id_bien: b.id_bien })); 
- setMultipleMatches([]); 
- showToast('Bien seleccionado', 'success');
+ handleSelectBien(b);
  }} 
  className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl hover:border-green-500 hover:shadow-md cursor-pointer transition-all flex flex-col gap-3 group"
  >
@@ -534,6 +565,216 @@ function ConfirmEliminarModal({ garantia, onClose }) {
  );
 }
 
+// ─── Modal Generar Reporte Rápido ────────────────────────────────────────────
+
+function GenerarReporteModal({ onClose }) {
+  const qc = useQueryClient();
+  const { showToast } = useApp();
+
+  const [searchValue, setSearchValue] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [multipleMatches, setMultipleMatches] = useState([]);
+  const [selectedBien, setSelectedBien] = useState(null);
+  const [garantiaActiva, setGarantiaActiva] = useState(null);
+
+  const [form, setForm] = useState({
+    estatus: 'Enviado a proveedor',
+    descripcion_falla: '',
+    resolucion: ''
+  });
+
+  const createMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_REPORTE_GARANTIA, vars),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['garantias'] });
+      if (garantiaActiva) {
+        qc.invalidateQueries({ queryKey: ['reportesGarantia', parseInt(garantiaActiva.id_garantia)] });
+      }
+      showToast('Reporte registrado exitosamente', 'success');
+      onClose();
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al registrar reporte', 'error')
+  });
+
+  const handleSearch = async () => {
+    if (!searchValue) return;
+    setIsSearching(true);
+    setMultipleMatches([]);
+    setSelectedBien(null);
+    setGarantiaActiva(null);
+    try {
+      const res = await gqlClient.request(GET_BIEN_BY_TERMINO, { termino: searchValue.trim() });
+      const foundBienes = res.bienByTermino || [];
+
+      if (foundBienes.length === 1) {
+        handleSelectBien(foundBienes[0]);
+      } else if (foundBienes.length > 1) {
+        setMultipleMatches(foundBienes);
+      } else {
+        showToast('No se encontró ningún bien con ese número de serie, inventario o IP', 'error');
+      }
+    } catch (error) {
+      showToast('Error al buscar el bien', 'error');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectBien = (b) => {
+    setSelectedBien(b);
+    setMultipleMatches([]);
+    
+    const garantiaVigente = b.garantias?.find(g => g.estado_garantia === 'VIGENTE') || b.garantias?.[0];
+    
+    if (garantiaVigente) {
+      setGarantiaActiva({
+        ...garantiaVigente,
+        id_bien: b.id_bien,
+        bien: { num_serie: b.num_serie }
+      });
+      showToast('Garantía encontrada', 'success');
+    } else {
+      showToast('Este equipo NO tiene una garantía registrada.', 'error');
+    }
+  };
+
+  const labelCls = "block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5";
+
+  return (
+    <>
+    <Modal onClose={onClose} title="Generar Nuevo Reporte / Nota" subtitle="Asigna un reporte buscando el equipo">
+      <div className="space-y-6">
+        
+        {/* Buscador de Bien */}
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+          <label className={labelCls}>Buscar equipo (S/N, Inv, IP)</label>
+          <div className="flex gap-2 relative">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={16} className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchValue}
+                onChange={e => setSearchValue(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                placeholder="Ingresa número de serie, inventario o IP..."
+                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-[#006341] focus:ring-1 focus:ring-[#006341] bg-white dark:bg-gray-800 text-sm shadow-sm transition-all"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={!searchValue || isSearching}
+              className="px-5 bg-[#006341] hover:bg-[#004d32] text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 flex items-center gap-2 shadow-sm"
+            >
+              {isSearching ? <Loader2 size={16} className="animate-spin" /> : 'Buscar'}
+            </button>
+          </div>
+
+          {/* Selección de múltiples coincidencias */}
+          {multipleMatches.length > 0 && (
+            <div className="mt-4 border border-blue-200 dark:border-blue-800/50 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 border-b border-blue-100 dark:border-blue-800/50 flex justify-between items-center">
+                <span className="font-bold text-blue-800 dark:blue-300 text-sm">
+                  Se encontraron {multipleMatches.length} equipos con esta IP. Selecciona el correcto:
+                </span>
+                <button 
+                  type="button"
+                  onClick={() => { setMultipleMatches([]); setSearchValue(''); }}
+                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700 max-h-[250px] overflow-y-auto">
+                {multipleMatches.map(b => (
+                  <div 
+                    key={b.id_bien} 
+                    onClick={() => handleSelectBien(b)} 
+                    className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors flex flex-col gap-1.5 group"
+                  >
+                    <div className="flex justify-between items-center">
+                      <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                        {b.modelo?.marca?.marca} {b.modelo?.descrip_disp}
+                      </p>
+                      <ChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors" size={16} />
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                      <span>S/N: <span className="text-gray-700 dark:text-gray-300">{b.num_serie || 'N/D'}</span></span>
+                      <span>Inv: <span className="text-gray-700 dark:text-gray-300">{b.num_inv || 'N/D'}</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Información del bien seleccionado */}
+          {selectedBien && (
+            <div className="mt-4 p-3 bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800/50 rounded-lg flex items-start gap-3">
+              <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg mt-0.5 border border-green-100 dark:border-green-800/50">
+                <CheckCircle2 size={16} className="text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+                  {selectedBien.modelo?.marca?.marca} {selectedBien.modelo?.descrip_disp}
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  <span>S/N: <span className="text-gray-700 dark:text-gray-300">{selectedBien.num_serie || 'N/D'}</span></span>
+                  <span>Inv: <span className="text-gray-700 dark:text-gray-300">{selectedBien.num_inv || 'N/D'}</span></span>
+                  {selectedBien.especificacionTI?.dir_ip && (
+                    <span className="text-blue-600 dark:text-blue-400">IP: {selectedBien.especificacionTI.dir_ip}</span>
+                  )}
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                  setSelectedBien(null);
+                  setGarantiaActiva(null);
+                  setSearchValue('');
+                }}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+                title="Limpiar selección"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Mensaje de error si no tiene garantía */}
+          {selectedBien && !garantiaActiva && (
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs font-semibold rounded border border-red-200 dark:border-red-800/50 flex items-center gap-2">
+              <AlertCircle size={14} />
+              Este equipo no tiene ninguna garantía registrada en el sistema.
+            </div>
+          )}
+
+          {/* Badge de garantía activa */}
+          {selectedBien && garantiaActiva && (
+             <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border ${
+               garantiaActiva.estado_garantia === 'VENCIDA' 
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400' 
+                : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400'
+             }`}>
+               Garantía encontrada: {garantiaActiva.estado_garantia}
+             </div>
+          )}
+        </div>
+
+        {/* Historial de Reportes */}
+        {garantiaActiva && (
+          <div className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+            <ReportesSeccion garantia={garantiaActiva} readOnly={false} />
+          </div>
+        )}
+      </div>
+    </Modal>
+    </>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Garantias() {
@@ -546,8 +787,12 @@ export default function Garantias() {
  const isAdministrador = idRol === 2;
 
  const [activeTab, setActiveTab] = useState('GARANTIAS');
- const [searchFilter, setSearchFilter] = useState('');
- const [statusFilter, setStatusFilter] = useState('ALL');
+  const [modalEditar, setModalEditar] = useState(null);
+  const [modalEliminar, setModalEliminar] = useState(null);
+  const [modalProveedor, setModalProveedor] = useState(false);
+  const [modalGenerarReporte, setModalGenerarReporte] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
  const [showPorVencer, setShowPorVencer] = useState(location.state?.filterPorVencer || false);
  const [dateFilterType, setDateFilterType] = useState('NONE');
  const [startDate, setStartDate] = useState('');
@@ -560,11 +805,8 @@ export default function Garantias() {
  const [sortConfig, setSortConfig] = useState({ key: 'bien', direction: 'asc' });
 
  const [modalCrear, setModalCrear] = useState(false);
- const [modalEditar, setModalEditar] = useState(null);
- const [modalEliminar, setModalEliminar] = useState(null);
  const [modalDetalles, setModalDetalles] = useState(null);
  
- const [modalProveedor, setModalProveedor] = useState(false);
  const [modalEditarProveedor, setModalEditarProveedor] = useState(null);
  const [modalEliminarProveedor, setModalEliminarProveedor] = useState(null);
 
@@ -972,6 +1214,16 @@ export default function Garantias() {
  <FileSpreadsheet size={16} />
  <span className="hidden sm:inline">Exportar a Excel</span>
  </button>
+ )}
+
+ {(isMaestro || isAdministrador) && activeTab === 'REPORTES' && (
+   <button
+     onClick={() => setModalGenerarReporte(true)}
+     className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
+     style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
+     <Plus size={18} />
+     <span className="hidden sm:inline">Generar Reporte</span>
+   </button>
  )}
 
  {/* Administrador y Maestro pueden crear */}
@@ -1452,7 +1704,7 @@ export default function Garantias() {
  return (
  <tr 
  key={garantia.id_garantia} 
- className="hover:bg-blue-50/50 transition-colors group cursor-pointer"
+ className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer"
  onClick={() => setModalDetalles(garantia)}
  title="Haz clic para ver los detalles de la garantía"
  >
@@ -1719,6 +1971,7 @@ export default function Garantias() {
  </div>
  </Modal>
  )}
+ {modalGenerarReporte && <GenerarReporteModal onClose={() => setModalGenerarReporte(false)} />}
  </div>
  );
 }

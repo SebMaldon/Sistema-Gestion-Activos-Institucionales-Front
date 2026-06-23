@@ -13,7 +13,11 @@ import {
 /** Invalida la cache de bienes tras cualquier mutación */
 function useInvalidateBienes() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: ['bienes'] });
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['bienes'] });
+    queryClient.invalidateQueries({ queryKey: ['bienDetail'] });
+    queryClient.invalidateQueries({ queryKey: ['bienByQR'] });
+  };
 }
 
 // ─── Crear Bien ───────────────────────────────────────────────────────────────

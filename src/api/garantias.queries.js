@@ -112,6 +112,15 @@ export const GET_BIEN_BY_TERMINO = gql`
       especificacionTI {
         dir_ip
       }
+      garantias {
+        id_garantia
+        estado_garantia
+        fecha_inicio
+        fecha_fin
+        proveedorObj {
+          id_proveedor
+        }
+      }
     }
   }
 `;
