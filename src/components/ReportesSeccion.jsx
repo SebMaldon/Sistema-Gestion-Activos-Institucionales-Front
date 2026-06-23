@@ -127,7 +127,7 @@ export default function ReportesSeccion({ garantia, readOnly = false }) {
  if (isCreating) {
  createMut.mutate({
  id_garantia: garantia.id_garantia,
- id_bien: garantia.id_bien,
+ id_bien: garantia.bien?.id_bien || garantia.id_bien,
  num_serie: garantia.bien?.num_serie,
  estatus: form.estatus,
  descripcion_falla: form.descripcion_falla,

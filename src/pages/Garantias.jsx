@@ -196,7 +196,10 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
     const vigente = foundBien.garantias?.find(g => g.estado_garantia === 'VIGENTE') || foundBien.garantias?.[0];
     
     if (vigente) {
-      setExistingGarantia(vigente);
+      setExistingGarantia({
+        ...vigente,
+        bien: foundBien
+      });
       setForm({
         id_bien: foundBien.id_bien,
         fecha_inicio: vigente.fecha_inicio ? new Date(vigente.fecha_inicio).toISOString().split('T')[0] : '',
@@ -285,7 +288,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  }
  };
 
- const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
+  const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent';
  const labelCls = 'block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1';
 
  return (
@@ -409,9 +412,9 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
  value={form.id_proveedor}
  onChange={e => handleChange('id_proveedor', e.target.value)}
  >
- <option value="">-- Sin proveedor --</option>
+ <option value="" className="bg-white dark:bg-gray-800">-- Sin proveedor --</option>
  {proveedores.map(p => (
- <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre_proveedor}</option>
+ <option key={p.id_proveedor} value={p.id_proveedor} className="bg-white dark:bg-gray-800">{p.nombre_proveedor}</option>
  ))}
  </select>
  <button
