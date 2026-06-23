@@ -67,8 +67,8 @@ const copyTextFallback = (text) => {
 import ReportePanel from '../components/ReportePanel';
 
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
-const ROL_ADMIN = 1;
-const ROL_MAESTRO = 2;
+const ROL_ADMIN = 2;
+const ROL_MAESTRO = 1;
 
 // Categorías TI (id_categoria = 1: Equipo de Cómputo, 3: Redes y Telecomunicaciones)
 // NOTA: Esta constante ya no se usa para mostrar/ocultar specs TI; el control ahora
@@ -1616,7 +1616,7 @@ export default function Inventario() {
  Nuevo Bien
  </button>
  )}
- {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (
+        {idRol === ROL_MAESTRO && (
  <button
  onClick={() => setShowConfirmSyncAll(true)}
  title="Forzar Escaneo de Todos"
@@ -2579,7 +2579,7 @@ export default function Inventario() {
  <p className="text-xs text-gray-500 dark:text-gray-400 ">{activeFicha.categoria?.nombre_categoria}</p>
  </div>
  <EstatusBadge estatus={activeFicha.estatusOperativo} />
- {(fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
+ {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
  <button
  ref={el => { if (el) console.log('DEBUG programasPC:', activeFicha.programasPC); }}
  disabled={!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW'))}
