@@ -580,22 +580,18 @@ export default function GestionUsuarios() {
 
  // ── Query principal de usuarios
  const { data: usuariosData, isLoading, isError, refetch, isFetching } = useQuery({
- queryKey: ['usuarios', filterEstatus, filterRoles, debouncedSearch, currentPage],
- queryFn: () => gqlClient.request(GET_USUARIOS, {
- estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
- search: debouncedSearch || undefined,
- roles: filterRoles.length > 0 ? filterRoles.map(Number) : undefined,
- pagination: { first: PAGE_SIZE, page: currentPage },
- }),
+  queryKey: ['usuarios', filterEstatus, filterRoles, filterUnidadesFisicas, debouncedSearch, currentPage],
+  queryFn: () => gqlClient.request(GET_USUARIOS, {
+  estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
+  search: debouncedSearch || undefined,
+  roles: filterRoles.length > 0 ? filterRoles.map(Number) : undefined,
+  claves_unidades: filterUnidadesFisicas.length > 0 ? filterUnidadesFisicas : undefined,
+  pagination: { first: PAGE_SIZE, page: currentPage },
+  }),
  select: d => d.usuarios,
  });
 
- // Filtro de unidad física aplicado en cliente
- const allUsuarios = usuariosData?.edges?.map(e => e.node) ?? [];
- const usuarios = allUsuarios.filter(u => {
- if (filterUnidadesFisicas.length > 0 && !filterUnidadesFisicas.includes(u.clave_unidad)) return false;
- return true;
- });
+ const usuarios = usuariosData?.edges?.map(e => e.node) ?? [];
 
  const pageInfo = usuariosData?.pageInfo;
  const totalCount = pageInfo?.totalCount ?? 0;

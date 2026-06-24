@@ -8,9 +8,10 @@ export const GET_USUARIOS = gql`
     $id_unidad: Int
     $search: String
     $roles: [Int]
+    $claves_unidades: [String]
     $pagination: PaginationInput
   ) {
-    usuarios(estatus: $estatus, id_unidad: $id_unidad, search: $search, roles: $roles, pagination: $pagination) {
+    usuarios(estatus: $estatus, id_unidad: $id_unidad, search: $search, roles: $roles, claves_unidades: $claves_unidades, pagination: $pagination) {
       edges {
         node {
           id_usuario
