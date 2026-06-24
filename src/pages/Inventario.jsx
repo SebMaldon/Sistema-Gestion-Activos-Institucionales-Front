@@ -865,7 +865,7 @@ export default function Inventario() {
  const idRol = usuario?.id_rol ?? 3;
  // canEdit incluye también al usuario estándar (rol 3) solo para modificar TI y Cuentas
  const canEdit = [ROL_ADMIN, ROL_MAESTRO, 3].includes(idRol);
- const canDelete = [ROL_ADMIN].includes(idRol);
+ const canDelete = [ROL_MAESTRO].includes(idRol);
  const queryClient = useQueryClient();
  const location = useLocation();
 
