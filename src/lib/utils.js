@@ -8,20 +8,36 @@ export function parseServerDate(dateStr) {
   if (dateStr instanceof Date) return dateStr;
   
   let str = dateStr;
+  let d;
   
   // Si es un timestamp en string o número
   if (!isNaN(Number(str))) {
-    const d = new Date(Number(str));
-    return isNaN(d.getTime()) ? null : d;
+    d = new Date(Number(str));
+  } else {
+    // Si tiene espacio en lugar de T (formato SQL), lo normalizamos
+    if (typeof str === 'string' && str.includes(' ') && !str.includes('T')) {
+      str = str.replace(' ', 'T');
+    }
+    d = new Date(str);
   }
-
-  // Si tiene espacio en lugar de T (formato SQL), lo normalizamos
-  if (typeof str === 'string' && str.includes(' ') && !str.includes('T')) {
-    str = str.replace(' ', 'T');
+  
+  if (!isNaN(d.getTime())) {
+    // Si la fecha representa exactamente la medianoche en UTC (00:00:00.000Z),
+    // es muy probable que provenga de un campo tipo DATE en SQL.
+    // Para evitar que se muestre el día anterior en zonas horarias locales negativas,
+    // construimos la fecha respetando el año, mes y día en UTC pero en tiempo local.
+    if (
+      d.getUTCHours() === 0 &&
+      d.getUTCMinutes() === 0 &&
+      d.getUTCSeconds() === 0 &&
+      d.getUTCMilliseconds() === 0
+    ) {
+      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0);
+    }
+    return d;
   }
-  // Importante: No forzamos 'Z' si el servidor envía tiempo local.
-  const d = new Date(str);
-  return isNaN(d.getTime()) ? null : d;
+  
+  return null;
 }
 
 /** Formatea una fecha a DD/MMM/YYYY */
