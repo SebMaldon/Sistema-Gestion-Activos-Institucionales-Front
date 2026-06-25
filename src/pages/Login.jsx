@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Shield, Eye, EyeOff, LogIn, Lock, User, ClipboardList, AlertCircle } from 'lucide-react';
+import { Building2, Shield, Eye, EyeOff, LogIn, Lock, User, ClipboardList, AlertCircle, Monitor, Download } from 'lucide-react';
 import { useLogin } from '../hooks/useLogin';
 
 // Mapeo de códigos de error del backend a mensajes amigables
@@ -76,10 +76,36 @@ export default function Login() {
  </div>
  ))}
 
+ {/* Enlace de descarga App Escritorio (Panel Izquierdo Desktop) */}
+ <div className="pt-3">
+ <a
+ href="/descargas/Sistema-Gestor-Hardware-IMSS.rar"
+ download="Sistema-Gestor-Hardware-IMSS.rar"
+ className="flex items-center justify-between p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all group text-white no-underline shadow-lg cursor-pointer"
+ title="Descargar herramienta complementaria para Windows (Escritorio)"
+ >
+ <div className="flex items-center gap-3.5 min-w-0 pr-2">
+ <div className="w-11 h-11 rounded-xl bg-yellow-400/20 text-yellow-300 flex items-center justify-center shrink-0 border border-yellow-400/30 group-hover:scale-110 transition-transform shadow-inner">
+ <Monitor size={22} />
+ </div>
+ <div className="min-w-0">
+ <p className="text-sm font-bold text-white group-hover:text-yellow-300 transition-colors flex items-center gap-2 truncate">
+ Herramienta de Escritorio Complementaria
+ <span className="text-[10px] bg-yellow-400 text-[#00472e] px-1.5 py-0.5 rounded font-black tracking-wider shrink-0">RAR</span>
+ </p>
+ <p className="text-xs text-green-100/70 truncate mt-0.5">Sistema Gestor de Hardware IMSS</p>
+ </div>
+ </div>
+ <div className="w-9 h-9 rounded-lg bg-white/10 group-hover:bg-yellow-400 group-hover:text-[#00472e] flex items-center justify-center transition-all shrink-0">
+ <Download size={18} />
+ </div>
+ </a>
+ </div>
+
  <div className="mt-8 pt-6 border-t border-white dark:border-gray-800/10">
  <div className="flex items-center gap-2">
  <ClipboardList size={14} className="text-yellow-300" />
- <span className="text-xs font-semibold" style={{ color: '#f0c040' }}>SIIT v2.4.1</span>
+ <span className="text-xs font-semibold" style={{ color: '#f0c040' }}>SIIT v3.1.0</span>
  </div>
  <p className="text-green-200/40 text-xs mt-1">
  Bajo normativa MAAGTIC-SI · Ley Federal de Transparencia
@@ -218,7 +244,7 @@ export default function Login() {
 
  {/* Footer */}
  <p className="text-center text-green-200/40 text-xs mt-6">
- © 2026 IMSS — DGSTI · v2.4.1 · Delegación Nayarit
+ © 2026 IMSS — SIIT v3.1.0 · Delegación Nayarit
  </p>
  </div>
  </div>
