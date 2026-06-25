@@ -1583,7 +1583,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  setInconveniencesWarning(null);
  executeSave();
  }}
- className="w-full py-2.5 text-sm font-semibold border-2 border-red-200 dark:border-red-800/50 dark:border-red-800/50 text-red-600 dark:text-red-400 hover:bg-red-50 rounded-xl transition-colors"
+ className="w-full py-2.5 text-sm font-semibold border-2 border-red-200 dark:border-red-800/60 text-red-600 dark:text-red-300 bg-transparent dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-xl transition-colors"
  >
  Guardar con inconvenientes
  </button>
@@ -2042,14 +2042,17 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  <button
  type="button"
  onClick={() => setRedInterfaces([...redInterfaces, { ip: '', mac: '' }])}
- className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-800 dark:text-blue-300 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+ className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-800 dark:hover:text-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/40 transition-colors"
  >
  <Plus size={13}/> Agregar
  </button>
  </div>
  <div className="space-y-3">
- {redInterfaces.map((net, idx) => (
- <div key={idx} className="flex gap-2 items-center">
+ {redInterfaces.map((net, idx) => {
+ const isDupIp = net.ip && ((modalForm?.inconvenientes || []).some(inc => inc.startsWith('IP Repetida') && inc.includes(net.ip)) || inconveniencesWarning?.ipConflict?.ip === net.ip);
+ return (
+ <div key={idx} className="flex flex-col gap-1">
+ <div className="flex gap-2 items-center">
  <input
  type="text"
  value={net.ip}
@@ -2067,7 +2070,11 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  setRedInterfaces(prev => prev.map((item, i) => i === idx ? { ...item, ip: formattedIp } : item))
  }}
  placeholder="10.73.226.242"
- className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 font-mono tracking-widest text-center"
+ className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 font-mono tracking-widest text-center transition-colors ${
+ isDupIp 
+ ? 'border-red-500 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-bold focus:ring-red-500 shadow-sm' 
+ : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-blue-400'
+ }`}
  />
  <input
  type="text"
@@ -2078,19 +2085,27 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  setRedInterfaces(prev => prev.map((item, i) => i === idx ? { ...item, mac: formattedMac } : item))
  }}
  placeholder="4C:5F:70:73:63:97"
- className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 font-mono tracking-widest text-center"
+ className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 font-mono tracking-widest text-center bg-white dark:bg-gray-800"
  />
  {redInterfaces.length > 1 && (
  <button
  type="button"
  onClick={() => setRedInterfaces(prev => prev.filter((_, i) => i !== idx))}
- className="w-10 h-10 flex items-center justify-center rounded-lg border border-red-200 dark:border-red-800/50 dark:border-red-800/50 text-red-500 hover:bg-red-50 shrink-0"
+ className="w-10 h-10 flex items-center justify-center rounded-lg border border-red-200 dark:border-red-800/50 dark:border-red-800/50 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40 shrink-0"
  >
  <X size={16} />
  </button>
  )}
  </div>
- ))}
+ {isDupIp && (
+ <div className="flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400 font-semibold px-1 mt-0.5">
+ <AlertTriangle size={13} className="animate-pulse shrink-0" />
+ <span>¡Advertencia! Esta dirección IP ya se encuentra asignada a otro equipo en el inventario.</span>
+ </div>
+ )}
+ </div>
+ );
+ })}
  </div>
  </div>
  )}
@@ -2104,7 +2119,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  <button
  type="button"
  onClick={() => setCuentasList(prev => [...prev, { _new: true, _editing: true, cuenta_windows: '', correo: '', tipo_user: '' }])}
- className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-800 dark:text-blue-300 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+ className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-800 dark:hover:text-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/40 transition-colors"
  >
  <Plus size={13}/> Agregar cuenta
  </button>

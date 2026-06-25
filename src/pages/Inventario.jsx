@@ -2253,12 +2253,20 @@ export default function Inventario() {
  );
  })()}
 
- {hasWifiConflict && (
- <div className="flex items-center gap-1 mt-1 text-red-600 dark:text-red-400 font-semibold text-[10px]" title={wifiConflictMsg}>
- <Wifi size={12} className="animate-pulse" />
- <span>{wifiConflictMsg}</span>
- </div>
+ {hasWifiConflict && (() => {
+ const repIp = wifiConflictMsg.includes(':') ? wifiConflictMsg.split(':')[1].trim() : (bien.especificacionTI?.dir_ip?.split('/')[0]?.trim() || '');
+ return (
+ <div className="mt-1 flex items-center gap-1.5 text-[10px] text-red-700 dark:text-red-300 font-mono font-bold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded border border-red-200/60 dark:border-red-800/50 w-fit max-w-full" title={wifiConflictMsg}>
+ <Wifi size={11} className="text-red-600 dark:text-red-400 shrink-0 animate-pulse" />
+ <span className="truncate">{wifiConflictMsg}</span>
+ {repIp && (
+ <button onClick={(e) => { e.stopPropagation(); copyTextFallback(repIp); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-red-600 dark:text-red-400/80 hover:text-red-800 dark:hover:text-red-200 shrink-0 ml-0.5">
+ <Copy size={11} />
+ </button>
  )}
+ </div>
+ );
+ })()}
  </div>
  {hasRecentNotes && (
  <div title="Tiene notas de observación recientes (últimas 24h)" className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 shadow-sm flex-shrink-0">
@@ -2404,12 +2412,27 @@ export default function Inventario() {
  </span>
  {(() => {
  const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
- if (ips.length === 0 || hasWifiConflict) return null;
+ if (hasWifiConflict) {
+ const repIp = wifiConflictMsg.includes(':') ? wifiConflictMsg.split(':')[1].trim() : (ips[0] || '');
  return (
- <div className="flex items-center gap-1 text-[10px] text-emerald-800 dark:text-emerald-300 font-mono font-bold bg-emerald-100 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50">
- <Network size={10} className="text-emerald-600 dark:text-emerald-400" />
- <span>{ips[0]}</span>
- {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5">+{ips.length - 1}</span>}
+ <div className="flex items-center gap-1 text-[10px] text-red-700 dark:text-red-300 font-mono font-bold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded border border-red-200/60 dark:border-red-800/50 max-w-full" title={wifiConflictMsg}>
+ <Wifi size={10} className="text-red-600 dark:text-red-400 shrink-0 animate-pulse" />
+ <span className="truncate">{wifiConflictMsg}</span>
+ {repIp && (
+ <button onClick={(e) => { e.stopPropagation(); copyTextFallback(repIp); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-red-600 dark:text-red-400/80 hover:text-red-800 dark:hover:text-red-200 shrink-0 ml-0.5">
+ <Copy size={11} />
+ </button>
+ )}
+ </div>
+ );
+ }
+ if (ips.length === 0) return null;
+ return (
+ <div className="flex items-center gap-1 text-[10px] text-emerald-800 dark:text-emerald-300 font-mono font-bold bg-emerald-100 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50 max-w-full">
+ <Network size={10} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+ <span className="truncate">{ips[0]}</span>
+ {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
+ <button onClick={(e) => { e.stopPropagation(); copyTextFallback(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600 dark:text-emerald-400/60 hover:text-emerald-800 dark:text-emerald-300 shrink-0 ml-0.5"><Copy size={11} /></button>
  </div>
  );
  })()}
