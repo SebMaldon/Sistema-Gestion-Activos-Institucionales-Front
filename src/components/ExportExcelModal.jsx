@@ -542,7 +542,7 @@ export default function ExportExcelModal({
  <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between"
  style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}>
  <div className="flex items-center gap-2.5">
- <div className="w-8 h-8 rounded-lg bg-white dark:bg-gray-800/10 dark:bg-gray-800/20 flex items-center justify-center">
+ <div className="w-8 h-8 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center">
  <FileSpreadsheet size={18} className="text-white" />
  </div>
  <div>

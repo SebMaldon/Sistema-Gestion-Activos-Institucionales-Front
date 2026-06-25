@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_MARCAS_TIPOS_QUERY } from '../api/inventario.queries';
@@ -8,6 +9,7 @@ import {
  useCatAtributos, useCreateAtributo, useUpdateAtributo, useDeleteAtributo,
  useAtributosPorTipoDispositivo, useSetAtributoTipoDispositivo, useRemoveAtributoTipoDispositivo
 } from '../hooks/useAtributos';
+import { Modal } from './EditBienModal';
 
 const TIPO_OPCIONES = [
  { value: 'TEXT', label: 'Texto libre' },
@@ -31,42 +33,36 @@ export default function AtributosCatalogModal({ onClose }) {
  const tipos = mtData?.tiposDispositivo ?? [];
 
  return (
- <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-gray-900/70 fade-in" onClick={onClose}>
- <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
- {/* Header */}
- <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-900 shrink-0">
- <div>
- <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
- <Tag size={18} className="text-purple-600 dark:text-purple-400" /> Atributos Técnicos (EAV)
- </h2>
- <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Define qué atributos se pueden registrar para cada tipo de dispositivo.</p>
- </div>
- <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-400 transition-colors"><X size={18} /></button>
- </div>
-
+ <Modal
+ onClose={onClose}
+ title="Atributos Técnicos (EAV)"
+ subtitle="Define qué atributos se pueden registrar para cada tipo de dispositivo."
+ wide
+ >
+ <div className="-mx-5 sm:-mx-6 -my-5 flex flex-col h-[70vh] min-h-[450px]">
  {/* Tabs */}
- <div className="flex border-b border-gray-100 dark:border-gray-800 shrink-0 bg-gray-50 dark:bg-gray-900 ">
+ <div className="flex border-b border-gray-100 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-900 px-5 sm:px-6 pt-2">
  <button onClick={() => setTab('catalogo')}
- className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
- tab === 'catalogo' ? 'border-purple-600 text-purple-700 dark:text-purple-400 bg-white dark:bg-gray-800 ' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '
+ className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${
+ tab === 'catalogo' ? 'border-green-600 text-green-700 dark:text-green-300 bg-white dark:bg-gray-800 border-t border-x border-gray-200 dark:border-gray-700 rounded-t-lg -mb-px' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
  }`}>
  <List size={14} /> Catálogo Maestro
  </button>
  <button onClick={() => setTab('asignacion')}
- className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
- tab === 'asignacion' ? 'border-purple-600 text-purple-700 dark:text-purple-400 bg-white dark:bg-gray-800 ' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '
+ className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${
+ tab === 'asignacion' ? 'border-green-600 text-green-700 dark:text-green-300 bg-white dark:bg-gray-800 border-t border-x border-gray-200 dark:border-gray-700 rounded-t-lg -mb-px' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
  }`}>
  <LinkIcon size={14} /> Asignación por Tipo
  </button>
  </div>
 
  {/* Content */}
- <div className="flex-1 overflow-y-auto p-5 bg-white dark:bg-gray-800 ">
+ <div className="flex-1 overflow-y-auto p-5 sm:p-6 bg-white dark:bg-gray-800">
  {tab === 'catalogo' && <TabCatalogo atributos={catAtributos} loading={loadingCat} showToast={showToast} />}
  {tab === 'asignacion' && <TabAsignacion tipos={tipos} atributos={catAtributos} showToast={showToast} />}
  </div>
  </div>
- </div>
+ </Modal>
  );
 }
 
@@ -127,7 +123,7 @@ function TabCatalogo({ atributos, loading, showToast }) {
  return (
  <div className="space-y-6 fade-in">
  {/* Formulario Crear/Editar */}
- <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-100">
+ <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-100 dark:border-purple-800/40">
  <h3 className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wide mb-3">
  {editingId ? 'Editar Atributo' : 'Crear Nuevo Atributo'}
  </h3>

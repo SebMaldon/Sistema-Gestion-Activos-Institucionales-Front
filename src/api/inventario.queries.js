@@ -180,6 +180,27 @@ export const GET_BIENES_REPORTE_QUERY = gql`
   }
 `;
 
+export const GET_REPORTE_UNIDADES_QUERY = gql`
+  query GetReporteUnidades($filter: BienesFilterInput) {
+    reportePorUnidades(filter: $filter) {
+      clave
+      descCorta
+      descripcion
+      pcs
+      laptops
+      impresoras
+      switches
+      telefonosIP
+      telefonosNormal
+      otros
+      total
+      inconvenientes
+      ubicacionesStatsJson
+      detailStatsJson
+    }
+  }
+`;
+
 export const GET_BIENES_QUERY = gql`
   ${BIEN_FIELDS}
   query GetBienes($filter: BienesFilterInput, $pagination: PaginationInput) {
