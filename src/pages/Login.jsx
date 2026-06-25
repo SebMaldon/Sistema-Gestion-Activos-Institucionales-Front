@@ -79,8 +79,8 @@ export default function Login() {
  {/* Enlace de descarga App Escritorio (Panel Izquierdo Desktop) */}
  <div className="pt-3">
  <a
- href="/descargas/Sistema-Gestor-Hardware-IMSS.rar"
- download="Sistema-Gestor-Hardware-IMSS.rar"
+ href="/descargas/SGHI.rar"
+ download="SGHI.rar"
  className="flex items-center justify-between p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all group text-white no-underline shadow-lg cursor-pointer"
  title="Descargar herramienta complementaria para Windows (Escritorio)"
  >
