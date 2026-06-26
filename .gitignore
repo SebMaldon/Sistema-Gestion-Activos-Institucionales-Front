@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Archivos pesados descargables (no subir a GitHub)
+public/descargas/*.rar
+public/descargas/*.exe
+public/descargas/*.zip
