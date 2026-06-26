@@ -1097,6 +1097,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
     if (loanModalOpen === 'edit') {
       actualizarPrestamoMut({
         id_registro_prestamo: loanToEdit.id_registro_prestamo,
+        fecha_inicio_prestamo: loanDetails.fecha_inicio_prestamo,
         fecha_a_terminar_prestamo: loanDetails.fecha_a_terminar_prestamo,
         descripcion_prestamo_inicio: loanDetails.descripcion_prestamo_inicio
       });

@@ -29,11 +29,13 @@ export const GET_PRESTAMOS_POR_BIEN = gql`
 export const CREATE_PRESTAMO_MUTATION = gql`
   mutation CrearPrestamoBien(
     $id_bien: ID!
+    $fecha_inicio_prestamo: DateTime
     $fecha_a_terminar_prestamo: DateTime
     $descripcion_prestamo_inicio: String
   ) {
     crearPrestamoBien(
       id_bien: $id_bien
+      fecha_inicio_prestamo: $fecha_inicio_prestamo
       fecha_a_terminar_prestamo: $fecha_a_terminar_prestamo
       descripcion_prestamo_inicio: $descripcion_prestamo_inicio
     ) {
@@ -65,15 +67,18 @@ export const FINALIZAR_PRESTAMO_MUTATION = gql`
 export const ACTUALIZAR_PRESTAMO_MUTATION = gql`
   mutation ActualizarPrestamoBien(
     $id_registro_prestamo: Int!
+    $fecha_inicio_prestamo: DateTime
     $fecha_a_terminar_prestamo: DateTime!
     $descripcion_prestamo_inicio: String!
   ) {
     actualizarPrestamoBien(
       id_registro_prestamo: $id_registro_prestamo
+      fecha_inicio_prestamo: $fecha_inicio_prestamo
       fecha_a_terminar_prestamo: $fecha_a_terminar_prestamo
       descripcion_prestamo_inicio: $descripcion_prestamo_inicio
     ) {
       id_registro_prestamo
+      fecha_inicio_prestamo
       fecha_a_terminar_prestamo
       descripcion_prestamo_inicio
     }

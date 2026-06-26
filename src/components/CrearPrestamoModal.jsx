@@ -3,15 +3,26 @@ import ReactDOM from 'react-dom';
 import { X, Calendar, FileText, Share2, Loader2 } from 'lucide-react';
 
 export function CrearPrestamoModal({ isOpen, onClose, onConfirm, bien, prestamoToEdit, isLoading }) {
+  const getInitialInicio = (p) => {
+    if (!p?.fecha_inicio_prestamo) return new Date().toISOString().split('T')[0];
+    const val = p.fecha_inicio_prestamo;
+    const num = Number(val);
+    const d = new Date(isNaN(num) ? val : num);
+    return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
+  };
+
+  const [fechaInicio, setFechaInicio] = useState(() => getInitialInicio(prestamoToEdit));
   const [fechaTermino, setFechaTermino] = useState(() => prestamoToEdit?.fecha_a_terminar_prestamo ? prestamoToEdit.fecha_a_terminar_prestamo.split('T')[0] : '');
   const [descripcion, setDescripcion] = useState(() => prestamoToEdit?.descripcion_prestamo_inicio || '');
 
   // Efecto por si cambia prestamoToEdit con modal abierto
   React.useEffect(() => {
     if (prestamoToEdit) {
+      setFechaInicio(getInitialInicio(prestamoToEdit));
       setFechaTermino(prestamoToEdit.fecha_a_terminar_prestamo ? prestamoToEdit.fecha_a_terminar_prestamo.split('T')[0] : '');
       setDescripcion(prestamoToEdit.descripcion_prestamo_inicio || '');
     } else {
+      setFechaInicio(new Date().toISOString().split('T')[0]);
       setFechaTermino('');
       setDescripcion('');
     }
@@ -21,6 +32,10 @@ export function CrearPrestamoModal({ isOpen, onClose, onConfirm, bien, prestamoT
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!fechaInicio) {
+      alert('Por favor selecciona la fecha de inicio del préstamo.');
+      return;
+    }
     if (!fechaTermino) {
       alert('Por favor selecciona la fecha estimada de devolución.');
       return;
@@ -31,6 +46,7 @@ export function CrearPrestamoModal({ isOpen, onClose, onConfirm, bien, prestamoT
     }
     onConfirm({
       ...(prestamoToEdit ? { id_registro_prestamo: prestamoToEdit.id_registro_prestamo } : {}),
+      fecha_inicio_prestamo: new Date(`${fechaInicio}T08:00:00`).toISOString(),
       fecha_a_terminar_prestamo: new Date(`${fechaTermino}T23:59:59`).toISOString(),
       descripcion_prestamo_inicio: descripcion.trim(),
     });
@@ -74,19 +90,36 @@ export function CrearPrestamoModal({ isOpen, onClose, onConfirm, bien, prestamoT
             </span>
           </div>
 
-          <div>
-            <label className={labelCls}>
-              Fecha estimada de devolución <span className="text-red-500 font-bold">*</span>
-            </label>
-            <input
-              required
-              type="date"
-              value={fechaTermino}
-              onChange={e => setFechaTermino(e.target.value)}
-              className={inputCls}
-              disabled={isLoading}
-            />
-            <p className="text-[11px] text-gray-400 mt-1">Obligatorio: Sirve para alertar si el equipo no se devuelve a tiempo.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>
+                Fecha de inicio <span className="text-red-500 font-bold">*</span>
+              </label>
+              <input
+                required
+                type="date"
+                value={fechaInicio}
+                onChange={e => setFechaInicio(e.target.value)}
+                className={inputCls}
+                disabled={isLoading}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">Automática o editable si es anterior.</p>
+            </div>
+
+            <div>
+              <label className={labelCls}>
+                Est. devolución <span className="text-red-500 font-bold">*</span>
+              </label>
+              <input
+                required
+                type="date"
+                value={fechaTermino}
+                onChange={e => setFechaTermino(e.target.value)}
+                className={inputCls}
+                disabled={isLoading}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">Para alertar vencimientos.</p>
+            </div>
           </div>
 
           <div>
