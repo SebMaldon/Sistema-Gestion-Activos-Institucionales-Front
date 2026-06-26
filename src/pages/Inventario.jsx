@@ -3029,9 +3029,14 @@ export default function Inventario() {
  </span>
  <span className="text-xs text-gray-500 font-mono">#{prestamo.id_registro_prestamo}</span>
  </div>
- <span className="text-xs text-gray-400">
- Inicio: {formatDateTime(prestamo.fecha_inicio_prestamo)}
- </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">Inicio: {formatDateTime(prestamo.fecha_inicio_prestamo)}</span>
+                            {isActivo && (
+                              <button type="button" onClick={() => setQuickLoanModal({ type: 'edit', bien: activeFicha, prestamoToEdit: prestamo })} className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 text-amber-800 dark:text-amber-200 rounded text-[11px] font-bold transition-colors border border-amber-300 dark:border-amber-700 shadow-sm" title="Extender plazo o editar notas">
+                                ✏️ Extender / Editar
+                              </button>
+                            )}
+                          </div>
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3">
