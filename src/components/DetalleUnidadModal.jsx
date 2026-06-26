@@ -127,6 +127,9 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  <DetailItem icon={MapPin} label="Ciudad" value={unidad.ciudad} color="green" />
  <DetailItem icon={MapPin} label="Municipio" value={unidad.municipio} color="green" />
  <DetailItem icon={Layers} label="C.P." value={unidad.cp} color="green" />
+ <div className="md:col-span-2 lg:col-span-3">
+ <DetailItem icon={MapPin} label="Coordenadas (Lat, Long)" value={unidad.ubicacion_coordenada} color="green" />
+ </div>
  </div>
 
  <div className="flex items-center gap-2 mt-6 mb-4">

@@ -22,6 +22,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  ciudad: '',
  municipio: '',
  cp: '',
+ ubicacion_coordenada: '',
  ppal: '',
  clave_zona: '',
  clave_a: '',
@@ -103,6 +104,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  ciudad: unidadToEdit.ciudad ?? '',
  municipio: unidadToEdit.municipio ?? '',
  cp: unidadToEdit.cp ?? '',
+ ubicacion_coordenada: unidadToEdit.ubicacion_coordenada ?? '',
  ppal: unidadToEdit.ppal ?? '',
  clave_zona: unidadToEdit.clave_zona ?? '',
  clave_a: unidadToEdit.clave_a ?? '',
@@ -134,6 +136,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  ciudad: '',
  municipio: '',
  cp: '',
+ ubicacion_coordenada: '',
  ppal: '',
  clave_zona: '',
  clave_a: '',
@@ -275,6 +278,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  if (formData.ciudad && formData.ciudad.length > 50) newErrors.ciudad = 'Máximo 50 caracteres';
  if (formData.municipio && formData.municipio.length > 50) newErrors.municipio = 'Máximo 50 caracteres';
  if (formData.cp && formData.cp.length > 50) newErrors.cp = 'Máximo 50 caracteres';
+ if (formData.ubicacion_coordenada && formData.ubicacion_coordenada.length > 200) newErrors.ubicacion_coordenada = 'Máximo 200 caracteres';
 
  // Validar segmentos
  if (formData.segmentos) {
@@ -328,7 +332,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  if (isValid) {
  const submissionData = { ...formData };
  // Convert numeric fields
- ['clave_a', 'nivel', 'no_inmueble', 'tipo_unidad'].forEach(field => {
+ ['clave_a', 'nivel', 'no_inmueble', 'regimen', 'tipo_unidad'].forEach(field => {
  if (submissionData[field] === '' || submissionData[field] === null) {
  submissionData[field] = null;
  } else {
@@ -397,7 +401,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  showToast('Por favor, revisa los errores en el formulario', 'error');
  
  const generalFields = ['clave', 'descripcion', 'desc_corta', 'encargado'];
- const locationFields = ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp'];
+ const locationFields = ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'ubicacion_coordenada'];
  
  const hasGeneralErrors = generalFields.some(f => !!currentErrors[f]);
  const hasLocationErrors = locationFields.some(f => !!currentErrors[f]);
@@ -452,7 +456,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  >
  <MapPin size={16} /> 
  Ubicación y Contacto
- {Object.keys(errors).some(f => ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp'].includes(f)) && (
+ {Object.keys(errors).some(f => ['direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'ubicacion_coordenada'].includes(f)) && (
  <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
  )}
  </button>
@@ -463,7 +467,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  >
  <Settings size={16} /> 
  Datos Técnicos
- {Object.keys(errors).some(f => !['clave', 'descripcion', 'desc_corta', 'encargado', 'direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp'].includes(f) && !f.startsWith('segmento_')) && (
+ {Object.keys(errors).some(f => !['clave', 'descripcion', 'desc_corta', 'encargado', 'direccion', 'calle', 'numero', 'colonia', 'ciudad', 'municipio', 'cp', 'ubicacion_coordenada'].includes(f) && !f.startsWith('segmento_')) && (
  <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
  )}
  </button>
@@ -674,7 +678,18 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  />
  </div>
  
-
+ <div className="md:col-span-1">
+ <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Coordenadas (Lat, Long)</label>
+ <input
+ type="text"
+ name="ubicacion_coordenada"
+ value={formData.ubicacion_coordenada}
+ onChange={handleChange}
+ placeholder="Ej: 21.5041, -104.8946"
+ className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+ />
+ {errors.ubicacion_coordenada && <p className="text-[10px] text-red-500 mt-1 font-semibold">{errors.ubicacion_coordenada}</p>}
+ </div>
 
  <div className="col-span-1 md:col-span-3 mt-4 border-t border-gray-100 dark:border-gray-800 pt-4">
  <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-3 text-green-700 dark:text-green-400 dark:text-green-300">Contactos</h4>

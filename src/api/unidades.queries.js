@@ -54,6 +54,7 @@ export const GET_UNIDADES_FISICAS_QUERY = gql`
           no_inmueble
           regimen
           tipo_unidad
+          ubicacion_coordenada
           tipoUnidadInfo {
             tipo_unidad
           }
@@ -136,6 +137,7 @@ export const GET_UNIDAD_BY_CLAVE_QUERY = gql`
       no_inmueble
       regimen
       tipo_unidad
+      ubicacion_coordenada
       unidadesACargo {
         id_rol_empleado
         id_usuario
@@ -192,6 +194,7 @@ export const CREATE_UNIDAD_MUTATION = gql`
     $no_inmueble: Int
     $regimen: Int
     $tipo_unidad: Int
+    $ubicacion_coordenada: String
     $unidadesACargo: [UnidadACargoInput!]
     $contactos: [ContactoInput!]
     $segmentos: [SegmentoInput!]
@@ -216,6 +219,7 @@ export const CREATE_UNIDAD_MUTATION = gql`
       no_inmueble: $no_inmueble
       regimen: $regimen
       tipo_unidad: $tipo_unidad
+      ubicacion_coordenada: $ubicacion_coordenada
       unidadesACargo: $unidadesACargo
       contactos: $contactos
       segmentos: $segmentos
@@ -247,6 +251,7 @@ export const UPDATE_UNIDAD_MUTATION = gql`
     $no_inmueble: Int
     $regimen: Int
     $tipo_unidad: Int
+    $ubicacion_coordenada: String
     $unidadesACargo: [UnidadACargoInput!]
     $contactos: [ContactoInput!]
     $segmentos: [SegmentoInput!]
@@ -271,6 +276,7 @@ export const UPDATE_UNIDAD_MUTATION = gql`
       no_inmueble: $no_inmueble
       regimen: $regimen
       tipo_unidad: $tipo_unidad
+      ubicacion_coordenada: $ubicacion_coordenada
       unidadesACargo: $unidadesACargo
       contactos: $contactos
       segmentos: $segmentos
