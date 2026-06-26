@@ -177,7 +177,7 @@ export default function Sidebar() {
         </button>
         {!sidebarCollapsed && (
           <p className="text-center mt-2 text-green-200/30 text-xs whitespace-nowrap">
-            © 2026 IMSS — DGSTI
+            © 2026 IMSS — SIIT
           </p>
         )}
       </div>

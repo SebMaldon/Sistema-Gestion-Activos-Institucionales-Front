@@ -8,6 +8,27 @@ import ConfirmModal from '../components/ConfirmModal';
 import DetalleUnidadModal from '../components/DetalleUnidadModal';
 import MultiSelect from '../components/MultiSelect';
 
+const highlightText = (text, query) => {
+  if (!text || !query) return text;
+  const str = String(text);
+  const q = String(query).trim();
+  if (!q) return text;
+
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQ})`, 'gi');
+  const parts = str.split(regex);
+
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-300 dark:bg-yellow-500/50 text-gray-950 dark:text-gray-100 rounded px-0.5 font-bold shadow-sm">
+        {part}
+      </mark>
+    ) : part
+  );
+};
+
 // Esta pagina muestra las UNIDADES FISICAS (tabla: unidades)
 export default function Unidades() {
  const [isModalOpen, setIsModalOpen] = useState(false);
@@ -168,7 +189,7 @@ export default function Unidades() {
  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
  <div className="relative flex-1 max-w-xl">
  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
- <input type="text" placeholder="Buscar por descripción, clave, ciudad, IP o encargado..."
+ <input type="text" placeholder="Buscar por descripción, clave, referencia, ciudad, IP o encargado..."
  value={search} onChange={(e) => handleSearch(e.target.value)}
  className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm" />
  </div>
@@ -366,15 +387,15 @@ export default function Unidades() {
  <tr key={node.clave} onClick={() => { if (window.getSelection().toString().length > 0) return; handleOpenDetail(node); }} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
  <td className="px-6 py-4">
  <div className="min-w-0">
- <p className="text-sm font-bold text-gray-800 dark:text-gray-200 break-words" title={node.descripcion}>{node.descripcion || 'Sin descripción'}</p>
- <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">{node.clave}</p>
+ <p className="text-sm font-bold text-gray-800 dark:text-gray-200 break-words" title={node.descripcion}>{highlightText(node.descripcion || 'Sin descripción', search)}</p>
+ <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">{highlightText(node.clave, search)}</p>
  {(() => {
  const refs = [...new Set((node.segmentos || []).map(s => s.no_ref).filter(Boolean))];
  if (refs.length === 0) return null;
  return (
  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-0.5">
  {refs.length === 1 ? 'REF: ' : 'REFS: '}
- <span className="text-gray-700 dark:text-gray-300 ">{refs.join(', ')}</span>
+ <span className="text-gray-700 dark:text-gray-300 ">{highlightText(refs.join(', '), search)}</span>
  </p>
  );
  })()}
@@ -383,9 +404,9 @@ export default function Unidades() {
  <td className="px-6 py-4 max-w-[200px]">
  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 font-medium">
  <MapPin size={14} className="text-red-400 flex-shrink-0" />
- <span className="text-sm break-words">{node.ciudad ? `${node.ciudad}, ${node.municipio || ''}` : 'No definida'}</span>
+ <span className="text-sm break-words">{highlightText(node.ciudad ? `${node.ciudad}, ${node.municipio || ''}` : 'No definida', search)}</span>
  </div>
- <p className="text-[10px] text-gray-400 mt-0.5 break-words line-clamp-2">{node.direccion}</p>
+ <p className="text-[10px] text-gray-400 mt-0.5 break-words line-clamp-2">{highlightText(node.direccion, search)}</p>
  </td>
  <td className="px-6 py-4 max-w-[220px]">
  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 min-w-0">

@@ -17,6 +17,27 @@ import {
 import MultiSelect from '../components/MultiSelect';
 import SearchableSelect from '../components/SearchableSelect';
 
+const highlightText = (text, query) => {
+  if (!text || !query) return text;
+  const str = String(text);
+  const q = String(query).trim();
+  if (!q) return text;
+
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQ})`, 'gi');
+  const parts = str.split(regex);
+
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-300 dark:bg-yellow-500/50 text-gray-950 dark:text-gray-100 rounded px-0.5 font-bold shadow-sm">
+        {part}
+      </mark>
+    ) : part
+  );
+};
+
 
 // ─── Constantes de roles ──────────────────────────────────────────────────────
 const ROLE_BADGE = {
@@ -699,7 +720,7 @@ export default function GestionUsuarios() {
  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
  <input
  type="text"
- placeholder="Buscar por nombre o matrícula..."
+ placeholder="Buscar por nombre, matrícula o correo..."
  value={search}
  onChange={e => handleSearch(e.target.value)}
  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 h-[38px]"
@@ -774,14 +795,14 @@ export default function GestionUsuarios() {
  {getInitials(u.nombre_completo)}
  </div>
  <div>
- <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{u.nombre_completo}</p>
- <p className="text-xs text-gray-400">{u.matricula} {u.correo_electronico && `• ${u.correo_electronico}`}</p>
+ <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{highlightText(u.nombre_completo, debouncedSearch)}</p>
+ <p className="text-xs text-gray-400">{highlightText(u.matricula, debouncedSearch)} {u.correo_electronico && <>• {highlightText(u.correo_electronico, debouncedSearch)}</>}</p>
  </div>
  </div>
  </td>
  <td className="px-5 py-4">
  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.color} border ${badge.border || 'border-transparent'}`}>
- {badge.label}
+ {highlightText(badge.label, debouncedSearch)}
  </span>
  </td>
  {/* Unidad física */}
@@ -850,11 +871,11 @@ export default function GestionUsuarios() {
  {getInitials(u.nombre_completo)}
  </div>
  <div className="flex-1 min-w-0">
- <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{u.nombre_completo}</p>
- <p className="text-xs text-gray-400">{u.matricula}</p>
+ <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{highlightText(u.nombre_completo, debouncedSearch)}</p>
+ <p className="text-xs text-gray-400">{highlightText(u.matricula, debouncedSearch)}</p>
  </div>
  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.color} border ${badge.border || 'border-transparent'}`}>
- {badge.label}
+ {highlightText(badge.label, debouncedSearch)}
  </span>
  </div>
  {/* Unidad en móvil */}

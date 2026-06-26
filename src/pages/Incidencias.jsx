@@ -30,6 +30,27 @@ import {
 } from '../hooks/useIncidencias';
 import { parseServerDate, copyTextToClipboard } from '../lib/utils';
 
+const highlightText = (text, query) => {
+  if (!text || !query) return text;
+  const str = String(text);
+  const q = String(query).trim();
+  if (!q) return text;
+
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQ})`, 'gi');
+  const parts = str.split(regex);
+
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-300 dark:bg-yellow-500/50 text-gray-950 dark:text-gray-100 rounded px-0.5 font-bold shadow-sm">
+        {part}
+      </mark>
+    ) : part
+  );
+};
+
 // ROLES.ADMIN=1 → Maestro (edita+elimina), ROLES.SUPERVISOR=2 → Admin (edita), ROLES.USUARIO=3 → visualiza
 
 const COLUMNS = [
@@ -112,72 +133,72 @@ const NotasPanel = memo(function NotasPanel({ incidenciaId, estatus, onAddNota, 
 
 // ─── Tarjeta de Incidencia ────────────────────────────────────────────────────
 const IncidenciaCard = memo(function IncidenciaCard({
- inc, onStatusChange, onEdit, onDelete, onAddNota, onDeleteNota, canEdit, canDelete, isMoving,
- isExpanded, onToggle, isHighlighted, onVerBien
+  inc, onStatusChange, onEdit, onDelete, onAddNota, onDeleteNota, canEdit, canDelete, isMoving,
+  isExpanded, onToggle, isHighlighted, onVerBien, searchTerm
 }) {
- const { showToast } = useApp();
- const [menuOpen, setMenuOpen] = useState(false);
- const cardRef = useRef(null);
+  const { showToast } = useApp();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const cardRef = useRef(null);
 
- useEffect(() => {
- const handleOutsideClick = (event) => {
- // Ignorar clics si ocurren dentro de un modal global (que usan z-50)
- if (event.target.closest('.z-50')) {
- return;
- }
- 
- const isOutside = cardRef.current && !cardRef.current.contains(event.target);
- 
- if (isOutside) {
- // Siempre cerrar el menú al hacer clic fuera
- if (menuOpen) setMenuOpen(false);
- }
- };
- if (menuOpen) document.addEventListener('mousedown', handleOutsideClick);
- return () => document.removeEventListener('mousedown', handleOutsideClick);
- }, [menuOpen, inc.estatus]);
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      // Ignorar clics si ocurren dentro de un modal global (que usan z-50)
+      if (event.target.closest('.z-50')) {
+        return;
+      }
+      
+      const isOutside = cardRef.current && !cardRef.current.contains(event.target);
+      
+      if (isOutside) {
+        // Siempre cerrar el menú al hacer clic fuera
+        if (menuOpen) setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [menuOpen, inc.estatus]);
 
- const handleCardClick = useCallback(() => {
- if (menuOpen) setMenuOpen(false);
- else onToggle();
- }, [menuOpen, onToggle]);
+  const handleCardClick = useCallback(() => {
+    if (menuOpen) setMenuOpen(false);
+    else onToggle();
+  }, [menuOpen, onToggle]);
 
- // Obtener config de columna para el indicador visual
- const colConfig = COLUMNS.find(c => c.id === inc.estatus) || COLUMNS[0];
+  // Obtener config de columna para el indicador visual
+  const colConfig = COLUMNS.find(c => c.id === inc.estatus) || COLUMNS[0];
 
- return (
- <div
- ref={cardRef}
- data-card-status={inc.estatus}
- className={`group bg-white dark:bg-gray-800 rounded-2xl border p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''} ${isHighlighted ? 'border-[#006341] ring-2 ring-[#006341]/20 shadow-lg shadow-[#006341]/10' : 'border-gray-50 dark:border-gray-800'}`}
- onClick={handleCardClick}
- >
- {/* Cabecera */}
- <div className="flex items-start justify-between gap-3 mb-3">
- <div className="flex-1 min-w-0">
- <div className="flex items-center gap-2 mb-0.5">
- <Hash size={14} className="text-gray-400" />
- <p className="text-sm font-black text-gray-900 dark:text-gray-100 tracking-tight leading-none uppercase">{inc.numSerie}</p>
- </div>
- {inc.alias && (
- <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400/80 italic ml-5 truncate" title={inc.alias}>
- {inc.alias}
- </p>
- )}
- </div>
+  return (
+    <div
+      ref={cardRef}
+      data-card-status={inc.estatus}
+      className={`group bg-white dark:bg-gray-800 rounded-2xl border p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${isMoving ? 'opacity-50 pointer-events-none' : ''} ${isHighlighted ? 'border-[#006341] ring-2 ring-[#006341]/20 shadow-lg shadow-[#006341]/10' : 'border-gray-50 dark:border-gray-800'}`}
+      onClick={handleCardClick}
+    >
+      {/* Cabecera */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <Hash size={14} className="text-gray-400" />
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100 tracking-tight leading-none uppercase">{highlightText(inc.numSerie, searchTerm)}</p>
+          </div>
+          {inc.alias && (
+            <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400/80 italic ml-5 truncate" title={inc.alias}>
+              {highlightText(inc.alias, searchTerm)}
+            </p>
+          )}
+        </div>
 
- <div className="flex items-center gap-2 shrink-0">
- {inc.requerimiento && (
- <div 
- onClick={(e) => {
- e.stopPropagation();
- copyTextToClipboard(inc.requerimiento);
- showToast('Requerimiento copiado', 'success');
- }}
- className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 dark:text-blue-300 font-bold px-2.5 py-1 rounded-lg border border-blue-100 dark:border-blue-800/50 hover:bg-blue-100 hover:text-blue-800 dark:text-blue-300 transition-all cursor-pointer shadow-sm"
- title="Copiar Requerimiento"
- >
- <span>REQ: {inc.requerimiento}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {inc.requerimiento && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                copyTextToClipboard(inc.requerimiento);
+                showToast('Requerimiento copiado', 'success');
+              }}
+              className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 dark:text-blue-300 font-bold px-2.5 py-1 rounded-lg border border-blue-100 dark:border-blue-800/50 hover:bg-blue-100 hover:text-blue-800 dark:text-blue-300 transition-all cursor-pointer shadow-sm"
+              title="Copiar Requerimiento"
+            >
+              <span>REQ: {highlightText(inc.requerimiento, searchTerm)}</span>
  <Copy size={12} className="shrink-0" />
  </div>
  )}
@@ -225,55 +246,55 @@ const IncidenciaCard = memo(function IncidenciaCard({
  </span>
  </div>
  
- <div className="flex gap-2.5 items-start bg-gray-50/30 dark:bg-gray-900/20 p-2.5 rounded-xl border border-gray-50 dark:border-gray-800/50 group-hover:bg-white dark:bg-gray-800 group-hover:border-gray-100 dark:border-gray-800 transition-all">
- <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
- <p className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed line-clamp-3" title={inc.falla}>
- {inc.falla}
- </p>
- </div>
- </div>
+      <div className="flex gap-2.5 items-start bg-gray-50/30 dark:bg-gray-900/20 p-2.5 rounded-xl border border-gray-50 dark:border-gray-800/50 group-hover:bg-white dark:bg-gray-800 group-hover:border-gray-100 dark:border-gray-800 transition-all">
+        <FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed line-clamp-3" title={inc.falla}>
+          {highlightText(inc.falla, searchTerm)}
+        </p>
+      </div>
+    </div>
 
- {/* Footer Informátivo */}
- <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[11px]">
- <div className="flex items-center gap-2 min-w-0 text-gray-500 dark:text-gray-400 ">
- <div className="p-1 bg-gray-50 dark:bg-gray-900 rounded-lg group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
- <Building2 size={12} />
- </div>
- <span className="truncate font-bold tracking-tight">{inc.unidad || 'Ubicación General'}</span>
- </div>
- </div>
+    {/* Footer Informátivo */}
+    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[11px]">
+      <div className="flex items-center gap-2 min-w-0 text-gray-500 dark:text-gray-400 ">
+        <div className="p-1 bg-gray-50 dark:bg-gray-900 rounded-lg group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+          <Building2 size={12} />
+        </div>
+        <span className="truncate font-bold tracking-tight">{inc.unidad || 'Ubicación General'}</span>
+      </div>
+    </div>
 
- {/* Ver más indicador */}
- {!isExpanded && (
- <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-500 transition-all py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 ">
- <AlignLeft size={12} className="transition-transform group-hover:scale-125" />
- <span>Detalles de seguimiento</span>
- </div>
- )}
+    {/* Ver más indicador */}
+    {!isExpanded && (
+      <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-500 transition-all py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 ">
+        <AlignLeft size={12} className="transition-transform group-hover:scale-125" />
+        <span>Detalles de seguimiento</span>
+      </div>
+    )}
 
- {/* Detalle expandido */}
- {isExpanded && (
- <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4 fade-in">
- <div className="grid grid-cols-2 gap-3">
- <div 
- onClick={(e) => { e.stopPropagation(); if (inc.id_bien) onVerBien(inc.id_bien); }}
- className={`bg-gradient-to-br from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900/50 rounded-2xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm min-w-0 ${inc.id_bien ? 'cursor-pointer hover:border-green-300 dark:hover:border-green-700/50 hover:shadow-md transition-all' : ''}`}
- title={inc.id_bien ? "Ver Ficha Técnica" : ""}
- >
- <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
- <Hash size={10} /> Dispositivo
- </p>
- <p className="text-xs text-gray-800 dark:text-gray-200 font-bold leading-tight break-words">{inc.equipo}</p>
- <p className="text-[10px] text-gray-400 mt-1 font-mono">ID: {inc.id}</p>
- </div>
- <div className="bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/20 dark:to-transparent rounded-2xl p-3 border border-blue-50 dark:border-blue-900/30 shadow-sm min-w-0">
- <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
- <User size={10} /> Reportado por
- </p>
- <p className="text-xs text-blue-900 dark:text-blue-300 font-bold leading-tight break-words">{inc.generadoPor || 'Personal IMSS'}</p>
- <p className="text-[10px] text-blue-600 dark:text-blue-400/70 mt-1 truncate">REQ: {inc.requerimiento || 'S/N'}</p>
- </div>
- </div>
+    {/* Detalle expandido */}
+    {isExpanded && (
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4 fade-in">
+        <div className="grid grid-cols-2 gap-3">
+          <div 
+            onClick={(e) => { e.stopPropagation(); if (inc.id_bien) onVerBien(inc.id_bien); }}
+            className={`bg-gradient-to-br from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900/50 rounded-2xl p-3 border border-gray-100 dark:border-gray-800 shadow-sm min-w-0 ${inc.id_bien ? 'cursor-pointer hover:border-green-300 dark:hover:border-green-700/50 hover:shadow-md transition-all' : ''}`}
+            title={inc.id_bien ? "Ver Ficha Técnica" : ""}
+          >
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Hash size={10} /> Dispositivo
+            </p>
+            <p className="text-xs text-gray-800 dark:text-gray-200 font-bold leading-tight break-words">{highlightText(inc.equipo, searchTerm)}</p>
+            <p className="text-[10px] text-gray-400 mt-1 font-mono">ID: {inc.id}</p>
+          </div>
+          <div className="bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/20 dark:to-transparent rounded-2xl p-3 border border-blue-50 dark:border-blue-900/30 shadow-sm min-w-0">
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <User size={10} /> Reportado por
+            </p>
+            <p className="text-xs text-blue-900 dark:text-blue-300 font-bold leading-tight break-words">{highlightText(inc.generadoPor || 'Personal IMSS', searchTerm)}</p>
+            <p className="text-[10px] text-blue-600 dark:text-blue-400/70 mt-1 truncate">REQ: {highlightText(inc.requerimiento || 'S/N', searchTerm)}</p>
+          </div>
+        </div>
 
  <div className="flex gap-4 px-2">
  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-lg border border-gray-100 dark:border-gray-800 ">
@@ -636,15 +657,15 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
  {incidenciasNodes.map(inc => (
  <tr key={inc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors">
- <td className="px-3 py-2.5 font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap max-w-[110px] truncate" title={inc.numSerie}>{inc.numSerie}</td>
- <td className="px-3 py-2.5 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap max-w-[100px] truncate" title={inc.alias}>{inc.alias || '—'}</td>
+ <td className="px-3 py-2.5 font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap max-w-[110px] truncate" title={inc.numSerie}>{highlightText(inc.numSerie, debouncedSearch)}</td>
+ <td className="px-3 py-2.5 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap max-w-[100px] truncate" title={inc.alias}>{highlightText(inc.alias || '—', debouncedSearch)}</td>
  <td className="px-4 py-3 whitespace-nowrap">
  <div 
  className={`text-xs font-medium text-gray-900 dark:text-gray-100 ${inc.id_bien ? 'cursor-pointer hover:text-green-700 dark:text-green-400 underline decoration-green-300 decoration-2 underline-offset-2' : ''}`}
  onClick={(e) => { e.stopPropagation(); if (inc.id_bien) onVerBien(inc.id_bien); }}
  title={inc.id_bien ? "Ver Ficha Técnica" : ""}
  >
- {inc.equipo}
+ {highlightText(inc.equipo, debouncedSearch)}
  </div>
  </td>
  <td className="px-3 py-2.5 whitespace-nowrap">
@@ -673,11 +694,11 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  </span>
  )}
  </td>
- <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 max-w-[200px] truncate" title={inc.falla}>{inc.falla}</td>
+ <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 max-w-[200px] truncate" title={inc.falla}>{highlightText(inc.falla, debouncedSearch)}</td>
  <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">
  {inc.requerimiento ? (
  <div className="flex items-center gap-1.5">
- <span>{inc.requerimiento}</span>
+ <span>{highlightText(inc.requerimiento, debouncedSearch)}</span>
  <button
  onClick={(e) => {
  e.stopPropagation();
@@ -1130,7 +1151,7 @@ export default function Incidencias() {
  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
  <input
  type="text"
- placeholder="Buscar requerimiento, serie..."
+ placeholder="Buscar serie, falla, requerimiento..."
  value={kanbanSearch}
  onChange={e => setKanbanSearch(e.target.value)}
  className="w-48 xl:w-64 pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#006341] focus:border-[#006341] bg-white dark:bg-gray-800 transition-all"
@@ -1179,6 +1200,7 @@ export default function Incidencias() {
  <IncidenciaCard
  key={inc.id}
  inc={inc}
+ searchTerm={kanbanSearch}
  onStatusChange={handleStatusChange}
  onEdit={handleEdit}
  onDelete={handleDelete}

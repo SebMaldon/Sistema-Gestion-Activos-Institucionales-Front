@@ -705,7 +705,7 @@ export default function Documentacion() {
 
  {/* Footer */}
  <footer className="text-center py-6 text-xs text-gray-400 border-t border-gray-200 dark:border-gray-700 ">
- <p>© 2026 IMSS — DGSTI · Ecosistema de Gestión de Activos · Delegación Nayarit</p>
+ <p>© 2026 IMSS — SIIT · Ecosistema de Gestión de Activos · Delegación Nayarit</p>
  <p className="mt-1">Documentación generada automáticamente a partir del análisis del código fuente</p>
  </footer>
  </div>

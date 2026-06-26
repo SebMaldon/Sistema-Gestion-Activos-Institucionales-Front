@@ -69,6 +69,27 @@ const copyTextFallback = (text) => {
 
 import ReportePanel from '../components/ReportePanel';
 
+const highlightText = (text, query) => {
+  if (!text || !query) return text;
+  const str = String(text);
+  const q = String(query).trim();
+  if (!q) return text;
+
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQ})`, 'gi');
+  const parts = str.split(regex);
+
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-300 dark:bg-yellow-500/50 text-gray-950 dark:text-gray-100 rounded px-0.5 font-bold shadow-sm">
+        {part}
+      </mark>
+    ) : part
+  );
+};
+
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
 const ROL_ADMIN = 2;
 const ROL_MAESTRO = 1;
@@ -1794,7 +1815,7 @@ export default function Inventario() {
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Buscar por serie, inventario, IP, cuenta o correo..."
+                    placeholder="Buscar por serie, inventario, host, modelo, IP, cuenta o correo..."
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setCursor(null); setCursors([]); }}
                     className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
@@ -2346,23 +2367,29 @@ export default function Inventario() {
                                 <div className="flex items-center justify-between gap-3 w-full">
                                   <div className="min-w-0">
                                     <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300 inline-flex items-center gap-1.5 max-w-full">
-                                      <span className="truncate" title={hoverZoomEnabled ? fmt(bien.numSerie) : undefined}>{fmt(bien.numSerie)}</span>
+                                      <span className="truncate" title={hoverZoomEnabled ? fmt(bien.numSerie) : undefined}>{highlightText(fmt(bien.numSerie), debouncedSearch)}</span>
                                       {bien.numSerie && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numSerie); showToast('Número de Serie copiado', 'success'); }} title="Copiar Serie" className="text-gray-400 hover:text-gray-600 dark:text-gray-400 shrink-0"><Copy size={12} /></button>}
                                     </span>
                                     <p className={`flex items-center gap-1.5 text-xs mt-0.5 max-w-full ${(isPcOrLaptop && isMissingInv) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-400'}`}>
-                                      <span className="truncate" title={hoverZoomEnabled ? `Inv: ${fmt(bien.numInv)}` : undefined}>Inv: {fmt(bien.numInv)}</span>
+                                      <span className="truncate" title={hoverZoomEnabled ? `Inv: ${fmt(bien.numInv)}` : undefined}>Inv: {highlightText(fmt(bien.numInv), debouncedSearch)}</span>
                                       {bien.numInv && bien.numInv !== 'N/D' && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.numInv); showToast('Número de Inventario copiado', 'success'); }} title="Copiar Inventario" className="text-gray-400 hover:text-gray-600 dark:text-gray-400 shrink-0"><Copy size={12} /></button>}
                                     </p>
+                                    {debouncedSearch && bien.clavePresupuestal && bien.clavePresupuestal !== '—' && bien.clavePresupuestal.toLowerCase().includes(debouncedSearch.toLowerCase()) && !String(bien.numSerie).toLowerCase().includes(debouncedSearch.toLowerCase()) && !String(bien.numInv).toLowerCase().includes(debouncedSearch.toLowerCase()) && (
+                                      <p className="text-[10px] text-amber-700 dark:text-amber-400 font-mono mt-0.5">
+                                        CP: {highlightText(bien.clavePresupuestal, debouncedSearch)}
+                                      </p>
+                                    )}
 
                                     {(() => {
-                                      const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split('/').map(i => i.trim()).filter(Boolean) : [];
-                                      if (ips.length === 0 || hasWifiConflict) return null;
+                                      const rawIps = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(/[\/,]/).map(i => i.trim()).filter(Boolean) : [];
+                                      if (rawIps.length === 0 || hasWifiConflict) return null;
+                                      const matchingIp = debouncedSearch ? (rawIps.find(i => i.toLowerCase().includes(debouncedSearch.toLowerCase())) || rawIps[0]) : rawIps[0];
                                       return (
-                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 dark:text-emerald-300 font-mono font-bold bg-emerald-100 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50 w-fit max-w-full" title={`IP(s): ${ips.join(' / ')}`}>
+                                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-emerald-800 dark:text-emerald-300 font-mono font-bold bg-emerald-100 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50 w-fit max-w-full" title={`IP(s): ${rawIps.join(' / ')}`}>
                                           <Network size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                          <span className="truncate" title={hoverZoomEnabled ? ips[0] : undefined}>{ips[0]}</span>
-                                          {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
-                                          <button onClick={(e) => { e.stopPropagation(); copyTextFallback(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600 dark:text-emerald-400/60 hover:text-emerald-800 dark:text-emerald-300 shrink-0 ml-0.5"><Copy size={11} /></button>
+                                          <span className="truncate" title={hoverZoomEnabled ? matchingIp : undefined}>{highlightText(matchingIp, debouncedSearch)}</span>
+                                          {rawIps.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{rawIps.length - 1}</span>}
+                                          <button onClick={(e) => { e.stopPropagation(); copyTextFallback(matchingIp); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600 dark:text-emerald-400/60 hover:text-emerald-800 dark:text-emerald-300 shrink-0 ml-0.5"><Copy size={11} /></button>
                                         </div>
                                       );
                                     })()}
@@ -2403,33 +2430,39 @@ export default function Inventario() {
                                 <div className="w-full">
                                   <div className="flex items-center gap-1.5 max-w-full">
                                     <p className={`font-semibold text-gray-900 dark:text-gray-100 text-sm truncate ${!isPcOrLaptop ? 'whitespace-normal' : ''}`} title={hoverZoomEnabled ? (isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo) : undefined}>
-                                      {isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo}
+                                      {highlightText(isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo, debouncedSearch)}
                                     </p>
                                     {isPcOrLaptop && bien.especificacionTI?.nombre_host && <button onClick={(e) => { e.stopPropagation(); copyTextFallback(bien.especificacionTI.nombre_host); showToast('Nombre de Host copiado', 'success'); }} title="Copiar Host" className="text-gray-400 hover:text-gray-600 dark:text-gray-400 shrink-0"><Copy size={12} /></button>}
                                   </div>
                                   <p className="text-xs text-gray-400 mt-0.5">
                                     <span className="font-semibold text-gray-500 dark:text-gray-400">{bien.modelo?.tipoDispositivo?.nombre_tipo || 'Dispositivo'}</span>
                                     <span className="mx-1">•</span>
-                                    {isPcOrLaptop ? bien.equipo : (bien.categoria?.nombre_categoria || 'Accesorio')}
+                                    {highlightText(isPcOrLaptop ? bien.equipo : (bien.categoria?.nombre_categoria || 'Accesorio'), debouncedSearch)}
+                                    {debouncedSearch && bien.claveModelo && bien.claveModelo.toLowerCase().includes(debouncedSearch.toLowerCase()) && !String(bien.equipo).toLowerCase().includes(debouncedSearch.toLowerCase()) && (
+                                      <span className="ml-1 text-[11px] font-mono font-bold text-amber-700 dark:text-amber-400">[{highlightText(bien.claveModelo, debouncedSearch)}]</span>
+                                    )}
                                   </p>
-                                  {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
-                                    <div className="mt-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-md p-1.5 flex flex-col gap-0.5 w-fit shadow-sm">
-                                      <div className="flex items-center gap-1.5 text-xs text-indigo-900 dark:text-indigo-300" title={`Cuenta: ${bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}`}>
-                                        <div className="bg-indigo-200 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 p-0.5 rounded flex items-center justify-center shrink-0">
-                                          <User size={11} strokeWidth={2.5} />
+                                  {isPcOrLaptop && bien.cuentasPC?.length > 0 && (() => {
+                                    const matchingAccount = debouncedSearch ? (bien.cuentasPC.find(c => (c.cuenta_windows && c.cuenta_windows.toLowerCase().includes(debouncedSearch.toLowerCase())) || (c.correo && c.correo.toLowerCase().includes(debouncedSearch.toLowerCase()))) || bien.cuentasPC[0]) : bien.cuentasPC[0];
+                                    return (
+                                      <div className="mt-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-md p-1.5 flex flex-col gap-0.5 w-fit shadow-sm">
+                                        <div className="flex items-center gap-1.5 text-xs text-indigo-900 dark:text-indigo-300" title={`Cuenta: ${matchingAccount.cuenta_windows || 'Sin usuario'}`}>
+                                          <div className="bg-indigo-200 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 p-0.5 rounded flex items-center justify-center shrink-0">
+                                            <User size={11} strokeWidth={2.5} />
+                                          </div>
+                                          <span className="font-bold whitespace-nowrap truncate" title={hoverZoomEnabled ? (matchingAccount.cuenta_windows || 'Sin usuario') : undefined}>{highlightText(matchingAccount.cuenta_windows || 'Sin usuario', debouncedSearch)}</span>
+                                          {matchingAccount.cuenta_windows && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(matchingAccount.cuenta_windows); showToast('Usuario de Windows copiado', 'success'); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                          {bien.cuentasPC.length > 1 && (
+                                            <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
+                                          )}
                                         </div>
-                                        <span className="font-bold whitespace-nowrap truncate" title={hoverZoomEnabled ? (bien.cuentasPC[0].cuenta_windows || 'Sin usuario') : undefined}>{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
-                                        {bien.cuentasPC[0].cuenta_windows && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].cuenta_windows); showToast('Usuario de Windows copiado', 'success'); }} title="Copiar Usuario" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
-                                        {bien.cuentasPC.length > 1 && (
-                                          <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0" title={`Y ${bien.cuentasPC.length - 1} cuenta(s) más`}>+{bien.cuentasPC.length - 1}</span>
-                                        )}
+                                        <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 dark:text-indigo-400 pl-6 font-semibold max-w-full" title={`Correo: ${matchingAccount.correo}`}>
+                                          <span className="truncate" title={hoverZoomEnabled ? matchingAccount.correo : undefined}>{highlightText(matchingAccount.correo, debouncedSearch)}</span>
+                                          {matchingAccount.correo && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(matchingAccount.correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 dark:text-indigo-400 pl-6 font-semibold max-w-full" title={`Correo: ${bien.cuentasPC[0].correo}`}>
-                                        <span className="truncate" title={hoverZoomEnabled ? bien.cuentasPC[0].correo : undefined}>{bien.cuentasPC[0].correo}</span>
-                                        {bien.cuentasPC[0].correo && <button onClick={(e) => { e.stopPropagation(); copyTextToClipboard(bien.cuentasPC[0].correo); showToast('Correo copiado', 'success'); }} title="Copiar Correo" className="text-indigo-400 hover:text-indigo-600 shrink-0"><Copy size={12} /></button>}
-                                      </div>
-                                    </div>
-                                  )}
+                                    );
+                                  })()}
                                 </div>
                               </td>
                               <td className="px-4 py-3.5 text-xs min-w-[200px]">
@@ -2520,7 +2553,7 @@ export default function Inventario() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className={`font-semibold text-sm leading-tight ${isConflictRow ? 'text-red-700 dark:text-red-400 dark:text-red-300' : 'text-gray-900 dark:text-gray-100 '}`}>
-                                {isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo}
+                                {highlightText(isPcOrLaptop ? (bien.especificacionTI?.nombre_host || 'Sin Host') : bien.equipo, debouncedSearch)}
                               </p>
                               {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
                               {hasWifiConflict && <Wifi size={14} className="text-red-600 dark:text-red-400 animate-pulse" title={wifiConflictMsg} />}
@@ -2529,34 +2562,48 @@ export default function Inventario() {
                             <p className="text-xs text-gray-400 mt-0.5">
                               <span className="font-semibold text-gray-500 dark:text-gray-400">{bien.modelo?.tipoDispositivo?.nombre_tipo || 'Dispositivo'}</span>
                               <span className="mx-1">•</span>
-                              {isPcOrLaptop ? bien.equipo : (bien.categoria?.nombre_categoria || 'Accesorio')}
+                              {highlightText(isPcOrLaptop ? bien.equipo : (bien.categoria?.nombre_categoria || 'Accesorio'), debouncedSearch)}
+                              {debouncedSearch && bien.claveModelo && bien.claveModelo.toLowerCase().includes(debouncedSearch.toLowerCase()) && !String(bien.equipo).toLowerCase().includes(debouncedSearch.toLowerCase()) && (
+                                <span className="ml-1 font-mono font-bold text-amber-700 dark:text-amber-400">[{highlightText(bien.claveModelo, debouncedSearch)}]</span>
+                              )}
                             </p>
-                            {isPcOrLaptop && bien.cuentasPC?.length > 0 && (
-                              <div className="mt-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-md p-1.5 flex flex-col gap-0.5 w-fit max-w-full shadow-sm">
-                                <div className="flex items-center gap-1.5 text-xs text-indigo-900 dark:text-indigo-300">
-                                  <div className="bg-indigo-200 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 p-0.5 rounded flex items-center justify-center shrink-0">
-                                    <User size={11} strokeWidth={2.5} />
+                            {isPcOrLaptop && bien.cuentasPC?.length > 0 && (() => {
+                              const matchingAccount = debouncedSearch ? (bien.cuentasPC.find(c => (c.cuenta_windows && c.cuenta_windows.toLowerCase().includes(debouncedSearch.toLowerCase())) || (c.correo && c.correo.toLowerCase().includes(debouncedSearch.toLowerCase()))) || bien.cuentasPC[0]) : bien.cuentasPC[0];
+                              return (
+                                <div className="mt-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-md p-1.5 flex flex-col gap-0.5 w-fit max-w-full shadow-sm">
+                                  <div className="flex items-center gap-1.5 text-xs text-indigo-900 dark:text-indigo-300">
+                                    <div className="bg-indigo-200 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 p-0.5 rounded flex items-center justify-center shrink-0">
+                                      <User size={11} strokeWidth={2.5} />
+                                    </div>
+                                    <span className="font-bold whitespace-nowrap">{highlightText(matchingAccount.cuenta_windows || 'Sin usuario', debouncedSearch)}</span>
+                                    {bien.cuentasPC.length > 1 && (
+                                      <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0">+{bien.cuentasPC.length - 1}</span>
+                                    )}
                                   </div>
-                                  <span className="font-bold whitespace-nowrap">{bien.cuentasPC[0].cuenta_windows || 'Sin usuario'}</span>
-                                  {bien.cuentasPC.length > 1 && (
-                                    <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-black shrink-0">+{bien.cuentasPC.length - 1}</span>
+                                  {matchingAccount.correo && (
+                                    <div className="text-[10px] text-indigo-600 dark:text-indigo-400 pl-6 font-semibold whitespace-nowrap">
+                                      {highlightText(matchingAccount.correo, debouncedSearch)}
+                                    </div>
                                   )}
                                 </div>
-                                {bien.cuentasPC[0].correo && (
-                                  <div className="text-[10px] text-indigo-600 dark:text-indigo-400 pl-6 font-semibold whitespace-nowrap">
-                                    {bien.cuentasPC[0].correo}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                              );
+                            })()}
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               <span className="font-mono text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 ">
-                                Serie: {fmt(bien.numSerie)}
+                                Serie: {highlightText(fmt(bien.numSerie), debouncedSearch)}
                               </span>
+                              <span className="font-mono text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700 ">
+                                Inv: {highlightText(fmt(bien.numInv), debouncedSearch)}
+                              </span>
+                              {debouncedSearch && bien.clavePresupuestal && bien.clavePresupuestal !== '—' && bien.clavePresupuestal.toLowerCase().includes(debouncedSearch.toLowerCase()) && !String(bien.numSerie).toLowerCase().includes(debouncedSearch.toLowerCase()) && !String(bien.numInv).toLowerCase().includes(debouncedSearch.toLowerCase()) && (
+                                <span className="font-mono text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded border border-amber-200">
+                                  CP: {highlightText(bien.clavePresupuestal, debouncedSearch)}
+                                </span>
+                              )}
                               {(() => {
-                                const ips = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(',').map(i => i.trim()).filter(Boolean) : [];
+                                const rawIps = bien.especificacionTI?.dir_ip ? bien.especificacionTI.dir_ip.split(/[\/,]/).map(i => i.trim()).filter(Boolean) : [];
                                 if (hasWifiConflict) {
-                                  const repIp = wifiConflictMsg.includes(':') ? wifiConflictMsg.split(':')[1].trim() : (ips[0] || '');
+                                  const repIp = wifiConflictMsg.includes(':') ? wifiConflictMsg.split(':')[1].trim() : (rawIps[0] || '');
                                   return (
                                     <div className="flex items-center gap-1 text-[10px] text-red-700 dark:text-red-300 font-mono font-bold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded border border-red-200/60 dark:border-red-800/50 max-w-full" title={wifiConflictMsg}>
                                       <Wifi size={10} className="text-red-600 dark:text-red-400 shrink-0 animate-pulse" />
@@ -2569,13 +2616,14 @@ export default function Inventario() {
                                     </div>
                                   );
                                 }
-                                if (ips.length === 0) return null;
+                                if (rawIps.length === 0) return null;
+                                const matchingIp = debouncedSearch ? (rawIps.find(i => i.toLowerCase().includes(debouncedSearch.toLowerCase())) || rawIps[0]) : rawIps[0];
                                 return (
                                   <div className="flex items-center gap-1 text-[10px] text-emerald-800 dark:text-emerald-300 font-mono font-bold bg-emerald-100 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50 max-w-full">
                                     <Network size={10} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                    <span className="truncate">{ips[0]}</span>
-                                    {ips.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{ips.length - 1}</span>}
-                                    <button onClick={(e) => { e.stopPropagation(); copyTextFallback(ips[0]); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600 dark:text-emerald-400/60 hover:text-emerald-800 dark:text-emerald-300 shrink-0 ml-0.5"><Copy size={11} /></button>
+                                    <span className="truncate">{highlightText(matchingIp, debouncedSearch)}</span>
+                                    {rawIps.length > 1 && <span className="bg-emerald-600 text-white px-1 rounded-sm text-[8px] ml-0.5 shrink-0">+{rawIps.length - 1}</span>}
+                                    <button onClick={(e) => { e.stopPropagation(); copyTextFallback(matchingIp); showToast('Dirección IP copiada', 'success'); }} title="Copiar IP" className="text-emerald-600 dark:text-emerald-400/60 hover:text-emerald-800 dark:text-emerald-300 shrink-0 ml-0.5"><Copy size={11} /></button>
                                   </div>
                                 );
                               })()}

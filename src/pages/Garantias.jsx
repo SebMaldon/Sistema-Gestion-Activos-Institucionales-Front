@@ -23,6 +23,27 @@ import ReportesSeccion from '../components/ReportesSeccion';
 import MultiSelect from '../components/MultiSelect';
 import * as XLSX from 'xlsx-js-style';
 
+const highlightText = (text, query) => {
+  if (!text || !query) return text;
+  const str = String(text);
+  const q = String(query).trim();
+  if (!q) return text;
+
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQ})`, 'gi');
+  const parts = str.split(regex);
+
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-300 dark:bg-yellow-500/50 text-gray-950 dark:text-gray-100 rounded px-0.5 font-bold shadow-sm">
+        {part}
+      </mark>
+    ) : part
+  );
+};
+
 // ─── Componentes reusables de vista ──────────────────────────────────────────
 
 function EstatusBadge({ estatus }) {
@@ -963,7 +984,8 @@ export default function Garantias() {
  const proveedorMatch = g.proveedorObj?.nombre_proveedor?.toLowerCase().includes(term);
  const serieMatch = g.bien?.num_serie?.toLowerCase().includes(term);
  const invMatch = g.bien?.num_inv?.toLowerCase().includes(term);
- return proveedorMatch || serieMatch || invMatch;
+ const equipoMatch = g.bien ? (`${g.bien.modelo?.marca?.marca || ''} ${g.bien.modelo?.descrip_disp || ''} ${g.bien.especificacionTI?.nombre_host || ''}`).toLowerCase().includes(term) : false;
+ return proveedorMatch || serieMatch || invMatch || equipoMatch;
  });
  }, [garantias, statusFilter, showPorVencer, dateFilterType, startDate, endDate, proveedorFilters, tipoDispositivoFilters, searchFilter]);
 
@@ -1353,7 +1375,7 @@ export default function Garantias() {
  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
  <input
  type="text"
- placeholder="Buscar por equipo, proveedor o número de serie..."
+ placeholder="Buscar por equipo, host, serie, inventario o proveedor..."
  value={searchFilter}
  onChange={e => setSearchFilter(e.target.value)}
  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
@@ -1519,7 +1541,7 @@ export default function Garantias() {
  >
  <td className="px-4 py-3.5 relative">
  <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
- {garantia.bien ? (garantia.bien.modelo?.marca?.marca + " " + garantia.bien.modelo?.descrip_disp) : 'Bien Extraviado/No Asignado'}
+ {highlightText(garantia.bien ? (garantia.bien.modelo?.marca?.marca + " " + garantia.bien.modelo?.descrip_disp) : 'Bien Extraviado/No Asignado', searchFilter)}
  </p>
  <div className="flex items-center flex-wrap gap-1.5 mt-1">
  {garantia.bien?.modelo?.tipoDispositivo?.nombre_tipo && (
@@ -1530,7 +1552,7 @@ export default function Garantias() {
  )}
  <span className="font-mono text-[11px] bg-gray-50 dark:bg-gray-900 px-1.5 py-0.5 rounded border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 inline-flex items-center">
  <span className="mr-1 text-gray-400">S/N:</span>
- <span className="font-semibold text-gray-700 dark:text-gray-300 ">{garantia.bien?.num_serie || 'N/A'}</span>
+ <span className="font-semibold text-gray-700 dark:text-gray-300 ">{highlightText(garantia.bien?.num_serie || 'N/A', searchFilter)}</span>
  </span>
  </div>
  </td>
@@ -1545,7 +1567,7 @@ export default function Garantias() {
  </div>
  </td>
  <td className="px-4 py-3.5 text-xs text-gray-600 dark:text-gray-400 ">
- {garantia.proveedorObj?.nombre_proveedor || '--'}
+ {highlightText(garantia.proveedorObj?.nombre_proveedor || '--', searchFilter)}
  </td>
  <td className="px-4 py-3.5">
  <EstatusBadge estatus={garantia.estado_garantia} />
@@ -1725,7 +1747,7 @@ export default function Garantias() {
  <td className="px-5 py-4">
  <div className="flex flex-col">
  <span className="font-bold text-gray-900 dark:text-gray-100 ">
- {garantia.bien ? `${garantia.bien.modelo?.marca?.marca} ${garantia.bien.modelo?.descrip_disp}` : 'Equipo no especificado'}
+ {highlightText(garantia.bien ? `${garantia.bien.modelo?.marca?.marca} ${garantia.bien.modelo?.descrip_disp}` : 'Equipo no especificado', searchFilter)}
  </span>
  <div className="flex items-center flex-wrap gap-1.5 mt-1">
  {garantia.bien?.modelo?.tipoDispositivo?.nombre_tipo && (
@@ -1734,14 +1756,14 @@ export default function Garantias() {
  {garantia.bien.modelo.tipoDispositivo.nombre_tipo}
  </span>
  )}
- <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">SN: {garantia.bien?.num_serie || 'N/A'}</span>
+ <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">SN: {highlightText(garantia.bien?.num_serie || 'N/A', searchFilter)}</span>
  </div>
  </div>
  </td>
  <td className="px-5 py-4">
  <div className="flex items-center gap-2">
  <Building size={14} className="text-gray-400" />
- <span className="font-medium text-gray-700 dark:text-gray-300 ">{garantia.proveedorObj?.nombre_proveedor || <span className="text-gray-400 italic">No asignado</span>}</span>
+ <span className="font-medium text-gray-700 dark:text-gray-300 ">{garantia.proveedorObj?.nombre_proveedor ? highlightText(garantia.proveedorObj.nombre_proveedor, searchFilter) : <span className="text-gray-400 italic">No asignado</span>}</span>
  </div>
  </td>
  <td className="px-5 py-4">

@@ -105,7 +105,7 @@ export default function Login() {
  <div className="mt-8 pt-6 border-t border-white dark:border-gray-800/10">
  <div className="flex items-center gap-2">
  <ClipboardList size={14} className="text-yellow-300" />
- <span className="text-xs font-semibold" style={{ color: '#f0c040' }}>SIIT v3.1.0</span>
+ <span className="text-xs font-semibold" style={{ color: '#f0c040' }}>SIIT v3.1.9</span>
  </div>
  <p className="text-green-200/40 text-xs mt-1">
  Bajo normativa MAAGTIC-SI · Ley Federal de Transparencia
@@ -244,7 +244,7 @@ export default function Login() {
 
  {/* Footer */}
  <p className="text-center text-green-200/40 text-xs mt-6">
- © 2026 IMSS — SIIT v3.1.0 · Delegación Nayarit
+ © 2026 IMSS — SIIT v3.1.9 · Delegación Nayarit
  </p>
  </div>
  </div>
