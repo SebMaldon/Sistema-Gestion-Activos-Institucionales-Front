@@ -219,12 +219,33 @@ export default function DetalleBienVisualModal({ id_bien, onClose }) {
  <EstatusBadge estatus={activeFicha.estatus_operativo} />
  </div>
 
+ {activeFicha.prestamoActivo && (
+   <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3">
+     <div className="p-2 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg shrink-0">
+       <Tag size={16} />
+     </div>
+     <div className="flex-1 text-xs">
+       <p className="font-bold text-blue-900 dark:text-blue-100 mb-0.5">ESTE EQUIPO SE ENCUENTRA EN PRÉSTAMO ACTIVO</p>
+       <p className="text-blue-800 dark:text-blue-200">
+         Prestado por: <strong>{activeFicha.prestamoActivo.usuarioRegistraPrestamo?.nombre_completo || 'Usuario'}</strong> el {formatDateTime(activeFicha.prestamoActivo.fecha_inicio_prestamo)}
+         {activeFicha.prestamoActivo.fecha_a_terminar_prestamo && (
+           <span> · Devolución acordada: <strong>{formatDate(activeFicha.prestamoActivo.fecha_a_terminar_prestamo)}</strong></span>
+         )}
+       </p>
+       {activeFicha.prestamoActivo.descripcion_prestamo_inicio && (
+         <p className="mt-1 italic text-blue-700 dark:text-blue-300">"{activeFicha.prestamoActivo.descripcion_prestamo_inicio}"</p>
+       )}
+     </div>
+   </div>
+ )}
+
  {/* ── Pestañas Ficha ── */}
  <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 ">
  {[
  { key: 'info', label: 'Información' },
  ...(hasTecnico ? [{ key: 'tecnico', label: 'Técnico / Garantía' }] : []),
  ...(activeFicha.programasPC && activeFicha.programasPC.length > 0 ? [{ key: 'software', label: 'Software Instalado' }] : []),
+ ...(activeFicha.prestamos && activeFicha.prestamos.length > 0 ? [{ key: 'prestamos', label: `Historial Préstamos (${activeFicha.prestamos.length})` }] : []),
  ].map(t => (
  <button
  key={t.key}
@@ -417,6 +438,58 @@ export default function DetalleBienVisualModal({ id_bien, onClose }) {
  {/* ── Tab: Software Instalado ── */}
  {fichaTabs === 'software' && activeFicha.programasPC && (
  <SoftwareTable programas={activeFicha.programasPC} />
+ )}
+
+ {/* ── Tab: Historial Préstamos ── */}
+ {fichaTabs === 'prestamos' && activeFicha.prestamos && (
+   <div className="space-y-3 fade-in">
+     {activeFicha.prestamos.map((p, idx) => (
+       <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2 text-xs">
+         <div className="flex justify-between items-center border-b pb-2">
+           <span className="font-bold text-gray-800 dark:text-gray-200">
+             {p.fecha_entrega ? 'DEVUELTO' : 'EN PRÉSTAMO (ACTIVO)'}
+           </span>
+           <span className="text-gray-400 font-mono">
+             Inicio: {formatDateTime(p.fecha_inicio_prestamo)}
+           </span>
+         </div>
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+           <div>
+             <span className="text-gray-400">Registró préstamo:</span>{' '}
+             <span className="font-medium text-gray-700 dark:text-gray-300">{p.usuarioRegistraPrestamo?.nombre_completo || '—'}</span>
+           </div>
+           <div>
+             <span className="text-gray-400">Devolución acordada:</span>{' '}
+             <span className="font-medium text-gray-700 dark:text-gray-300">{p.fecha_a_terminar_prestamo ? formatDate(p.fecha_a_terminar_prestamo) : '—'}</span>
+           </div>
+           {p.fecha_entrega && (
+             <>
+               <div>
+                 <span className="text-gray-400">Recibió devolución:</span>{' '}
+                 <span className="font-medium text-gray-700 dark:text-gray-300">{p.usuarioRegistraEntrega?.nombre_completo || '—'}</span>
+               </div>
+               <div>
+                 <span className="text-gray-400">Fecha de entrega:</span>{' '}
+                 <span className="font-medium text-gray-700 dark:text-gray-300">{formatDateTime(p.fecha_entrega)}</span>
+               </div>
+             </>
+           )}
+         </div>
+         {p.descripcion_prestamo_inicio && (
+           <div className="bg-white dark:bg-gray-800 p-2 rounded border mt-2">
+             <span className="text-gray-400 block text-[10px] uppercase">Detalles de préstamo</span>
+             <p className="text-gray-600 dark:text-gray-300 italic">"{p.descripcion_prestamo_inicio}"</p>
+           </div>
+         )}
+         {p.descripcion_prestamo_finalizacion && (
+           <div className="bg-white dark:bg-gray-800 p-2 rounded border mt-2">
+             <span className="text-gray-400 block text-[10px] uppercase">Detalles de finalización</span>
+             <p className="text-gray-600 dark:text-gray-300 italic">"{p.descripcion_prestamo_finalizacion}"</p>
+           </div>
+         )}
+       </div>
+     ))}
+   </div>
  )}
  </div>
  </Modal>

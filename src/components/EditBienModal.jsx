@@ -14,7 +14,7 @@ import {
  Server, Monitor, Cpu, HardDrive, Wifi, Save,
  Package, Shield, Calendar, MapPin, User, Tag,
  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings,
- SlidersHorizontal, FilterX
+ SlidersHorizontal, FilterX, Clock, History
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
@@ -42,6 +42,9 @@ import CargaMasivaPanel from '../components/CargaMasivaPanel';
 import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOSITIVO } from '../api/atributos.queries';
 import ExportExcelModal from '../components/ExportExcelModal';
 import ReportePanel from '../components/ReportePanel';
+import { CrearPrestamoModal } from './CrearPrestamoModal';
+import { FinalizarPrestamoModal } from './FinalizarPrestamoModal';
+import { CREATE_PRESTAMO_MUTATION, FINALIZAR_PRESTAMO_MUTATION, ACTUALIZAR_PRESTAMO_MUTATION } from '../api/prestamos.queries';
 
 import { EditBienModal as Self } from './EditBienModal';
 // ─── Roles reales de BD ───────────────────────────────────────────────────────
@@ -644,7 +647,7 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  <span className="text-gray-700 dark:text-gray-300 ">{m.marca}</span>
  </div>
  ))}
- {marcas.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin marcas registradas</p>}
+ {marcas.length === 0 && <p className="text-center text-xs text-gray-400 py-4">Sin marcas registrados</p>}
  </div>
  <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Crear Nueva Marca</p>
@@ -1022,6 +1025,119 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  setNotaToDelete(nota);
  };
 
+ const { mutate: createBien, isPending: creating } = useCreateBien({
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
+  });
+  const { mutate: updateBien, isPending: updating } = useUpdateBien({
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar bien.', 'error'),
+  });
+
+  const [loanModalOpen, setLoanModalOpen] = useState(null); // 'create' | 'finish' | 'edit' | null
+  const [loanToEdit, setLoanToEdit] = useState(null);
+  const [pendingLoanVars, setPendingLoanVars] = useState(null);
+  const [createdBienForLoan, setCreatedBienForLoan] = useState(null);
+
+  const { mutate: crearPrestamoMut, isPending: creandoPrestamo } = useMutation({
+    mutationFn: (vars) => gqlClient.request(CREATE_PRESTAMO_MUTATION, vars),
+    onSuccess: async () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      qc.invalidateQueries({ queryKey: ['bienDetail'] });
+      showToast('Préstamo registrado exitosamente', 'success');
+      setLoanModalOpen(null);
+      if (pendingLoanVars?.directBitacora) {
+        setPendingLoanVars(null);
+        if (modalForm?.id_bien) {
+          const res = await gqlClient.request(gql`query GetBien($id: ID!) { bien(id_bien: $id) { id_bien prestamos { id_registro_prestamo fecha_inicio_prestamo fecha_a_terminar_prestamo fecha_entrega descripcion_prestamo_inicio descripcion_prestamo_finalizacion } } }`, { id: modalForm.id_bien });
+          setModalForm(prev => ({ ...prev, prestamos: res.bien.prestamos }));
+        }
+        if (refetch) refetch();
+        return;
+      }
+      setPendingLoanVars(null);
+      closeForm();
+      onClose();
+      if (refetch) refetch();
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al registrar préstamo', 'error'),
+  });
+
+  const { mutate: actualizarPrestamoMut, isPending: actualizandoPrestamo } = useMutation({
+    mutationFn: (vars) => gqlClient.request(ACTUALIZAR_PRESTAMO_MUTATION, vars),
+    onSuccess: async () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      qc.invalidateQueries({ queryKey: ['bienDetail'] });
+      showToast('Préstamo extendido/actualizado', 'success');
+      setLoanModalOpen(null);
+      setLoanToEdit(null);
+      if (modalForm?.id_bien) {
+        const res = await gqlClient.request(gql`query GetBien($id: ID!) { bien(id_bien: $id) { id_bien prestamos { id_registro_prestamo fecha_inicio_prestamo fecha_a_terminar_prestamo fecha_entrega descripcion_prestamo_inicio descripcion_prestamo_finalizacion } } }`, { id: modalForm.id_bien });
+        setModalForm(prev => ({ ...prev, prestamos: res.bien.prestamos }));
+      }
+      if (refetch) refetch();
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar préstamo', 'error'),
+  });
+
+  const { mutate: finalizarPrestamoMut, isPending: finalizandoPrestamo } = useMutation({
+    mutationFn: (vars) => gqlClient.request(FINALIZAR_PRESTAMO_MUTATION, vars),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bienes'] });
+      qc.invalidateQueries({ queryKey: ['bienDetail'] });
+      showToast('Préstamo finalizado exitosamente', 'success');
+      setLoanModalOpen(null);
+      setPendingLoanVars(null);
+      closeForm();
+      onClose();
+      if (refetch) refetch();
+    },
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al finalizar préstamo', 'error'),
+  });
+
+  const handleLoanConfirm = (loanDetails) => {
+    if (loanModalOpen === 'edit') {
+      actualizarPrestamoMut({
+        id_registro_prestamo: loanToEdit.id_registro_prestamo,
+        fecha_a_terminar_prestamo: loanDetails.fecha_a_terminar_prestamo,
+        descripcion_prestamo_inicio: loanDetails.descripcion_prestamo_inicio
+      });
+      return;
+    }
+    const targetId = modalForm?.id_bien || pendingLoanVars?.id_bien;
+    if (!targetId) return;
+
+    if (pendingLoanVars?.directBitacora) {
+      crearPrestamoMut({ id_bien: targetId, ...loanDetails });
+      return;
+    }
+    
+    // Si estamos en creación, el bien ya fue creado antes del modal
+    if (modalForm === 'create') {
+        crearPrestamoMut({ id_bien: targetId, ...loanDetails });
+        return;
+    }
+
+    // Si es edición
+    updateBien({ id_bien: targetId, ...pendingLoanVars }, {
+      onSuccess: () => {
+        if (showTI && targetId) {
+          const tiData = parseTI();
+          const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
+          if (hayDatosTI) upsertTI({ id_bien: targetId, ...tiData });
+          cuentasList.forEach(c => {
+            const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
+            if (c.id_cuenta && !c._new) updateCuentaPC({ id_cuenta: c.id_cuenta, data });
+            else createCuentaPC({ id_bien: targetId, data });
+          });
+        }
+        if (loanModalOpen === 'create') {
+          crearPrestamoMut({ id_bien: targetId, ...loanDetails });
+        } else {
+          finalizarPrestamoMut({ id_bien: targetId, ...loanDetails });
+        }
+      }
+    });
+  };
+
  const confirmDeleteNota = () => {
  if (!notaToDelete) return;
  setIsDeletingNota(true);
@@ -1039,13 +1155,6 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  }
  });
  };
-
- const { mutate: createBien, isPending: creating } = useCreateBien({
- onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
- });
- const { mutate: updateBien, isPending: updating } = useUpdateBien({
- onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar bien.', 'error'),
- });
 
  const handleAutoCalcGarantia = (years) => {
  if (!garantiaForm.fecha_inicio) {
@@ -1335,31 +1444,43 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
 
  // Crear Garantía si aplica
  if (garantiaForm.show) {
- const handleFinish = async () => {
- await queryClient.cancelQueries({ queryKey: ['bienes'] });
- closeForm();
- onClose();
- if (refetch) await refetch();
- showToast('Bien registrado correctamente.', 'success');
- };
- createGarantia({
- id_bien: bienCreado.id_bien,
- fecha_inicio: garantiaForm.fecha_inicio || null,
- fecha_fin: garantiaForm.fecha_fin || null,
- id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
- estado_garantia: 'VIGENTE'
- }, { onSuccess: handleFinish });
- } else {
- const handleFinish = async () => {
- await queryClient.cancelQueries({ queryKey: ['bienes'] });
- closeForm();
- onClose();
- if (refetch) await refetch();
- showToast('Bien registrado correctamente.', 'success');
- };
- handleFinish();
- }
- },
+      const handleFinish = async () => {
+        if (form.estatus_operativo === 'PRESTAMO') {
+          setCreatedBienForLoan(bienCreado);
+          setPendingLoanVars({ id_bien: bienCreado.id_bien });
+          setLoanModalOpen('create');
+          return;
+        }
+        await queryClient.cancelQueries({ queryKey: ['bienes'] });
+        closeForm();
+        onClose();
+        if (refetch) await refetch();
+        showToast('Bien registrado correctamente.', 'success');
+      };
+      createGarantia({
+        id_bien: bienCreado.id_bien,
+        fecha_inicio: garantiaForm.fecha_inicio || null,
+        fecha_fin: garantiaForm.fecha_fin || null,
+        id_proveedor: garantiaForm.id_proveedor ? parseInt(garantiaForm.id_proveedor) : null,
+        estado_garantia: 'VIGENTE'
+      }, { onSuccess: handleFinish });
+    } else {
+      const handleFinish = async () => {
+        if (form.estatus_operativo === 'PRESTAMO') {
+          setCreatedBienForLoan(bienCreado);
+          setPendingLoanVars({ id_bien: bienCreado.id_bien });
+          setLoanModalOpen('create');
+          return;
+        }
+        await queryClient.cancelQueries({ queryKey: ['bienes'] });
+        closeForm();
+        onClose();
+        if (refetch) await refetch();
+        showToast('Bien registrado correctamente.', 'success');
+      };
+      handleFinish();
+    }
+  },
  });
  } else {
  if (idRol === 3) {
@@ -1384,6 +1505,18 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  if (refetch) await refetch(); 
  showToast('Especificaciones TI actualizadas.', 'success'); 
  }, 300);
+ return;
+ }
+ const prevEst = modalForm.estatusOperativo || modalForm.estatus_operativo;
+ const newEst = form.estatus_operativo;
+  if (prevEst !== 'PRESTAMO' && newEst === 'PRESTAMO') {
+ setPendingLoanVars(vars);
+ setLoanModalOpen('create');
+ return;
+ }
+ if (prevEst === 'PRESTAMO' && newEst !== 'PRESTAMO') {
+ setPendingLoanVars(vars);
+ setLoanModalOpen('finish');
  return;
  }
 
@@ -1644,6 +1777,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  {[
  { key: 'general', label: 'General' },
  { key: 'tecnico', label: 'Técnico / Garantía', badge: showTI || deviceMode === 'OTHER' || deviceMode === 'PC' || deviceMode === 'LAPTOP' || deviceMode === 'MONITOR' },
+ ...(modalForm !== 'create' ? [{ key: 'historial', label: 'Historial / Bitácora', badge: modalForm?.prestamos?.length > 0 }] : []),
  ].filter(t => Number(idRol) !== 3 || t.key !== 'general').map(t => (
  <button
  key={t.key}
@@ -2326,6 +2460,105 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  </div>
  </div>
  )}
+
+ {/* ── Tab: Historial / Bitácora ── */}
+ {formTab === 'historial' && modalForm !== 'create' && (
+   <div className="space-y-4 fade-in">
+     <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+       <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+         <Clock size={16} className="text-indigo-500" />
+         Bitácora de Préstamos y Devoluciones
+       </h3>
+       <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+         Total: {modalForm.prestamos?.length || 0} registro(s)
+       </span>
+     </div>
+
+      {!modalForm.prestamos || modalForm.prestamos.length === 0 ? (
+        ['PRESTAMO', 'PRÉSTAMO'].includes((modalForm.estatusOperativo || modalForm.estatus_operativo)?.toUpperCase()) ? (
+          <div className="text-center py-8 bg-amber-50/80 dark:bg-amber-950/20 rounded-xl border border-amber-300 dark:border-amber-800 p-6 space-y-3">
+            <AlertTriangle size={32} className="mx-auto text-amber-600 animate-pulse" />
+            <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">⚠️ Equipo en Préstamo sin registro en bitácora</h4>
+            <p className="text-xs text-amber-700 dark:text-amber-300 max-w-md mx-auto">
+              Este equipo figura en estatus operativo <strong>PRÉSTAMO</strong> en la base de datos, pero no cuenta con registro en bitácora por ser previo a la actualización.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setPendingLoanVars({ id_bien: modalForm.id_bien, directBitacora: true }); setLoanModalOpen('create'); }}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition-colors shadow-md inline-flex items-center gap-1.5"
+            >
+              <span>+ Regularizar Préstamo Manualmente</span>
+            </button>
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+            <Clock size={32} className="mx-auto mb-2 text-gray-400 opacity-40" />
+            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Sin historial de préstamos</p>
+            <p className="text-xs text-gray-400 mt-1">Este equipo no ha registrado movimientos de préstamo o salida.</p>
+          </div>
+        )
+      ) : (
+        <div className="space-y-3">
+          {modalForm.prestamos.map((prestamo, idx) => {
+            const isActivo = !prestamo.fecha_entrega;
+            const isVencido = isActivo && prestamo.fecha_a_terminar_prestamo && (new Date(prestamo.fecha_a_terminar_prestamo) < new Date());
+            return (
+              <div key={prestamo.id_registro_prestamo || idx} className={`p-4 rounded-xl border ${isVencido ? 'bg-red-50/80 dark:bg-red-950/40 border-red-500 shadow-sm' : isActivo ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/60 shadow-sm' : 'bg-gray-50/60 dark:bg-gray-800/40 border-gray-100 dark:border-gray-800'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isVencido ? 'bg-red-600 text-white animate-bounce shadow-sm' : isActivo ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+                      {isVencido ? '⚠️ ¡Préstamo Vencido!' : isActivo ? 'En Préstamo Activo' : 'Finalizado / Devuelto'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">#{prestamo.id_registro_prestamo}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">
+                      Inicio: {prestamo.fecha_inicio_prestamo ? new Date(isNaN(Number(prestamo.fecha_inicio_prestamo)) ? prestamo.fecha_inicio_prestamo : Number(prestamo.fecha_inicio_prestamo)).toLocaleString() : 'N/D'}
+                    </span>
+                    {isActivo && (
+                      <button
+                        type="button"
+                        onClick={() => { setLoanToEdit(prestamo); setLoanModalOpen('edit'); }}
+                        className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 text-amber-800 dark:text-amber-200 rounded text-[11px] font-bold transition-colors inline-flex items-center gap-1 border border-amber-300 dark:border-amber-700 shadow-sm"
+                        title="Extender plazo o editar notas"
+                      >
+                        <span>✏️ Extender / Editar</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3">
+                 <div>
+                   <span className="text-gray-400 font-medium">Est. Devolución:</span>{' '}
+                   <span className="text-gray-700 dark:text-gray-300 font-semibold">{prestamo.fecha_a_terminar_prestamo ? prestamo.fecha_a_terminar_prestamo.split('T')[0] : 'N/D'}</span>
+                 </div>
+                 <div>
+                   <span className="text-gray-400 font-medium">Devuelto el:</span>{' '}
+                   <span className={prestamo.fecha_entrega ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-amber-600 font-semibold'}>{prestamo.fecha_entrega ? new Date(isNaN(Number(prestamo.fecha_entrega)) ? prestamo.fecha_entrega : Number(prestamo.fecha_entrega)).toLocaleString() : 'Pendiente de entrega'}</span>
+                 </div>
+               </div>
+
+               {prestamo.descripcion_prestamo_inicio && (
+                 <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 text-xs">
+                   <span className="text-gray-400 block mb-0.5">Motivo / Notas Inicio:</span>
+                   <p className="text-gray-600 dark:text-gray-300 italic">{prestamo.descripcion_prestamo_inicio}</p>
+                 </div>
+               )}
+
+               {prestamo.descripcion_prestamo_finalizacion && (
+                 <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 text-xs">
+                   <span className="text-gray-400 block mb-0.5">Notas de Recepción:</span>
+                   <p className="text-gray-600 dark:text-gray-300 italic">{prestamo.descripcion_prestamo_finalizacion}</p>
+                 </div>
+               )}
+             </div>
+           );
+         })}
+       </div>
+     )}
+   </div>
+ )}
  </div>
  )}
  </div>
@@ -2380,6 +2613,28 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  </div>
  </div>
  </Modal>
+ )}
+
+ {(loanModalOpen === 'create' || loanModalOpen === 'edit') && (
+ <CrearPrestamoModal
+ isOpen={true}
+ onClose={() => { setLoanModalOpen(null); setPendingLoanVars(null); }}
+ onConfirm={handleLoanConfirm}
+ bien={modalForm}
+ prestamoToEdit={loanToEdit}
+ isLoading={updating || creandoPrestamo || actualizandoPrestamo}
+ />
+ )}
+
+ {loanModalOpen === 'finish' && (
+ <FinalizarPrestamoModal
+ isOpen={true}
+ onClose={() => { setLoanModalOpen(null); setPendingLoanVars(null); }}
+ onConfirm={handleLoanConfirm}
+ bien={modalForm}
+ nuevoEstatus={form.estatus_operativo}
+ isLoading={updating || finalizandoPrestamo}
+ />
  )}
 
  </>

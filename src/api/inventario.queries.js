@@ -133,6 +133,29 @@ export const BIEN_FIELDS = gql`
         nombre_completo
       }
     }
+    prestamoActivo {
+      id_registro_prestamo
+      fecha_inicio_prestamo
+      fecha_a_terminar_prestamo
+      descripcion_prestamo_inicio
+      usuarioRegistraPrestamo {
+        nombre_completo
+      }
+    }
+    prestamos {
+      id_registro_prestamo
+      fecha_inicio_prestamo
+      fecha_a_terminar_prestamo
+      fecha_entrega
+      descripcion_prestamo_inicio
+      descripcion_prestamo_finalizacion
+      usuarioRegistraPrestamo {
+        nombre_completo
+      }
+      usuarioRegistraEntrega {
+        nombre_completo
+      }
+    }
     inconvenientes
   }
 `;

@@ -46,6 +46,8 @@ export function mapBienNode(node) {
     usuarioResguardo: node.usuarioResguardo,
     cuentasPC: node.cuentasPC || [],
     programasPC: node.programasPC || [],
+    prestamos: node.prestamos || [],
+    prestamoActivo: node.prestamoActivo || null,
     originalNode: node,
   };
 }

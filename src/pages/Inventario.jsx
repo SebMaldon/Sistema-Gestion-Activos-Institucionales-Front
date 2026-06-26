@@ -15,7 +15,7 @@ import {
  Server, Monitor, Cpu, HardDrive, Wifi, Save,
  Package, Shield, Calendar, MapPin, User, Tag,
  ChevronDown, ChevronUp, Loader2, RefreshCw, Check, Layers, Cpu as CpuIcon, Bookmark, StickyNote, Settings,
- SlidersHorizontal, FilterX, Network, Copy
+ SlidersHorizontal, FilterX, Network, Copy, Clock
 } from 'lucide-react';
 
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
@@ -42,6 +42,9 @@ import { UPSERT_BIEN_ATRIBUTOS, GET_CAT_ATRIBUTOS, GET_ATRIBUTOS_POR_TIPO_DISPOS
 import ExportExcelModal from '../components/ExportExcelModal';
 import { EditBienModal } from '../components/EditBienModal';
 import ConfirmModal from '../components/ConfirmModal';
+import { CrearPrestamoModal } from '../components/CrearPrestamoModal';
+import { FinalizarPrestamoModal } from '../components/FinalizarPrestamoModal';
+import { CREATE_PRESTAMO_MUTATION, FINALIZAR_PRESTAMO_MUTATION } from '../api/prestamos.queries';
 
 const fallbackCopyTextToClipboard = (text) => {
  var textArea = document.createElement("textarea");
@@ -93,6 +96,24 @@ function getDeviceMode(nombreTipo, nombreCategoria = null, nombreEquipo = null) 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(v) { return v || '—'; }
+
+// ─── Estilos de Estatus para Select ──────────────────────────────────────────
+function getStatusStyles(estatus) {
+  const map = {
+    'ACTIVO': 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-300 dark:border-green-800/50',
+    'INACTIVO': 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 border-red-300 dark:border-red-800/50',
+    'DAÑADO': 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800/50',
+    'DEVOLUCIÓN': 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-800/50',
+    'OTRO': 'bg-gray-100 dark:bg-gray-800/50 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700/50',
+    'P_BAJA': 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800/50',
+    'PRESTAMO': 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800/50',
+    'SINIESTRADO': 'bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-400 border-red-200 dark:border-red-800/30',
+    'SUSTITUIDO': 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800/50',
+    'TRASPASO OOAD': 'bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 border-teal-300 dark:border-teal-800/50',
+    'TRASPASO_FORANEO': 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800/50',
+  };
+  return map[estatus] ?? 'bg-gray-100 dark:bg-gray-800/50 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700/50';
+}
 
 // ─── Badge de Estatus ─────────────────────────────────────────────────────────
 function EstatusBadge({ estatus }) {
@@ -1048,6 +1069,8 @@ export default function Inventario() {
 
  // ── Modales ────────────────────────────────────────────────────────────────
  const [modalQR, setModalQR] = useState(null);
+ const [editingStatusId, setEditingStatusId] = useState(null);
+ const [quickLoanModal, setQuickLoanModal] = useState(null); // { type: 'create' | 'finish', bien, newStatus }
  const [modalFicha, setModalFicha] = useState(null);
  const [fichaTabs, setFichaTabs] = useState('info'); // 'info' | 'tecnico'
  const [modalForm, setModalForm] = useState(null); // null | 'create' | bien
@@ -1229,6 +1252,8 @@ export default function Inventario() {
  onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar garantía', 'error'),
  });
 
+
+
  const { mutate: createBien, isPending: creating } = useCreateBien({
  onSuccess: () => { closeForm(); showToast('Bien registrado correctamente.', 'success'); },
  onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al crear bien.', 'error'),
@@ -1247,6 +1272,65 @@ export default function Inventario() {
  d.setFullYear(d.getFullYear() + years);
  setGarantiaForm(p => ({ ...p, fecha_fin: d.toISOString().split('T')[0] }));
  };
+
+ const { mutate: updateBienQuick, isPending: updatingQuick } = useUpdateBien();
+
+ const handleQuickStatusChange = (targetBien, nuevoEstatus) => {
+ const prevEst = targetBien.estatusOperativo || targetBien.estatus_operativo;
+ if (nuevoEstatus === prevEst) return;
+
+ if (prevEst !== 'PRESTAMO' && nuevoEstatus === 'PRESTAMO') {
+ setQuickLoanModal({ type: 'create', bien: targetBien });
+ return;
+ }
+ if (prevEst === 'PRESTAMO' && nuevoEstatus !== 'PRESTAMO') {
+ setQuickLoanModal({ type: 'finish', bien: targetBien, newStatus: nuevoEstatus });
+ return;
+ }
+
+ updateBienQuick({ id_bien: targetBien.id_bien || targetBien.id, estatus_operativo: nuevoEstatus }, {
+ onSuccess: () => {
+ showToast('Estatus operativo actualizado.', 'success');
+ refetch();
+ },
+ onError: () => showToast('Error al actualizar estatus.', 'error')
+ });
+ };
+
+ const handleQuickLoanConfirm = async (vars) => {
+ try {
+ const id_bien = quickLoanModal.bien.id_bien || quickLoanModal.bien.id;
+ if (quickLoanModal.type === 'create') {
+ await gqlClient.request(CREATE_PRESTAMO_MUTATION, {
+ id_bien,
+ fecha_a_terminar_prestamo: vars.fecha_a_terminar_prestamo,
+ descripcion_prestamo_inicio: vars.descripcion_prestamo_inicio
+ });
+ updateBienQuick({ id_bien, estatus_operativo: 'PRESTAMO' }, {
+ onSuccess: () => {
+ showToast('Préstamo registrado exitosamente.', 'success');
+ refetch();
+ setQuickLoanModal(null);
+ }
+ });
+ } else {
+ await gqlClient.request(FINALIZAR_PRESTAMO_MUTATION, {
+ id_bien,
+ ...vars
+ });
+ updateBienQuick({ id_bien, estatus_operativo: vars.estatus_operativo_nuevo || quickLoanModal.newStatus }, {
+ onSuccess: () => {
+ showToast('Préstamo finalizado y devuelto.', 'success');
+ refetch();
+ setQuickLoanModal(null);
+ }
+ });
+ }
+ } catch (err) {
+ showToast('Error al procesar movimiento de préstamo.', 'error');
+ }
+ };
+
  const { mutate: deleteBien, isPending: deleting } = useDeleteBien({
  onSuccess: () => { setModalConfirmDel(null); showToast('Bien eliminado.', 'success'); },
  onError: (e) => {
@@ -2267,6 +2351,16 @@ export default function Inventario() {
  </div>
  );
  })()}
+ {(() => {
+ const overdueMsg = bien.inconvenientes?.find(i => i.toLowerCase().includes('caducado') || i.toLowerCase().includes('vencido'));
+ if (!overdueMsg) return null;
+ return (
+ <div className="mt-1 flex items-center gap-1.5 text-[10px] text-red-700 dark:text-red-300 font-bold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded border border-red-300 dark:border-red-800/50 w-fit max-w-full" title="El plazo acordado para la devolución ha expirado">
+ <AlertTriangle size={11} className="text-red-600 dark:text-red-400 shrink-0 animate-bounce" />
+ <span className="truncate">¡Préstamo caducado!</span>
+ </div>
+ );
+ })()}
  </div>
  {hasRecentNotes && (
  <div title="Tiene notas de observación recientes (últimas 24h)" className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 shadow-sm flex-shrink-0">
@@ -2319,7 +2413,25 @@ export default function Inventario() {
  {fmt(bien.resguardo)}
  </div>
  </td>
- <td className="px-4 py-3.5"><EstatusBadge estatus={bien.estatusOperativo} /></td>
+ <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+ {canEdit ? (
+ <select
+ value={bien.estatusOperativo || 'ACTIVO'}
+ onChange={(e) => {
+ e.stopPropagation();
+ handleQuickStatusChange(bien, e.target.value);
+ }}
+ onClick={(e) => e.stopPropagation()}
+ className={`text-xs font-bold px-2.5 py-1 rounded-full border shadow-sm outline-none cursor-pointer transition-all ${getStatusStyles(bien.estatusOperativo || 'ACTIVO')}`}
+ >
+ {['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'].map(st => (
+ <option key={st} value={st} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-semibold">{st}</option>
+ ))}
+ </select>
+ ) : (
+ <EstatusBadge estatus={bien.estatusOperativo} />
+ )}
+ </td>
  <td className="px-4 py-3.5">
  <div className="flex items-center gap-1.5">
 
@@ -2382,6 +2494,7 @@ export default function Inventario() {
  </p>
  {hasRecentNotes && <AlertTriangle size={14} className="text-amber-500 animate-pulse" title="Tiene notas recientes" />}
  {hasWifiConflict && <Wifi size={14} className="text-red-600 dark:text-red-400 animate-pulse" title={wifiConflictMsg} />}
+ {bien.inconvenientes?.some(i => i.toLowerCase().includes('caducado') || i.toLowerCase().includes('vencido')) && <AlertTriangle size={14} className="text-red-600 dark:text-red-400 animate-bounce" title="¡Préstamo caducado!" />}
  </div>
  <p className="text-xs text-gray-400 mt-0.5">
  <span className="font-semibold text-gray-500 dark:text-gray-400">{bien.modelo?.tipoDispositivo?.nombre_tipo || 'Dispositivo'}</span>
@@ -2438,7 +2551,25 @@ export default function Inventario() {
  })()}
  </div>
  </div>
+ <div onClick={(e) => e.stopPropagation()}>
+ {canEdit ? (
+ <select
+ value={bien.estatusOperativo || 'ACTIVO'}
+ onChange={(e) => {
+ e.stopPropagation();
+ handleQuickStatusChange(bien, e.target.value);
+ }}
+ onClick={(e) => e.stopPropagation()}
+ className={`text-xs font-bold px-2.5 py-1 rounded-full border shadow-sm outline-none cursor-pointer transition-all max-w-[130px] ${getStatusStyles(bien.estatusOperativo || 'ACTIVO')}`}
+ >
+ {['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'].map(st => (
+ <option key={st} value={st} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-semibold">{st}</option>
+ ))}
+ </select>
+ ) : (
  <EstatusBadge estatus={bien.estatusOperativo} />
+ )}
+ </div>
  </div>
  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-3">
  <p><span className="text-gray-400">Ubicación:</span> {fmt(bien.ubicacion)}</p>
@@ -2629,6 +2760,7 @@ export default function Inventario() {
  { key: 'info', label: 'Información' },
  ...(hasTecnico ? [{ key: 'tecnico', label: 'Técnico / Garantía' }] : []),
  ...(activeFicha.programasPC && activeFicha.programasPC.length > 0 ? [{ key: 'software', label: 'Software Instalado' }] : []),
+ { key: 'prestamos', label: 'Historial Préstamos' },
  ].map(t => (
  <button
  key={t.key}
@@ -2856,6 +2988,90 @@ export default function Inventario() {
  {fichaTabs === 'software' && activeFicha.programasPC && (
  <SoftwareTable programas={activeFicha.programasPC} />
  )}
+
+ {/* ── Tab: Historial Préstamos ── */}
+ {fichaTabs === 'prestamos' && (
+ <div className="space-y-4 fade-in">
+ <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+ <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+ <Clock size={16} className="text-indigo-500" />
+ Bitácora de Préstamos y Devoluciones
+ </h3>
+ <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+ Total: {activeFicha.prestamos?.length || 0} registro(s)
+ </span>
+ </div>
+
+ {!activeFicha.prestamos || activeFicha.prestamos.length === 0 ? (
+ <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+ <Clock size={32} className="mx-auto mb-2 text-gray-400 opacity-40" />
+           ['PRESTAMO', 'PRÉSTAMO'].includes(activeFicha.estatusOperativo?.toUpperCase()) ? (
+            <div className="text-center py-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-300 dark:border-amber-800 p-4 space-y-2 my-2">
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">⚠️ Equipo en Préstamo sin registro en bitácora</p>
+              <button type="button" onClick={() => setQuickLoanModal({ type: 'create', bien: activeFicha, directBitacora: true })} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition-colors shadow">
+                + Regularizar Préstamo Manualmente
+              </button>
+            </div>
+          ) : <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Sin historial de préstamos</p>
+ <p className="text-xs text-gray-400 mt-1">Este equipo no ha registrado movimientos de préstamo o salida.</p>
+ </div>
+ ) : (
+ <div className="space-y-3">
+ {activeFicha.prestamos.map((prestamo, idx) => {
+ const isActivo = !prestamo.fecha_entrega;
+ const isVencido = isActivo && prestamo.fecha_a_terminar_prestamo && (new Date(prestamo.fecha_a_terminar_prestamo) < new Date());
+ return (
+ <div key={prestamo.id_registro_prestamo || idx} className={`p-4 rounded-xl border ${isVencido ? 'bg-red-50/80 dark:bg-red-950/40 border-red-500 shadow-sm' : isActivo ? 'bg-indigo-50/40 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/60 shadow-sm' : 'bg-gray-50/60 dark:bg-gray-800/40 border-gray-100 dark:border-gray-800'}`}>
+ <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+ <div className="flex items-center gap-2">
+ <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isVencido ? 'bg-red-600 text-white animate-bounce shadow-sm' : isActivo ? 'bg-blue-600 text-white animate-pulse' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
+ {isVencido ? '⚠️ ¡Préstamo Vencido!' : isActivo ? 'En Préstamo Activo' : 'Finalizado / Devuelto'}
+ </span>
+ <span className="text-xs text-gray-500 font-mono">#{prestamo.id_registro_prestamo}</span>
+ </div>
+ <span className="text-xs text-gray-400">
+ Inicio: {formatDateTime(prestamo.fecha_inicio_prestamo)}
+ </span>
+ </div>
+
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3">
+ <div>
+ <span className="text-gray-400 font-medium">Est. Devolución:</span>{' '}
+ <span className="text-gray-700 dark:text-gray-300 font-semibold">{prestamo.fecha_a_terminar_prestamo ? formatDate(prestamo.fecha_a_terminar_prestamo) : 'N/D'}</span>
+ </div>
+ <div>
+ <span className="text-gray-400 font-medium">Devuelto el:</span>{' '}
+ <span className={prestamo.fecha_entrega ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-amber-600 font-semibold'}>{prestamo.fecha_entrega ? formatDateTime(prestamo.fecha_entrega) : 'Pendiente de entrega'}</span>
+ </div>
+ </div>
+
+ {isVencido && (
+ <div className="mt-3 p-2.5 rounded-lg bg-red-100/80 dark:bg-red-900/40 border border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 text-xs flex items-center gap-2 font-semibold">
+ <AlertTriangle size={15} className="text-red-600 dark:text-red-400 shrink-0 animate-pulse" />
+ <span>El plazo acordado para la devolución de este equipo ha expirado.</span>
+ </div>
+ )}
+
+ {prestamo.descripcion_prestamo_inicio && (
+ <div className="mt-2.5 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 text-xs">
+ <span className="text-gray-400 block mb-0.5">Motivo / Notas Inicio:</span>
+ <p className="text-gray-600 dark:text-gray-300 italic">{prestamo.descripcion_prestamo_inicio}</p>
+ </div>
+ )}
+
+ {prestamo.descripcion_prestamo_finalizacion && (
+ <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 text-xs">
+ <span className="text-gray-400 block mb-0.5">Notas de Recepción:</span>
+ <p className="text-gray-600 dark:text-gray-300 italic">{prestamo.descripcion_prestamo_finalizacion}</p>
+ </div>
+ )}
+ </div>
+ );
+ })}
+ </div>
+ )}
+ </div>
+ )}
  </div>
  </Modal>
  );
@@ -2926,9 +3142,30 @@ export default function Inventario() {
  {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
  {deleting ? 'Eliminando...' : 'Sí, eliminar'}
  </button>
- </div>
+</div>
  </div>
  </Modal>
+ )}
+
+ {(quickLoanModal?.type === 'create' || quickLoanModal?.type === 'edit') && (
+ <CrearPrestamoModal
+ isOpen={true}
+ onClose={() => setQuickLoanModal(null)}
+ onConfirm={handleQuickLoanConfirm}
+ bien={quickLoanModal.bien} prestamoToEdit={quickLoanModal.prestamoToEdit}
+ isLoading={updatingQuick}
+ />
+ )}
+
+ {quickLoanModal?.type === 'finish' && (
+ <FinalizarPrestamoModal
+ isOpen={true}
+ onClose={() => setQuickLoanModal(null)}
+ onConfirm={handleQuickLoanConfirm}
+ bien={quickLoanModal.bien}
+ nuevoEstatus={quickLoanModal.newStatus}
+ isLoading={updatingQuick}
+ />
  )}
 
  {/* ════════════════════════════════════════════════════════════════════
