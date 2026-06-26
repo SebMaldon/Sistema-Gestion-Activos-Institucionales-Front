@@ -984,7 +984,7 @@ export default function Inventario() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showAdvancedFilters && filtersContainerRef.current && !filtersContainerRef.current.contains(event.target)) {
-        if (event.target.closest('.multi-searchable-select-portal-menu') || event.target.closest('.multiselect-portal-menu')) return;
+        if (event.target.closest('.filter-toggle-btn') || event.target.closest('.multi-searchable-select-portal-menu') || event.target.closest('.multiselect-portal-menu')) return;
         setShowAdvancedFilters(false);
       }
     };
@@ -1841,7 +1841,7 @@ export default function Inventario() {
                   </button>
                   <button
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${showAdvancedFilters || activeFilterCount > 0
+                    className={`filter-toggle-btn flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${showAdvancedFilters || activeFilterCount > 0
                       ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-800/50 text-green-700 dark:text-green-400 dark:text-green-300 shadow-sm'
                       : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 '
                       }`}

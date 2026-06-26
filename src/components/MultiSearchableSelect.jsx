@@ -15,6 +15,8 @@ export default function MultiSearchableSelect({
  const [query, setQuery] = useState('');
  const containerRef = useRef(null);
  const searchInputRef = useRef(null);
+ const listRef = useRef(null);
+ const savedScrollRef = useRef(null);
  const [dropdownStyles, setDropdownStyles] = useState({ opacity: 0, pointerEvents: 'none' });
 
  const filteredOptions = useMemo(() => {
@@ -37,6 +39,13 @@ export default function MultiSearchableSelect({
  return 0;
  });
  }, [options, query, value]);
+
+ useLayoutEffect(() => {
+    if (listRef.current && savedScrollRef.current !== null) {
+      listRef.current.scrollTop = savedScrollRef.current;
+      savedScrollRef.current = null;
+    }
+  }, [filteredOptions, value]);
 
  useEffect(() => {
  const handleClickOutside = (event) => {
@@ -99,6 +108,9 @@ export default function MultiSearchableSelect({
  }, [isOpen]);
 
  const toggleOption = (optValue) => {
+    if (listRef.current) {
+      savedScrollRef.current = listRef.current.scrollTop;
+    }
  const isSelected = value.includes(optValue);
  if (isSelected) {
  onChange(value.filter(v => v !== optValue));
@@ -162,7 +174,7 @@ export default function MultiSearchableSelect({
  />
  </div>
  </div>
- <div className="flex-1 overflow-y-auto p-1">
+ <div className="flex-1 overflow-y-auto p-1" ref={listRef}>
  {filteredOptions.length === 0 ? (
  <div className="px-4 py-6 text-center text-xs text-gray-400">
  No se encontraron resultados

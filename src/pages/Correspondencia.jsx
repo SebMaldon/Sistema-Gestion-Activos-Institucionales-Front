@@ -48,6 +48,9 @@ export default function Correspondencia() {
  // Estado de filtros
  const [filters, setFilters] = useState({ Tipo: '', NoOficio: '', Folio: '', PalabraClave: '' });
  const [activeFilters, setActiveFilters] = useState({});
+ const [dateFilterType, setDateFilterType] = useState('NONE');
+ const [startDate, setStartDate] = useState('');
+ const [endDate, setEndDate] = useState('');
 
  // Paginación por cursor
  const PAGE_SIZE = 30;
@@ -128,10 +131,15 @@ export default function Correspondencia() {
  if (filters.NoOficio) newFilters.NoOficio = filters.NoOficio;
  if (filters.Folio) newFilters.Folio = parseInt(filters.Folio);
  if (filters.PalabraClave) newFilters.PalabraClave = filters.PalabraClave;
+ if (dateFilterType !== 'NONE' && (startDate || endDate)) {
+   newFilters.DateFilterType = dateFilterType;
+   if (startDate) newFilters.StartDate = startDate;
+   if (endDate) newFilters.EndDate = endDate;
+ }
  setActiveFilters(newFilters);
  }, 400);
  return () => clearTimeout(timer);
- }, [filters]);
+ }, [filters, dateFilterType, startDate, endDate]);
 
  const formatDate = (dateStr) => {
  const d = parseServerDate(dateStr);
@@ -193,37 +201,69 @@ export default function Correspondencia() {
  ))}
  </div>
 
- {/* Búsqueda — apilada en móvil, en fila en desktop */}
- <div className="flex flex-col sm:flex-row gap-2">
- <div className="relative flex-1">
- <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
- <input
- type="text"
- name="PalabraClave"
- value={filters.PalabraClave}
- onChange={handleFilterChange}
- placeholder="Buscar por descripción o remitente..."
- className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
- />
- </div>
- <input
- type="text"
- name="NoOficio"
- value={filters.NoOficio}
- onChange={handleFilterChange}
- placeholder="No. Oficio..."
- className="w-full sm:w-32 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
- />
- <input
- type="number"
- name="Folio"
- value={filters.Folio}
- onChange={handleFilterChange}
- placeholder="Folio..."
- className="w-full sm:w-24 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
- />
- </div>
- </div>
+ {/* Búsqueda y Filtros de Fecha */}
+  <div className="flex flex-col sm:flex-row gap-2 flex-wrap items-center">
+  <div className="relative flex-1 min-w-[200px] w-full sm:w-auto">
+  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+  <input
+  type="text"
+  name="PalabraClave"
+  value={filters.PalabraClave}
+  onChange={handleFilterChange}
+  placeholder="Buscar por descripción o remitente..."
+  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
+  />
+  </div>
+  <div className="flex gap-2 w-full sm:w-auto">
+  <input
+  type="text"
+  name="NoOficio"
+  value={filters.NoOficio}
+  onChange={handleFilterChange}
+  placeholder="No. Oficio..."
+  className="flex-1 sm:flex-none w-full sm:w-28 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
+  />
+  <input
+  type="number"
+  name="Folio"
+  value={filters.Folio}
+  onChange={handleFilterChange}
+  placeholder="Folio..."
+  className="w-24 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
+  />
+  </div>
+
+  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+  <select
+  value={dateFilterType}
+  onChange={(e) => setDateFilterType(e.target.value)}
+  className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all font-medium text-gray-700 dark:text-gray-300 cursor-pointer w-full sm:w-auto"
+  >
+  <option value="NONE">Sin filtro de fecha</option>
+  <option value="RECEPCION">Fecha Recepción</option>
+  <option value="OFICIO">Fecha Oficio</option>
+  </select>
+  
+  {dateFilterType !== 'NONE' && (
+  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+  <input 
+  type="date" 
+  value={startDate} 
+  onChange={e => setStartDate(e.target.value)} 
+  className="flex-1 sm:flex-none px-2.5 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none transition-all" 
+  />
+  <span className="text-gray-400 text-xs font-medium">a</span>
+  <input 
+  type="date" 
+  value={endDate} 
+  onChange={e => setEndDate(e.target.value)} 
+  className="flex-1 sm:flex-none px-2.5 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none transition-all" 
+  />
+  </div>
+  )}
+  </div>
+  </div>
+  </div>
 
  {/* ─── Wrapper tabla: scroll interno en desktop ────────────── */}
  <div className="sm:flex-1 sm:min-h-0 sm:flex sm:flex-col sm:overflow-hidden">

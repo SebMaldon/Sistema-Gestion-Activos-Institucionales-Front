@@ -15,6 +15,8 @@ export default function MultiSelect({
  const [searchQuery, setSearchQuery] = useState('');
  const containerRef = useRef(null);
  const dropdownRef = useRef(null);
+ const listRef = useRef(null);
+ const savedScrollRef = useRef(null);
  const [dropdownStyles, setDropdownStyles] = useState({ opacity: 0, pointerEvents: 'none' });
 
  // Asegurar que selectedValues es siempre un array
@@ -42,6 +44,13 @@ export default function MultiSelect({
  return 0;
  });
  }, [options, searchQuery, safeSelected]);
+
+ useLayoutEffect(() => {
+   if (listRef.current && savedScrollRef.current !== null) {
+     listRef.current.scrollTop = savedScrollRef.current;
+     savedScrollRef.current = null;
+   }
+ }, [filteredOptions, safeSelected]);
 
  // Cerrar el dropdown al hacer clic fuera
  useEffect(() => {
@@ -99,6 +108,9 @@ export default function MultiSelect({
  }, [isOpen]);
 
  const handleToggleOption = (val) => {
+ if (listRef.current) {
+   savedScrollRef.current = listRef.current.scrollTop;
+ }
  if (safeSelected.includes(val)) {
  onChange(safeSelected.filter(v => v !== val));
  } else {
@@ -195,7 +207,7 @@ export default function MultiSelect({
  </div>
 
  {/* Opciones */}
- <div className="max-h-[175px] overflow-y-auto p-1.5 space-y-0.5">
+ <div className="max-h-[175px] overflow-y-auto p-1.5 space-y-0.5" ref={listRef}>
  {filteredOptions.length === 0 ? (
  <div className="px-3 py-6 text-center text-xs text-gray-400">
  No se encontraron opciones
