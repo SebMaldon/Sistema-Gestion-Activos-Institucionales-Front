@@ -887,6 +887,8 @@ export default function Inventario() {
   // canEdit incluye también al usuario estándar (rol 3) solo para modificar TI y Cuentas
   const canEdit = [ROL_ADMIN, ROL_MAESTRO, 3].includes(idRol);
   const canDelete = [ROL_MAESTRO].includes(idRol);
+  // Solo Maestro y Administrador pueden crear/editar/finalizar préstamos
+  const canManagePrestamo = [ROL_ADMIN, ROL_MAESTRO].includes(idRol);
   const queryClient = useQueryClient();
   const location = useLocation();
 
@@ -2442,7 +2444,7 @@ export default function Inventario() {
                                 </div>
                               </td>
                               <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                                {canEdit ? (
+                                {canManagePrestamo ? (
                                   <select
                                     value={bien.estatusOperativo || 'ACTIVO'}
                                     onChange={(e) => {
@@ -2580,7 +2582,7 @@ export default function Inventario() {
                             </div>
                           </div>
                           <div onClick={(e) => e.stopPropagation()}>
-                            {canEdit ? (
+                            {canManagePrestamo ? (
                               <select
                                 value={bien.estatusOperativo || 'ACTIVO'}
                                 onChange={(e) => {
@@ -3038,6 +3040,7 @@ export default function Inventario() {
                           <p className="text-xs text-amber-700 dark:text-amber-300 max-w-md mx-auto">
                             Este equipo figura en estatus operativo <strong>PRÉSTAMO</strong> en la base de datos, pero no cuenta con registro en bitácora.
                           </p>
+                          {canManagePrestamo && (
                           <button
                             type="button"
                             onClick={() => setQuickLoanModal({ type: 'create', bien: activeFicha, directBitacora: true })}
@@ -3045,6 +3048,7 @@ export default function Inventario() {
                           >
                             <span>+ Regularizar Préstamo Manualmente</span>
                           </button>
+                          )}
                         </div>
                       ) : (
                         <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
@@ -3069,7 +3073,7 @@ export default function Inventario() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs text-gray-400">Inicio: {formatDateTime(prestamo.fecha_inicio_prestamo)}</span>
-                                  {isActivo && (
+                                  {isActivo && canManagePrestamo && (
                                     <button type="button" onClick={() => setQuickLoanModal({ type: 'edit', bien: activeFicha, prestamoToEdit: prestamo })} className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 text-amber-800 dark:text-amber-200 rounded text-[11px] font-bold transition-colors border border-amber-300 dark:border-amber-700 shadow-sm" title="Extender plazo o editar notas">
                                       ✏️ Extender / Editar
                                     </button>
