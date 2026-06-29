@@ -27,7 +27,10 @@ export function useCatalogosBienes() {
         // Usuarios activos para resguardo
         usuarios:       data.usuarios?.edges?.map((e) => e.node) ?? [],
         // Estatus operativos
-        catEstatusBienes: data.catEstatusBienes ?? [],
+        catEstatusBienes: Array.from(new Set([
+          'ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'BAJA', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO',
+          ...(data.catEstatusBienes ?? [])
+        ])).sort((a, b) => a.localeCompare(b)),
       };
     },
     staleTime: 5 * 60 * 1000,

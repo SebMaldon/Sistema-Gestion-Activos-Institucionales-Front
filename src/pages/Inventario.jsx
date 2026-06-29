@@ -126,6 +126,7 @@ function getStatusStyles(estatus) {
     'DAÑADO': 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800/50',
     'DEVOLUCIÓN': 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-800/50',
     'OTRO': 'bg-gray-100 dark:bg-gray-800/50 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700/50',
+    'BAJA': 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-400 dark:border-slate-600',
     'P_BAJA': 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800/50',
     'PRESTAMO': 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800/50',
     'SINIESTRADO': 'bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-400 border-red-200 dark:border-red-800/30',
@@ -144,6 +145,7 @@ function EstatusBadge({ estatus }) {
     'DAÑADO': { bg: 'bg-amber-100 dark:bg-amber-900/40', color: 'text-amber-800 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800/50', label: 'Dañado' },
     'DEVOLUCIÓN': { bg: 'bg-purple-100 dark:bg-purple-900/40', color: 'text-purple-800 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800/50', label: 'Devolución' },
     'OTRO': { bg: 'bg-gray-100 dark:bg-gray-800/50', color: 'text-gray-800 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700/50', label: 'Otro' },
+    'BAJA': { bg: 'bg-slate-200 dark:bg-slate-800', color: 'text-slate-800 dark:text-slate-300', border: 'border-slate-400 dark:border-slate-600', label: 'Baja' },
     'P_BAJA': { bg: 'bg-orange-100 dark:bg-orange-900/40', color: 'text-orange-800 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800/50', label: 'Pre-Baja' },
     'PRESTAMO': { bg: 'bg-blue-100 dark:bg-blue-900/40', color: 'text-blue-800 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800/50', label: 'Préstamo' },
     'SINIESTRADO': { bg: 'bg-red-50 dark:bg-red-900/20', color: 'text-red-900 dark:text-red-400', border: 'border-red-100 dark:border-red-800/30', label: 'Siniestrado' },
@@ -2487,7 +2489,7 @@ export default function Inventario() {
                                     onClick={(e) => e.stopPropagation()}
                                     className={`text-xs font-bold px-2.5 py-1 rounded-full border shadow-sm outline-none cursor-pointer transition-all ${getStatusStyles(bien.estatusOperativo || 'ACTIVO')}`}
                                   >
-                                    {['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'].map(st => (
+                                    {['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'BAJA', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'].map(st => (
                                       <option key={st} value={st} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-semibold">{st}</option>
                                     ))}
                                   </select>
@@ -2640,7 +2642,7 @@ export default function Inventario() {
                                 onClick={(e) => e.stopPropagation()}
                                 className={`text-xs font-bold px-2.5 py-1 rounded-full border shadow-sm outline-none cursor-pointer transition-all max-w-[130px] ${getStatusStyles(bien.estatusOperativo || 'ACTIVO')}`}
                               >
-                                {['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'].map(st => (
+                                {['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'BAJA', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'].map(st => (
                                   <option key={st} value={st} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-semibold">{st}</option>
                                 ))}
                               </select>

@@ -161,6 +161,7 @@ export default function ReportePanel({ serverFilter, activeTab, onClose }) {
       'DAÑADO': { label: 'Dañado', color: '#D97706', badgeCls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50' },
       'DEVOLUCIÓN': { label: 'Devolución', color: '#7C3AED', badgeCls: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50' },
       'OTRO': { label: 'Otro', color: '#4B5563', badgeCls: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700' },
+      'BAJA': { label: 'Baja', color: '#475569', badgeCls: 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-400 dark:border-slate-600' },
       'P_BAJA': { label: 'Pre-Baja', color: '#EA580C', badgeCls: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50' },
       'PRESTAMO': { label: 'Préstamo', color: '#2563EB', badgeCls: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50' },
       'SINIESTRADO': { label: 'Siniestrado', color: '#E11D48', badgeCls: 'bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50' },

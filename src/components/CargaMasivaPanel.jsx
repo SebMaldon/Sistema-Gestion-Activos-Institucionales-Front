@@ -179,7 +179,7 @@ export default function CargaMasivaPanel() {
  let fecha_adquisicion = String(row["Fecha Adquisicion (YYYY-MM-DD - Fecha)"] || row["Fecha Adquisicion (YYYY-MM-DD)"] || "").trim() || null;
  
  let estatus_operativo = String(row["Estatus Operativo (Texto)"] || row["Estatus Operativo"] || "ACTIVO").toUpperCase().trim();
- const validStatuses = ['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'];
+ const validStatuses = ['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'BAJA', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'];
  if(!validStatuses.includes(estatus_operativo)) estatus_operativo = 'ACTIVO';
 
  const especificacionTI = {

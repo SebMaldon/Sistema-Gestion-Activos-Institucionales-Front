@@ -273,6 +273,7 @@ export function CargaMasivaRowModal({ row, onSave, onClose }) {
  <option value="DAÑADO">DAÑADO</option>
  <option value="DEVOLUCIÓN">DEVOLUCIÓN</option>
  <option value="OTRO">OTRO</option>
+ <option value="BAJA">BAJA</option>
  <option value="P_BAJA">PRE-BAJA</option>
  <option value="PRESTAMO">PRÉSTAMO</option>
  <option value="SINIESTRADO">SINIESTRADO</option>
