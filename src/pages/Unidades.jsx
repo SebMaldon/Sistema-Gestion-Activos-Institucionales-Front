@@ -29,6 +29,11 @@ const highlightText = (text, query) => {
   );
 };
 
+const SortIcon = ({ column, sortBy, sortOrder }) => {
+  if (sortBy !== column) return <span className="opacity-0 group-hover:opacity-50 text-[10px]">▼</span>;
+  return <span className="text-blue-500 text-[10px]">{sortOrder === 'asc' ? '▲' : '▼'}</span>;
+};
+
 // Esta pagina muestra las UNIDADES FISICAS (tabla: unidades)
 export default function Unidades() {
  const [isModalOpen, setIsModalOpen] = useState(false);
@@ -118,11 +123,6 @@ export default function Unidades() {
  }
  
  setCurrentPage(1);
- };
-
- const SortIcon = ({ column }) => {
- if (sortBy !== column) return <span className="opacity-0 group-hover:opacity-50 text-[10px]">▼</span>;
- return <span className="text-blue-500 text-[10px]">{sortOrder === 'asc' ? '▲' : '▼'}</span>;
  };
 
  const handleClearFilters = () => {
@@ -353,16 +353,16 @@ export default function Unidades() {
  <thead className="sticky top-0 z-10 bg-gray-50/95 dark:bg-gray-900/20 backdrop-blur-sm">
  <tr>
  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" onClick={() => handleSort('descripcion')}>
- <div className="flex items-center gap-1">Unidad / Clave <SortIcon column="descripcion" /></div>
+ <div className="flex items-center gap-1">Unidad / Clave <SortIcon column="descripcion" sortBy={sortBy} sortOrder={sortOrder} /></div>
  </th>
  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" onClick={() => handleSort('ciudad')}>
- <div className="flex items-center gap-1">Ubicación <SortIcon column="ciudad" /></div>
+ <div className="flex items-center gap-1">Ubicación <SortIcon column="ciudad" sortBy={sortBy} sortOrder={sortOrder} /></div>
  </th>
  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" onClick={() => handleSort('encargado')}>
- <div className="flex items-center gap-1">Encargado <SortIcon column="encargado" /></div>
+ <div className="flex items-center gap-1">Encargado <SortIcon column="encargado" sortBy={sortBy} sortOrder={sortOrder} /></div>
  </th>
  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer group hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" onClick={() => handleSort('tipo_unidad')}>
- <div className="flex items-center gap-1">Clasificación <SortIcon column="tipo_unidad" /></div>
+ <div className="flex items-center gap-1">Clasificación <SortIcon column="tipo_unidad" sortBy={sortBy} sortOrder={sortOrder} /></div>
  </th>
  {isPrivileged && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
  </tr>
@@ -388,7 +388,14 @@ export default function Unidades() {
  <td className="px-6 py-4">
  <div className="min-w-0">
  <p className="text-sm font-bold text-gray-800 dark:text-gray-200 break-words" title={node.descripcion}>{highlightText(node.descripcion || 'Sin descripción', search)}</p>
- <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">{highlightText(node.clave, search)}</p>
+ <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter mt-0.5 flex items-center gap-1.5 flex-wrap">
+ <span>{highlightText(node.clave, search)}</span>
+ {node.desc_corta && (
+ <span className="text-gray-500 dark:text-gray-400 font-bold tracking-normal">
+ ({highlightText(node.desc_corta, search)})
+ </span>
+ )}
+ </p>
  {(() => {
  const refs = [...new Set((node.segmentos || []).map(s => s.no_ref).filter(Boolean))];
  if (refs.length === 0) return null;
@@ -492,7 +499,7 @@ export default function Unidades() {
  >
  {currentPage}
  </button>
- {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
+ {currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999) && (
  <button
  onClick={handleNextPage}
  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 flex-shrink-0"

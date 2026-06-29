@@ -134,6 +134,31 @@ function buildDescription({ activeTab, advFilters, filterStatus, search, catalog
  // Sin inventario
  if (advFilters.inconvenientes) partes.push('con inconvenientes (Sin inventario o IP Duplicada)');
 
+ // Agente instalado
+ if (advFilters.tiene_agente === 'true') partes.push('con Agente instalado');
+ if (advFilters.tiene_agente === 'false') partes.push('sin Agente instalado');
+
+ // Atributos EAV
+ if (advFilters.atributo_id && advFilters.atributo_valor) {
+ const atr = (catalogos?.catAtributos ?? []).find(x => String(x.id_atributo) === String(advFilters.atributo_id));
+ const nomAtr = atr?.nombre_atributo || `Atributo #${advFilters.atributo_id}`;
+ partes.push(`${nomAtr}: "${advFilters.atributo_valor}"`);
+ }
+
+ // Fechas adquisición
+ if (advFilters.fecha_adquisicion_desde || advFilters.fecha_adquisicion_hasta) {
+ const d = advFilters.fecha_adquisicion_desde || 'Inicio';
+ const h = advFilters.fecha_adquisicion_hasta || 'Hoy';
+ partes.push(`f. adquisición entre ${d} y ${h}`);
+ }
+
+ // Fechas actualización
+ if (advFilters.fecha_actualizacion_desde || advFilters.fecha_actualizacion_hasta) {
+ const d = advFilters.fecha_actualizacion_desde ? advFilters.fecha_actualizacion_desde.split('T')[0] : 'Inicio';
+ const h = advFilters.fecha_actualizacion_hasta ? advFilters.fecha_actualizacion_hasta.split('T')[0] : 'Hoy';
+ partes.push(`f. actualización entre ${d} y ${h}`);
+ }
+
  // Estatus
  const estatusMap = {
  'ACTIVO': 'Activo', 'INACTIVO': 'Inactivo', 'DAÑADO': 'Dañado',
@@ -142,7 +167,11 @@ function buildDescription({ activeTab, advFilters, filterStatus, search, catalog
  'SUSTITUIDO': 'Sustituido', 'TRASPASO OOAD': 'Traspaso OOAD',
  'TRASPASO_FORANEO': 'Traspaso Foráneo'
  };
- if (filterStatus) partes.push(`estatus: ${estatusMap[filterStatus] || filterStatus}`);
+ if (filterStatus && filterStatus.length > 0) {
+ const arr = Array.isArray(filterStatus) ? filterStatus : [filterStatus];
+ const nms = arr.map(s => estatusMap[s] || s);
+ partes.push(`estatus: ${nms.join(', ')}`);
+ }
 
  // Búsqueda
  if (search) partes.push(`búsqueda: "${search}"`);

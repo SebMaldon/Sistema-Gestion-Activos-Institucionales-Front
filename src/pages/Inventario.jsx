@@ -922,7 +922,11 @@ export default function Inventario() {
   const [nuevaNotaText, setNuevaNotaText] = useState('');
   const { mutateAsync: createNotaBien, isLoading: isCreatingNota } = useCreateNotaBien();
 
-  const [filterStatus, setFilterStatus] = useState(location.state?.filterStatus || '');
+  const [filterStatus, setFilterStatus] = useState(() => {
+    const st = location.state?.filterStatus;
+    if (!st) return [];
+    return Array.isArray(st) ? st : [st];
+  });
   const [filterUbicacion, setFilterUbicacion] = useState('');
 
   const [sortBy, setSortBy] = useState('');
@@ -937,7 +941,8 @@ export default function Inventario() {
 
   useEffect(() => {
     if (location.state?.filterStatus) {
-      setFilterStatus(location.state.filterStatus);
+      const st = location.state.filterStatus;
+      setFilterStatus(Array.isArray(st) ? st : [st]);
       setSearch(''); // clear search just in case
       // clear router state so it doesn't get stuck if we refresh
       window.history.replaceState({}, document.title);
@@ -1020,6 +1025,7 @@ export default function Inventario() {
   // Contar filtros activos
   const activeFilterCount = useMemo(() => {
     let count = 0;
+    if (filterStatus.length) count++;
     if (advFilters.clave_unidad_ref.length) count++;
     if (advFilters.id_segmento.length) count++;
     if (advFilters.id_ubicacion.length) count++;
@@ -1041,13 +1047,13 @@ export default function Inventario() {
     if (advFilters.fecha_adquisicion_desde || advFilters.fecha_adquisicion_hasta) count++;
     if (advFilters.fecha_actualizacion_desde || advFilters.fecha_actualizacion_hasta) count++;
     return count;
-  }, [advFilters]);
+  }, [advFilters, filterStatus]);
 
   // Construir objeto de filtro para la API
   const serverFilter = useMemo(() => {
     const f = {};
     if (search) f.search = search;
-    if (filterStatus) f.estatus_operativo = filterStatus;
+    if (filterStatus && filterStatus.length > 0) f.estatus_operativo = filterStatus;
     if (sortBy) f.sort_by = sortBy;
     if (sortDir) f.sort_dir = sortDir;
 
@@ -1824,16 +1830,18 @@ export default function Inventario() {
                   />
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scroll-smooth" style={{ scrollbarWidth: 'none' }}>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => { setFilterStatus(e.target.value); setCursor(null); setCursors([]); }}
-                    className="flex-none text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white dark:bg-gray-800 "
-                  >
-                    <option value="">Todos los estatus</option>
-                    {catalogos?.catEstatusBienes?.map(status => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
+                  <div className="flex-none w-48">
+                    <MultiSearchableSelect
+                      placeholder="Todos los estatus"
+                      value={filterStatus}
+                      onChange={(val) => { setFilterStatus(val); setCursor(null); setCursors([]); }}
+                      className="text-xs"
+                      options={(catalogos?.catEstatusBienes ?? []).map(status => ({
+                        value: status,
+                        label: status
+                      }))}
+                    />
+                  </div>
                   <button
                     onClick={() => { setAdvFilters(p => ({ ...p, con_notas_recientes: !p.con_notas_recientes })); setCursor(null); setCursors([]); }}
                     className={`flex items-center flex-none gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${advFilters.con_notas_recientes
@@ -1893,7 +1901,7 @@ export default function Inventario() {
                   )}
                   {activeFilterCount > 0 && (
                     <button
-                      onClick={() => { setAdvFilters({ ...EMPTY_ADV }); setCursor(null); setCursors([]); }}
+                      onClick={() => { setAdvFilters({ ...EMPTY_ADV }); setFilterStatus([]); setCursor(null); setCursors([]); }}
                       className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-xs font-semibold border border-red-200 dark:border-red-800/50 dark:border-red-800/50 text-red-600 dark:text-red-400 hover:bg-red-50 transition-colors"
                       title="Limpiar todos los filtros"
                     >
@@ -1906,6 +1914,12 @@ export default function Inventario() {
               {/* Chips de filtros activos */}
               {activeFilterCount > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 ">
+                  {filterStatus.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 font-medium">
+                      Estatus ({filterStatus.length}): {filterStatus.join(', ')}
+                      <button onClick={() => setFilterStatus([])} className="ml-0.5 hover:text-slate-900 dark:hover:text-white"><X size={10} /></button>
+                    </span>
+                  )}
                   {advFilters.tipo_disp.length > 0 && (
                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50 dark:border-blue-800/50 font-medium">
                       <Cpu size={10} /> {advFilters.tipo_disp.length} tipo(s) disp.
@@ -2020,7 +2034,19 @@ export default function Inventario() {
                     {/* Sección: Equipo / Dispositivo */}
                     <div>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Cpu size={11} /> Equipo / Dispositivo</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Estatus Operativo</label>
+                          <MultiSearchableSelect
+                            placeholder="Seleccionar estatus..."
+                            value={filterStatus}
+                            onChange={(val) => { setFilterStatus(val); setCursor(null); setCursors([]); }}
+                            options={(catalogos?.catEstatusBienes ?? []).map(status => ({
+                              value: status,
+                              label: status
+                            }))}
+                          />
+                        </div>
                         <div>
                           <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Tipo Dispositivo</label>
                           <MultiSearchableSelect
