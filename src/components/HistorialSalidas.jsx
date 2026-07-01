@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
@@ -6,7 +6,7 @@ import { GET_REGISTRO_SALIDAS, ACTUALIZAR_SALIDA } from '../api/salidas.queries'
 import { useApp } from '../context/AppContext';
 import {
  Search, RefreshCw, Edit2, FileDown, ChevronLeft, ChevronRight, Hash, User,
- Calendar, MapPin, Phone, Briefcase, FileText, Check, X, Loader2
+ Calendar, MapPin, Phone, Briefcase, FileText, Check, X, Loader2, Package, Eye
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { buildPDFBytes } from '../utils/pdfSalidas';
@@ -39,6 +39,208 @@ function Modal({ onClose, title, children }) {
  );
 }
 
+const HighlightText = ({ text, highlight }) => {
+  if (!highlight || !text) return <>{text}</>;
+  const strText = String(text);
+  const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = strText.split(new RegExp(`(${escapedHighlight})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === highlight.toLowerCase()
+          ? <span key={i} className="bg-yellow-200 dark:bg-yellow-500/40 text-yellow-900 dark:text-yellow-100 font-bold">{part}</span>
+          : part
+      )}
+    </>
+  );
+};
+
+const getBienDesc = (b) => {
+  if (b.descripcion && b.descripcion.trim() !== '') {
+    return b.descripcion;
+  }
+  if (b.bienRef) {
+    const modelo = b.bienRef.modelo?.descrip_disp || '';
+    const serie = b.bienRef.num_serie ? ` - S/N: ${b.bienRef.num_serie}` : '';
+    const inv = b.bienRef.num_inv ? ` - INV: ${b.bienRef.num_inv}` : '';
+    return `${modelo}${serie}${inv}` || 'Bien sin descripción detallada';
+  }
+  return 'Bien sin descripción';
+};
+
+function BienesTableCell({ salida, search, onOpenModal }) {
+  const [hoverPos, setHoverPos] = useState(null);
+  const cellRef = useRef(null);
+  const hoverTimerRef = useRef(null);
+  const closeTimerRef = useRef(null);
+  const goods = salida.bienes || [];
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (!cellRef.current || goods.length === 0) return;
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    if (hoverPos) return;
+
+    hoverTimerRef.current = setTimeout(() => {
+      if (!cellRef.current) return;
+      const rect = cellRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      let left = rect.left;
+      if (left + 500 > windowWidth) {
+        left = Math.max(10, windowWidth - 510);
+      }
+      let top = rect.bottom;
+      if (top + 280 > windowHeight && rect.top > 280) {
+        top = Math.max(10, rect.top - 280);
+      }
+      setHoverPos({ top, left });
+    }, 150);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      setHoverPos(null);
+    }, 350);
+  };
+
+  const handlePopoverMouseEnter = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  };
+
+  const handlePopoverMouseLeave = () => {
+    closeTimerRef.current = setTimeout(() => {
+      setHoverPos(null);
+    }, 250);
+  };
+
+  return (
+    <td
+      ref={cellRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="px-4 py-3 align-top max-w-[300px]"
+    >
+      {goods.length === 0 ? (
+        <span className="text-gray-400 italic text-xs">Sin bienes</span>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800/60">
+              <Package size={12} /> {goods.length} {goods.length === 1 ? 'bien' : 'bienes'}
+            </span>
+          </div>
+          <div className="space-y-1">
+            {goods.slice(0, 2).map((b, idx) => (
+              <div key={idx} className="text-xs text-gray-700 dark:text-gray-300 line-clamp-1 flex items-start gap-1" title={getBienDesc(b)}>
+                <span className="text-teal-600 dark:text-teal-400 font-bold flex-shrink-0">•</span>
+                <span className="truncate">
+                  {b.cantidad_o_id && <span className="font-mono font-semibold text-gray-500 dark:text-gray-400 mr-1">[<HighlightText text={b.cantidad_o_id} highlight={search} />]</span>}
+                  <HighlightText text={getBienDesc(b)} highlight={search} />
+                </span>
+              </div>
+            ))}
+          </div>
+          {goods.length > 2 ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+                setHoverPos(null);
+                onOpenModal(salida);
+              }}
+              className="text-left text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 font-semibold flex items-center gap-1 transition-colors group/btn pt-0.5"
+            >
+              <Eye size={12} className="group-hover/btn:scale-110 transition-transform" />
+              <span>Ver {goods.length - 2} más en tabla...</span>
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+                setHoverPos(null);
+                onOpenModal(salida);
+              }}
+              className="text-left text-[11px] text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 transition-colors pt-0.5 opacity-80 hover:opacity-100"
+            >
+              <Eye size={11} />
+              <span>Ver tabla de bienes</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {hoverPos && ReactDOM.createPortal(
+        <div
+          style={{ top: hoverPos.top, left: hoverPos.left }}
+          onMouseEnter={handlePopoverMouseEnter}
+          onMouseLeave={handlePopoverMouseLeave}
+          className="fixed z-[99999] w-[490px] max-h-[300px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3.5 pointer-events-auto flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100 dark:border-gray-700/80">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                <Package size={14} />
+              </span>
+              <span className="font-bold text-xs text-gray-800 dark:text-gray-200">
+                Bienes de Salida #{salida.folio} ({goods.length})
+              </span>
+            </div>
+            <span className="text-[10px] bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 px-1.5 py-0.5 rounded font-medium">
+              Interactiva (Scrollable)
+            </span>
+          </div>
+          <div className="overflow-y-auto max-h-[230px] custom-scrollbar pr-1">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-semibold border-b border-gray-100 dark:border-gray-700 sticky top-0 z-10">
+                  <th className="py-1.5 px-2 w-16">Cant.</th>
+                  <th className="py-1.5 px-2">Descripción / Bien</th>
+                  <th className="py-1.5 px-2 w-28">Naturaleza</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
+                {goods.map((b, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                    <td className="py-1.5 px-2 font-mono font-medium text-teal-700 dark:text-teal-400">
+                      <HighlightText text={b.cantidad_o_id || '1'} highlight={search} />
+                    </td>
+                    <td className="py-1.5 px-2">
+                      <div className="font-medium text-gray-800 dark:text-gray-200 line-clamp-2">
+                        <HighlightText text={getBienDesc(b)} highlight={search} />
+                      </div>
+                      {b.bienRef && (
+                        <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5 font-mono">
+                          {b.bienRef.num_serie && <span>S/N: <HighlightText text={b.bienRef.num_serie} highlight={search} /></span>}
+                          {b.bienRef.num_inv && <span>INV: <HighlightText text={b.bienRef.num_inv} highlight={search} /></span>}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-2 text-[11px] text-gray-500 dark:text-gray-400">
+                      <HighlightText text={b.naturaleza || '-'} highlight={search} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>,
+        document.body
+      )}
+    </td>
+  );
+}
+
 export default function HistorialSalidas() {
  const { showToast } = useApp();
  const qc = useQueryClient();
@@ -50,6 +252,8 @@ export default function HistorialSalidas() {
  const [endDate, setEndDate] = useState('');
 
  const [editingSalida, setEditingSalida] = useState(null);
+ const [viewingBienesSalida, setViewingBienesSalida] = useState(null);
+ const [modalSearch, setModalSearch] = useState('');
  const [isGeneratingPdfId, setIsGeneratingPdfId] = useState(null);
  const [pageInput, setPageInput] = useState('');
 
@@ -73,8 +277,8 @@ export default function HistorialSalidas() {
  queryFn: () => {
  const filter = {};
  if (debouncedSearch) filter.search = debouncedSearch;
- if (startDate) filter.fecha_inicio = startDate;
- if (endDate) filter.fecha_fin = endDate;
+ if (startDate) filter.fecha_desde = startDate;
+ if (endDate) filter.fecha_hasta = endDate;
  
  return gqlClient.request(GET_REGISTRO_SALIDAS, {
  filter,
@@ -129,7 +333,7 @@ export default function HistorialSalidas() {
  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
  <input
  type="text"
- placeholder="Buscar por folio, solicitante, motivo, responsable..."
+ placeholder="Buscar por folio, solicitante, descripción del bien, motivo..."
  value={search}
  onChange={e => setSearch(e.target.value)}
  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
@@ -164,7 +368,7 @@ export default function HistorialSalidas() {
  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Solicitante</th>
  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motivo</th>
  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Responsable</th>
- <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">Bienes</th>
+ <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bienes / Descripción</th>
  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center w-28">Acciones</th>
  </tr>
  </thead>
@@ -192,7 +396,7 @@ export default function HistorialSalidas() {
  <td className="px-4 py-3 align-middle">
  <div className="flex items-center gap-3">
  <div className="h-8 min-w-[2rem] px-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 font-bold border border-teal-100 dark:border-teal-800/50">
- #{salida.folio}
+ #<HighlightText text={salida.folio} highlight={debouncedSearch} />
  </div>
  <div>
  <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -202,15 +406,17 @@ export default function HistorialSalidas() {
  </div>
  </td>
  <td className="px-4 py-3 align-middle">
- <div className="font-medium text-gray-800 dark:text-gray-200 text-sm">{salida.solicitante}</div>
+ <div className="font-medium text-gray-800 dark:text-gray-200 text-sm">
+   <HighlightText text={salida.solicitante} highlight={debouncedSearch} />
+ </div>
  {salida.adscripcion && (
  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
- <MapPin size={10} /> {salida.adscripcion}
+ <MapPin size={10} /> <HighlightText text={salida.adscripcion} highlight={debouncedSearch} />
  </div>
  )}
  </td>
  <td className="px-4 py-3 align-middle text-sm text-gray-700 dark:text-gray-300 max-w-[200px] truncate" title={salida.motivo}>
- {salida.motivo || <span className="text-gray-400 italic">No especificado</span>}
+ {salida.motivo ? <HighlightText text={salida.motivo} highlight={debouncedSearch} /> : <span className="text-gray-400 italic">No especificado</span>}
  {salida.sujeto_devolucion && (
  <span className="block mt-1 text-[10px] bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 dark:border-amber-800/50 px-1.5 py-0.5 rounded-md inline-block">
  Devolución: {formatDate(salida.fecha_devolucion)}
@@ -220,14 +426,15 @@ export default function HistorialSalidas() {
  <td className="px-4 py-3 align-middle">
  <div className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300 ">
  <User size={14} className="text-gray-400" />
- <span className="truncate max-w-[150px]" title={salida.responsable}>{salida.responsable}</span>
+ <span className="truncate max-w-[150px]" title={salida.responsable}>
+   <HighlightText text={salida.responsable} highlight={debouncedSearch} />
+ </span>
  </div>
  </td>
- <td className="px-4 py-3 align-middle text-center">
- <span className="inline-flex items-center justify-center px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-semibold border border-gray-200 dark:border-gray-700 ">
- {salida.bienes?.length || 0}
- </span>
- </td>
+ <BienesTableCell salida={salida} search={debouncedSearch} onOpenModal={(s) => {
+ setModalSearch('');
+ setViewingBienesSalida(s);
+ }} />
  <td className="px-4 py-3 align-middle text-center">
  <div className="flex items-center justify-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
  <button
@@ -355,6 +562,119 @@ export default function HistorialSalidas() {
  refetch();
  }}
  />
+ </Modal>
+ )}
+
+ {viewingBienesSalida && (
+ <Modal
+ title={`Bienes de la Salida #${viewingBienesSalida.folio}`}
+ onClose={() => setViewingBienesSalida(null)}
+ >
+ <div className="space-y-4">
+ {/* Resumen superior */}
+ <div className="bg-white dark:bg-gray-800 rounded-xl p-3.5 border border-gray-100 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+ <div>
+ <span className="text-gray-400 block">Solicitante:</span>
+ <span className="font-semibold text-gray-800 dark:text-gray-200">{viewingBienesSalida.solicitante}</span>
+ </div>
+ <div>
+ <span className="text-gray-400 block">Fecha Salida:</span>
+ <span className="font-semibold text-gray-800 dark:text-gray-200">{formatDate(viewingBienesSalida.fecha_salida)}</span>
+ </div>
+ <div>
+ <span className="text-gray-400 block">Responsable:</span>
+ <span className="font-semibold text-gray-800 dark:text-gray-200">{viewingBienesSalida.responsable}</span>
+ </div>
+ <div>
+ <span className="text-gray-400 block">Motivo:</span>
+ <span className="font-semibold text-gray-800 dark:text-gray-200 truncate block" title={viewingBienesSalida.motivo}>{viewingBienesSalida.motivo || 'N/A'}</span>
+ </div>
+ </div>
+
+ {/* Buscador dentro del modal */}
+ <div className="relative">
+ <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+ <input
+ type="text"
+ placeholder="Filtrar bienes en esta salida por descripción, S/N o INV..."
+ value={modalSearch}
+ onChange={(e) => setModalSearch(e.target.value)}
+ className="w-full pl-9 pr-4 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white dark:bg-gray-800"
+ />
+ </div>
+
+ {/* Tabla completa de bienes */}
+ <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm max-h-[50vh] overflow-y-auto custom-scrollbar">
+ <table className="w-full text-left text-xs border-collapse">
+ <thead className="bg-gray-50 dark:bg-gray-900/80 sticky top-0 border-b border-gray-100 dark:border-gray-700 font-semibold text-gray-500 dark:text-gray-400">
+ <tr>
+ <th className="py-2.5 px-3 w-10 text-center">#</th>
+ <th className="py-2.5 px-3 w-28">Cant. / ID</th>
+ <th className="py-2.5 px-3">Descripción / Bien</th>
+ <th className="py-2.5 px-3 w-32">No. Serie</th>
+ <th className="py-2.5 px-3 w-32">No. Inventario</th>
+ <th className="py-2.5 px-3 w-28">Naturaleza</th>
+ </tr>
+ </thead>
+ <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-gray-700 dark:text-gray-300">
+ {(() => {
+ const filtered = (viewingBienesSalida.bienes || []).filter(b => {
+ if (!modalSearch) return true;
+ const term = modalSearch.toLowerCase();
+ const desc = getBienDesc(b).toLowerCase();
+ const sn = (b.bienRef?.num_serie || '').toLowerCase();
+ const inv = (b.bienRef?.num_inv || '').toLowerCase();
+ const id = (b.cantidad_o_id || '').toLowerCase();
+ return desc.includes(term) || sn.includes(term) || inv.includes(term) || id.includes(term);
+ });
+
+ if (filtered.length === 0) {
+ return (
+ <tr>
+ <td colSpan="6" className="py-8 text-center text-gray-400 italic">
+ No se encontraron bienes con el criterio de búsqueda.
+ </td>
+ </tr>
+ );
+ }
+
+ return filtered.map((b, idx) => {
+    const activeHighlight = modalSearch || debouncedSearch;
+    return (
+      <tr key={idx} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/60">
+        <td className="py-2.5 px-3 text-center text-gray-400 font-mono">{idx + 1}</td>
+        <td className="py-2.5 px-3 font-mono font-bold text-teal-700 dark:text-teal-400">
+          <HighlightText text={b.cantidad_o_id || '1'} highlight={activeHighlight} />
+        </td>
+        <td className="py-2.5 px-3 font-medium text-gray-800 dark:text-gray-200">
+          <HighlightText text={getBienDesc(b)} highlight={activeHighlight} />
+        </td>
+        <td className="py-2.5 px-3 font-mono text-gray-600 dark:text-gray-300">
+          {b.bienRef?.num_serie ? <HighlightText text={b.bienRef.num_serie} highlight={activeHighlight} /> : <span className="text-gray-400">-</span>}
+        </td>
+        <td className="py-2.5 px-3 font-mono text-gray-600 dark:text-gray-300">
+          {b.bienRef?.num_inv ? <HighlightText text={b.bienRef.num_inv} highlight={activeHighlight} /> : <span className="text-gray-400">-</span>}
+        </td>
+        <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">
+          <HighlightText text={b.naturaleza || '-'} highlight={activeHighlight} />
+        </td>
+      </tr>
+    );
+  });
+ })()}
+ </tbody>
+ </table>
+ </div>
+
+ <div className="flex justify-end pt-2">
+ <button
+ onClick={() => setViewingBienesSalida(null)}
+ className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-semibold transition-colors"
+ >
+ Cerrar
+ </button>
+ </div>
+ </div>
  </Modal>
  )}
  </div>

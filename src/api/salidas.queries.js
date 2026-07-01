@@ -90,6 +90,13 @@ export const GET_REGISTRO_SALIDAS = gql`
             cantidad_o_id
             naturaleza
             descripcion
+            bienRef {
+              num_serie
+              num_inv
+              modelo {
+                descrip_disp
+              }
+            }
           }
         }
       }

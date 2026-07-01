@@ -220,76 +220,74 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
 
   // Sub-encabezados de grupo (fila de grupo visual)
   // Columnas por grupo:
-  // N° (0) | PRINCIPALES (8) | OTROS DATOS (9) | TI (14) | GARANTÍA (3)
+  // No. (0) | PRINCIPALES (9 cols: 1..9) | GENERALES (3 cols: 10..12) | TI (14 cols: 13..26) | GARANTÍA (3 cols: 27..29) | ADMIN (5 cols: 30..34)
   const groupRow = [
-    '', // N°
-    // Principales (8 cols: Dispositivo, Marca, Modelo, Num Serie, Num Inv, Unidad, Ubicacion, Estatus)
-    'DATOS PRINCIPALES', '', '', '', '', '', '', '',
-    // Otros Datos Generales (9 cols)
-    'OTROS DATOS GENERALES', '', '', '', '', '', '', '', '',
-    // TI (14 cols)
+    '', // No.
+    // Principales (9 cols)
+    'DATOS PRINCIPALES', '', '', '', '', '', '', '', '',
+    // Datos Generales (3 cols)
+    'DATOS GENERALES', '', '',
+    // Especificaciones TI (14 cols)
     'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '', '',
     // Garantía (3 cols)
     'GARANTÍA', '', '',
+    // Otros Datos Administrativos (5 cols)
+    'DATOS ADMINISTRATIVOS', '', '', '', '',
   ];
   wsData.push(groupRow);
 
   // Columnas de datos
   const headers = [
-    'N°',
-    // Principales
-    'Tipo de Dispositivo', 'Marca', 'Descripción Dispositivo', 'N° de Serie', 'N° de Inventario', 'Unidad', 'Ubicación Física', 'Estatus',
-    // Otros Datos Generales
-    'Clave Presupuestal', 'Categoría', 'Clave Modelo', 'Unidad de Medida', 'Segmento', 'Resguardo', 'Fecha Adquisición', 'Capitalizable', 'Cantidad',
-    // TI
-    'CPU', 'RAM (GB)', 'Almacenamiento (GB)', 'Dir. IP', 'Dir. MAC',
-    'MAC Address', 'Nombre Host', 'S.O.', 'Office', 'Puerto Red', 'Switch',
-    'N° Serie Windows', 'Último Escaneo',
-    'Cuentas Registradas (Usuario | Correo | Tipo)',
-    // Garantía
-    'Garantía', 'Garantía Vence', 'Proveedor Garantía',
+    'No.',
+    // Principales (1..9)
+    'TIPO DE DISPOSITIVO', 'MARCA', 'MODELO', 'SERIE', 'NNI', 'UNIDAD', 'UBICACIÓN', 'ESTATUS', 'DESCRIPCIÓN DISPOSITIVO',
+    // Datos Generales (10..12)
+    'CLAVE PRESUPUESTAL', 'SEGMENTO', 'RESGUARDO',
+    // TI (13..26)
+    'CPU', 'RAM', 'ALMACENAMIENTO', 'DIR IP', 'DIR MAC',
+    'MAC ADDRESS', 'NOMBRE HOST', 'S.O.', 'OFFICE', 'PUERTO RED', 'SWITCH',
+    'NO. SERIE WINDOWS', 'CUENTAS REGISTRADAS', 'ULTIMO ESCANEO',
+    // Garantía (27..29)
+    'GARANTIA', 'GARANTIA VENCE', 'PROVEEDOR GARANTIA',
+    // Otros Admin (30..34)
+    'FECHA ADQUISICIÓN', 'CATEGORIA', 'UNIDAD DE MEDIDA', 'CAPITALIZABLE', 'CANTIDAD',
   ];
   wsData.push(headers);
 
- // Filas de datos
- bienes.forEach((b, i) => {
- const g = b.garantias?.[0] ?? null;
- // Marca: buscar en catalogos por clave_marca del modelo
- const marcaNombre = (() => {
- const claveMarca = b.modelo?.clave_marca;
- if (!claveMarca) return '';
- const m = (catalogosMarcas ?? []).find(x => String(x.clave_marca) === String(claveMarca));
- return m?.marca || String(claveMarca);
- })();
- // Unidad de medida
- const umNombre = b.unidadMedida?.nombre_unidad
- ? `${b.unidadMedida.nombre_unidad} (${b.unidadMedida.abreviatura || ''})`
- : (b.unidadMedida?.abreviatura || '');
- // Segmento: viene en originalNode.segmento
- const segmentoNombre = b.originalNode?.segmento?.nombre || b.originalNode?.segmento?.clave || '';
+  // Filas de datos
+  bienes.forEach((b, i) => {
+    const g = b.garantias?.[0] ?? null;
+    // Marca: buscar en catalogos por clave_marca del modelo
+    const marcaNombre = (() => {
+      const claveMarca = b.modelo?.clave_marca;
+      if (!claveMarca) return '';
+      const m = (catalogosMarcas ?? []).find(x => String(x.clave_marca) === String(claveMarca));
+      return m?.marca || String(claveMarca);
+    })();
+    // Unidad de medida
+    const umNombre = b.unidadMedida?.nombre_unidad
+      ? `${b.unidadMedida.nombre_unidad} (${b.unidadMedida.abreviatura || ''})`
+      : (b.unidadMedida?.abreviatura || '');
+    // Segmento: viene en originalNode.segmento
+    const segmentoNombre = b.originalNode?.segmento?.nombre || b.originalNode?.segmento?.clave || '';
 
     wsData.push([
       i + 1,
-      // Principales
+      // Principales (1..9)
       b.modelo?.tipoDispositivo?.nombre_tipo || '',
       marcaNombre,
-      b.modelo?.descrip_disp || '',
+      b.modelo?.clave_modelo || b.claveModelo || '',
       b.numSerie === 'N/D' ? '' : (b.numSerie || ''),
       b.numInv === 'N/D' ? '' : (b.numInv || ''),
       b.unidadFisica || '',
       b.ubicacion || '',
       b.estatusOperativo || '',
-      // Otros Datos Generales
+      b.modelo?.descrip_disp || '',
+      // Datos Generales (10..12)
       b.clavePresupuestal === '—' ? '' : (b.clavePresupuestal || ''),
-      b.categoria?.nombre_categoria || '',
-      b.modelo?.clave_modelo || b.claveModelo || '',
-      umNombre,
       segmentoNombre,
       b.resguardo || '',
-      fmtFecha(b.fechaAdquisicion),
-      b.esCapitalizable ? 'Sí' : 'No',
-      b.cantidad ?? 1,
-      // TI
+      // TI (13..26)
       b.especificacionTI?.cpu_info || '',
       b.especificacionTI?.ram_gb ?? '',
       b.especificacionTI?.almacenamiento_gb ?? '',
@@ -302,32 +300,39 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
       b.especificacionTI?.puerto_red || '',
       b.especificacionTI?.switch_red || '',
       b.especificacionTI?.windows_serial || '',
-      fmtFecha(b.especificacionTI?.last_scan),
       (b.cuentasPC || []).map(c => `• ${c.cuenta_windows || 'Sin usuario'} | ${c.correo || 'Sin correo'} | ${c.tipo_user || 'Sin rol'}`).join('\n') || '',
-      // Garantía
+      fmtFecha(b.especificacionTI?.last_scan),
+      // Garantía (27..29)
       g ? 'Sí' : 'No',
       g ? fmtFecha(g.fecha_fin) : '',
       g?.proveedorObj?.nombre_proveedor || '',
+      // Otros Admin (30..34)
+      fmtFecha(b.fechaAdquisicion),
+      b.categoria?.nombre_categoria || '',
+      umNombre,
+      b.esCapitalizable ? 'Sí' : 'No',
+      b.cantidad ?? 1,
     ]);
- });
+  });
 
  const ws = XLSX.utils.aoa_to_sheet(wsData);
 
  // ── Estilos ───────────────────────────────────────────────────────────────
   // Ancho de columnas
   ws['!cols'] = [
-    { wch: 4 }, // N°
-    // Principales
-    { wch: 18 }, { wch: 18 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 22 }, { wch: 14 },
-    // Otros Datos Generales
-    { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 10 },
-    // TI
-    { wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 14 },
-    { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 16 },
-    { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 22 }, { wch: 18 },
-    { wch: 45 },
-    // Garantía
-    { wch: 10 }, { wch: 16 }, { wch: 26 },
+    { wch: 5 },  // 0: No.
+    // Principales (1..9)
+    { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 32 },
+    // Datos Generales (10..12)
+    { wch: 20 }, { wch: 22 }, { wch: 26 },
+    // TI (13..26)
+    { wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 16 }, { wch: 18 },
+    { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 22 }, { wch: 45 }, { wch: 16 },
+    // Garantía (27..29)
+    { wch: 12 }, { wch: 16 }, { wch: 26 },
+    // Otros Admin (30..34)
+    { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 10 },
   ];
 
  const totalCols = headers.length;
@@ -343,7 +348,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
   // Rangos de grupos: [colStart, colEnd] (0-indexed)
   const groupRowIdx = dataStartRow;
   const groupRanges = [
-    [1, 8], [9, 17], [18, 31], [32, 34],
+    [1, 9], [10, 12], [13, 26], [27, 29], [30, 34],
   ];
   groupRanges.forEach(([start, end]) => {
     merges.push({ s: { r: groupRowIdx, c: start }, e: { r: groupRowIdx, c: end } });
@@ -352,8 +357,8 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
   ws['!merges'] = merges;
 
   // Aplicar estilos celda a celda
-  const groupColors = [COLOR_CIAN, COLOR_GRIS, COLOR_PURP, COLOR_AZUL];
-  const groupBorders = ['0E7490', '6B7280', '7C3AED', '1D4ED8'];
+  const groupColors = [COLOR_CIAN, COLOR_GRIS, COLOR_PURP, COLOR_AZUL, 'FEF3C7'];
+  const groupBorders = ['0E7490', '4B5563', '7C3AED', '1D4ED8', 'D97706'];
 
  // Estilo: encabezado institucional
  if (withDescription) {
@@ -412,9 +417,9 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
  font: { sz: 9, color: { rgb: COLOR_TEXT } },
  fill: { fgColor: { rgb: c === 0 ? (isEven ? 'F0FDF4' : 'DCFCE7') : baseFill } },
  alignment: {
- horizontal: c === 0 ? 'center' : (c >= 18 && c <= 31 ? 'center' : 'left'),
+ horizontal: c === 0 ? 'center' : (c >= 13 && c <= 29 ? 'center' : 'left'),
  vertical: 'center',
- wrapText: (c === 31),
+ wrapText: (c === 25 || c === 9),
  },
  border: {
  right: { style: 'hair', color: { rgb: 'E5E7EB' } },
