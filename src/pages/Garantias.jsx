@@ -831,9 +831,10 @@ export default function Garantias() {
  const [showPorVencer, setShowPorVencer] = useState(location.state?.filterPorVencer || false);
  const [dateFilterType, setDateFilterType] = useState('NONE');
  const [startDate, setStartDate] = useState('');
- const [endDate, setEndDate] = useState('');
- const [proveedorFilters, setProveedorFilters] = useState([]);
- const [tipoDispositivoFilters, setTipoDispositivoFilters] = useState([]);
+  const [endDate, setEndDate] = useState('');
+  const [proveedorFilters, setProveedorFilters] = useState([]);
+  const [tipoDispositivoFilters, setTipoDispositivoFilters] = useState([]);
+  const [ultimoEstatusFilters, setUltimoEstatusFilters] = useState([]);
  
  const [showStats, setShowStats] = useState(false);
  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
@@ -925,6 +926,35 @@ export default function Garantias() {
  .map(t => ({ value: t, label: t }))
  .sort((a, b) => a.label.localeCompare(b.label));
  }, [garantias]);
+
+  const ultimoEstatusOptions = useMemo(() => {
+    const baseList = [
+      'Enviado a proveedor',
+      'En revisión',
+      'En reparación',
+      'Esperando piezas',
+      'Listo para recoger',
+      'Resuelto / Entregado',
+      'Rechazado'
+    ];
+    const statuses = new Set(baseList);
+    garantias.forEach(g => {
+      if (g.reportes && g.reportes.length > 0) {
+        const est = g.reportes[0]?.estatus;
+        if (est) statuses.add(est);
+      }
+    });
+    return Array.from(statuses)
+      .map(s => ({ value: s, label: s }))
+      .sort((a, b) => {
+        const idxA = baseList.indexOf(a.label);
+        const idxB = baseList.indexOf(b.label);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.label.localeCompare(b.label);
+      });
+  }, [garantias]);
 
  const filteredGarantias = useMemo(() => {
  return garantias.filter(g => {
@@ -1023,9 +1053,16 @@ export default function Garantias() {
  });
  }, [filteredGarantias, sortConfig]);
 
- const garantiasConReportes = useMemo(() => {
- return sortedGarantias.filter(g => g.reportes && g.reportes.length > 0);
- }, [sortedGarantias]);
+  const garantiasConReportes = useMemo(() => {
+    return sortedGarantias.filter(g => {
+      if (!g.reportes || g.reportes.length === 0) return false;
+      if (activeTab === 'REPORTES' && ultimoEstatusFilters.length > 0) {
+        const est = g.reportes[0]?.estatus;
+        if (!ultimoEstatusFilters.includes(est)) return false;
+      }
+      return true;
+    });
+  }, [sortedGarantias, activeTab, ultimoEstatusFilters]);
 
  const totalPagesReportes = Math.ceil(garantiasConReportes.length / PAGE_SIZE) || 1;
  useEffect(() => {
@@ -1095,6 +1132,7 @@ export default function Garantias() {
  'Número de Serie': g.bien?.num_serie || 'N/A',
  'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
  'Estado Garantía': g.estado_garantia,
+ 'Último Estatus': g.reportes && g.reportes.length > 0 ? g.reportes[0].estatus : 'Sin Reportes',
  'Inicio Garantía': formatDate(g.fecha_inicio),
  'Fin Garantía': formatDate(g.fecha_fin),
  'Reportes / Bitácora': reportesFormateados
@@ -1103,7 +1141,7 @@ export default function Garantias() {
 
  colWidths = [
  { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, { wch: 28 }, 
- { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 60 }
+ { wch: 18 }, { wch: 22 }, { wch: 15 }, { wch: 15 }, { wch: 60 }
  ];
  sheetName = 'Reportes de Garantía';
  fileName = 'Reportes_Garantias.xlsx';
@@ -1111,7 +1149,7 @@ export default function Garantias() {
  return; // No hay exportación para PROVEEDORES u otros tabs en este momento
  }
 
- const isFiltered = searchFilter || statusFilter !== 'ALL' || (proveedorFilters && proveedorFilters.length > 0) || (tipoDispositivoFilters && tipoDispositivoFilters.length > 0) || showPorVencer || (dateFilterType !== 'NONE' && (startDate || endDate));
+ const isFiltered = searchFilter || statusFilter !== 'ALL' || (proveedorFilters && proveedorFilters.length > 0) || (tipoDispositivoFilters && tipoDispositivoFilters.length > 0) || (activeTab === 'REPORTES' && ultimoEstatusFilters && ultimoEstatusFilters.length > 0) || showPorVencer || (dateFilterType !== 'NONE' && (startDate || endDate));
  const today = new Date();
  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
  const baseName = activeTab === 'GARANTIAS' ? 'Garantias' : 'Reportes_Garantias';
@@ -1129,9 +1167,12 @@ export default function Garantias() {
  filtrosTexto.push(`Proveedores: ${nombresProveedores}`);
  }
  if (tipoDispositivoFilters && tipoDispositivoFilters.length > 0) {
- filtrosTexto.push(`Dispositivos: ${tipoDispositivoFilters.join(', ')}`);
- }
- if (dateFilterType !== 'NONE' && (startDate || endDate)) {
+    filtrosTexto.push(`Dispositivos: ${tipoDispositivoFilters.join(', ')}`);
+  }
+  if (activeTab === 'REPORTES' && ultimoEstatusFilters && ultimoEstatusFilters.length > 0) {
+    filtrosTexto.push(`Estatus: ${ultimoEstatusFilters.join(', ')}`);
+  }
+  if (dateFilterType !== 'NONE' && (startDate || endDate)) {
  const tipoFecha = dateFilterType === 'INICIO' ? 'Inicio' : 'Vencimiento';
  filtrosTexto.push(`Fecha de ${tipoFecha}: ${startDate || 'Siempre'} a ${endDate || 'Siempre'}`);
  }
@@ -1417,33 +1458,47 @@ export default function Garantias() {
  </div>
  
  {/* Filtros avanzados (Fecha y Proveedor) */}
- <div className={`${showFiltersMobile ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 `}>
- 
- <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
- <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
- <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Proveedor:</span>
- <div className="w-full sm:w-[200px]">
- <MultiSelect
- options={proveedorOptions}
- selectedValues={proveedorFilters}
- onChange={setProveedorFilters}
- placeholder="Todos"
- />
- </div>
- </div>
+ <div className={`${showFiltersMobile ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex-wrap`}>
+    
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+        <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Proveedor:</span>
+        <div className="w-full sm:w-[180px]">
+          <MultiSelect
+            options={proveedorOptions}
+            selectedValues={proveedorFilters}
+            onChange={setProveedorFilters}
+            placeholder="Todos"
+          />
+        </div>
+      </div>
 
- <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
- <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Dispositivo:</span>
- <div className="w-full sm:w-[180px]">
- <MultiSelect
- options={tipoDispositivoOptions}
- selectedValues={tipoDispositivoFilters}
- onChange={setTipoDispositivoFilters}
- placeholder="Todos"
- />
- </div>
- </div>
- </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+        <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Dispositivo:</span>
+        <div className="w-full sm:w-[170px]">
+          <MultiSelect
+            options={tipoDispositivoOptions}
+            selectedValues={tipoDispositivoFilters}
+            onChange={setTipoDispositivoFilters}
+            placeholder="Todos"
+          />
+        </div>
+      </div>
+
+      {activeTab === 'REPORTES' && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+          <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 tracking-wide uppercase flex items-center gap-1"><Filter size={12} className="text-gray-400" /> Estatus:</span>
+          <div className="w-full sm:w-[190px]">
+            <MultiSelect
+              options={ultimoEstatusOptions}
+              selectedValues={ultimoEstatusFilters}
+              onChange={setUltimoEstatusFilters}
+              placeholder="Todos"
+            />
+          </div>
+        </div>
+      )}
+    </div>
 
  <div className="hidden sm:block w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
 
@@ -1774,7 +1829,7 @@ export default function Garantias() {
  ultimoReporte.estatus === 'CERRADO' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 border-emerald-200' : 
  'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 '}
  `}>
- <span className={`w-1.5 h-1.5 rounded-full ${ultimoReporte.estatus === 'EN TRAMITE' ? 'bg-amber-500' : ultimoReporte.estatus === 'RESOLUCION' ? 'bg-blue-500' : ultimoReporte.estatus === 'CERRADO' ? 'bg-emerald-500' : 'bg-gray-50 dark:bg-gray-9000'}`}></span>
+ <span className={`w-1.5 h-1.5 rounded-full ${ultimoReporte.estatus === 'EN TRAMITE' ? 'bg-amber-500' : ultimoReporte.estatus === 'RESOLUCION' ? 'bg-blue-500' : ultimoReporte.estatus === 'CERRADO' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
  {ultimoReporte.estatus}
  </span>
  ) : (
