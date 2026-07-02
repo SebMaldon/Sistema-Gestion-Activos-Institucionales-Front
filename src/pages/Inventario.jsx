@@ -2842,7 +2842,7 @@ export default function Inventario() {
                   {[ROL_ADMIN, ROL_MAESTRO].includes(idRol) && (fichaMode === 'PC' || fichaMode === 'LAPTOP') && (
                     <button
                       ref={el => { if (el) console.log('DEBUG programasPC:', activeFicha.programasPC); }}
-                      disabled={!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW'))}
+                      disabled={!activeFicha.programasPC?.some(p => p.programa?.includes('SGHI'))}
                       onClick={async () => {
                         try {
                           await gqlClient.request(SET_SYNC_PENDING_MUTATION, { id_bien: activeFicha.id_bien });
@@ -2851,8 +2851,8 @@ export default function Inventario() {
                           showToast('Error al programar', 'error');
                         }
                       }}
-                      title={!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW')) ? "Agente no instalado" : "Forzar escaneo de este equipo"}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${!activeFicha.programasPC?.some(p => p.programa?.includes('Gestor Activos HW')) ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800/50 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 dark:text-amber-300 hover:bg-amber-50'}`}
+                      title={!activeFicha.programasPC?.some(p => p.programa?.includes('SGHI')) ? "Agente SGHI no instalado" : "Forzar escaneo de este equipo"}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors ${!activeFicha.programasPC?.some(p => p.programa?.includes('SGHI')) ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800/50 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 dark:text-amber-300 hover:bg-amber-50'}`}
                     >
                       <RefreshCw size={12} />
                       <span className="hidden sm:inline">Forzar Escaneo</span>

@@ -8,6 +8,7 @@ import {
   CREATE_CUENTA_PC_MUTATION,
   UPDATE_CUENTA_PC_MUTATION,
   DELETE_CUENTA_PC_MUTATION,
+  UPDATE_USUARIO_RESGUARDO_MUTATION,
 } from '../api/inventario.queries';
 
 /** Invalida la cache de bienes tras cualquier mutación */
@@ -54,6 +55,19 @@ export function useDeleteBien({ onSuccess, onError } = {}) {
     onSuccess: () => {
       invalidate();
       onSuccess?.();
+    },
+    onError,
+  });
+}
+
+// ─── Actualizar Usuario Resguardo ─────────────────────────────────────────────
+export function useUpdateUsuarioResguardo({ onSuccess, onError } = {}) {
+  const invalidate = useInvalidateBienes();
+  return useMutation({
+    mutationFn: (variables) => gqlClient.request(UPDATE_USUARIO_RESGUARDO_MUTATION, variables),
+    onSuccess: (data) => {
+      invalidate();
+      onSuccess?.(data.updateUsuarioResguardo);
     },
     onError,
   });
