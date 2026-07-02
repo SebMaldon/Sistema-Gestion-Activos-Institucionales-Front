@@ -485,6 +485,15 @@ export const DELETE_BIEN_MUTATION = gql`
   }
 `;
 
+export const UPDATE_USUARIO_RESGUARDO_MUTATION = gql`
+  ${BIEN_FIELDS}
+  mutation UpdateUsuarioResguardo($id_bien: ID!, $id_usuario_resguardo: Int) {
+    updateUsuarioResguardo(id_bien: $id_bien, id_usuario_resguardo: $id_usuario_resguardo) {
+      ...BienFields
+    }
+  }
+`;
+
 export const UPSERT_ESPECIFICACION_TI_MUTATION = gql`
   mutation UpsertEspecificacionTI(
     $id_bien: ID!

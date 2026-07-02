@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
 import { useBienes, mapBienNode } from '../hooks/useBienes';
 import { useCatalogosBienes } from '../hooks/useCatalogosBienes';
-import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI, useCreateCuentaPC, useUpdateCuentaPC, useDeleteCuentaPC } from '../hooks/useBienMutations';
+import { useCreateBien, useUpdateBien, useDeleteBien, useUpsertEspecificacionTI, useCreateCuentaPC, useUpdateCuentaPC, useDeleteCuentaPC, useUpdateUsuarioResguardo } from '../hooks/useBienMutations';
 import { useCreateNotaBien } from '../hooks/useEscaner';
 import { useAuthStore } from '../store/auth.store';
 import { useApp } from '../context/AppContext';
@@ -1032,6 +1032,9 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   const { mutate: updateBien, isPending: updating } = useUpdateBien({
     onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar bien.', 'error'),
   });
+  const { mutate: updateResguardo, isPending: updatingResguardo } = useUpdateUsuarioResguardo({
+    onError: (e) => showToast(e?.response?.errors?.[0]?.message ?? 'Error al actualizar usuario de resguardo.', 'error'),
+  });
 
   const [loanModalOpen, setLoanModalOpen] = useState(null); // 'create' | 'finish' | 'edit' | null
   const [loanToEdit, setLoanToEdit] = useState(null);
@@ -1486,29 +1489,33 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  });
  } else {
  if (idRol === 3) {
- // Rol estándar solo actualiza TI y Cuentas PC
- if (showTI && modalForm.id_bien) {
- const tiData = parseTI();
- const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
- if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
- cuentasList.forEach(c => {
- const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
- if (c.id_cuenta && !c._new) {
- updateCuentaPC({ id_cuenta: c.id_cuenta, data });
- } else {
- createCuentaPC({ id_bien: modalForm.id_bien, data });
- }
- });
- }
- setTimeout(async () => {
- await queryClient.cancelQueries({ queryKey: ['bienes'] });
- closeForm(); 
- onClose(); 
- if (refetch) await refetch(); 
- showToast('Especificaciones TI actualizadas.', 'success'); 
- }, 300);
- return;
- }
+  // Rol estándar solo actualiza TI, Cuentas PC y usuario de resguardo
+  if (modalForm.id_bien) {
+  if (showTI) {
+  const tiData = parseTI();
+  const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
+  if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+  cuentasList.forEach(c => {
+  const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
+  if (c.id_cuenta && !c._new) {
+  updateCuentaPC({ id_cuenta: c.id_cuenta, data });
+  } else {
+  createCuentaPC({ id_bien: modalForm.id_bien, data });
+  }
+  });
+  }
+  const nuevoResguardo = form.id_usuario_resguardo ? Number(form.id_usuario_resguardo) : null;
+  updateResguardo({ id_bien: modalForm.id_bien, id_usuario_resguardo: nuevoResguardo });
+  }
+  setTimeout(async () => {
+  await queryClient.cancelQueries({ queryKey: ['bienes'] });
+  closeForm(); 
+  onClose(); 
+  if (refetch) await refetch(); 
+  showToast('Información del activo actualizada.', 'success'); 
+  }, 300);
+  return;
+  }
  const prevEst = modalForm.estatusOperativo || modalForm.estatus_operativo;
  const newEst = form.estatus_operativo;
   if (prevEst !== 'PRESTAMO' && newEst === 'PRESTAMO') {
@@ -1747,11 +1754,11 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  </button>
  <button
  onClick={handleSubmit}
- disabled={creating || updating}
+ disabled={creating || updating || updatingResguardo}
  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
  style={{ background: 'linear-gradient(135deg,#006341,#004d32)' }}
  >
- {(creating || updating) ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+ {(creating || updating || updatingResguardo) ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
  {modalForm === 'create' ? 'Registrar Bien' : 'Guardar Cambios'}
  </button>
  </div>
@@ -2132,6 +2139,27 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  {/* ── Tab: Técnico ── */}
  {formTab === 'tecnico' && (
  <div className="space-y-4 fade-in">
+ {idRol === 3 && (
+  <div className="rounded-xl border border-teal-200 dark:border-teal-800/50 overflow-hidden">
+  <div className="px-4 py-3 bg-teal-50 dark:bg-teal-900/20 flex items-center justify-between border-b border-teal-100 dark:border-teal-800/50">
+  <div className="flex items-center gap-2">
+  <User size={14} className="text-teal-700 dark:text-teal-400" />
+  <span className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wide">Usuario de Resguardo</span>
+  </div>
+  </div>
+  <div className="p-4 bg-white dark:bg-gray-800">
+  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+  Modificar usuario asignado al resguardo del activo:
+  </label>
+  <SearchableSelect
+  value={form.id_usuario_resguardo ? String(form.id_usuario_resguardo) : ''}
+  onChange={(val) => setForm((f) => ({ ...f, id_usuario_resguardo: val }))}
+  options={(catalogos?.usuarios ?? []).map(u => ({ value: String(u.id_usuario), label: `${u.nombre_completo} (${u.matricula})` }))}
+  placeholder="Sin resguardo"
+  />
+  </div>
+  </div>
+  )}
 
  {showTI && (
  <div className="rounded-xl border border-blue-200 dark:border-blue-800/50 dark:border-blue-800/50 overflow-hidden">
