@@ -163,3 +163,45 @@ export const ACTUALIZAR_SALIDA = gql`
     }
   }
 `;
+
+export const GET_SALIDAS_ANTIGUAS = gql`
+  query GetSalidasAntiguas($filter: SalidasAntiguoFilterInput, $pagination: PaginationInput) {
+    salidasAntiguas(filter: $filter, pagination: $pagination) {
+      edges {
+        node {
+          id
+          responsable
+          m_responsable
+          p_responsable
+          solicitante
+          m_solicitante
+          p_solicitante
+          fecha
+          identificacion
+          telefono
+          devolucion
+          para_su
+          estado_fisico
+          fecha_devolucion
+          procedencia
+          adscripcion
+          unidad_bien
+          area
+          articulos {
+            id
+            id_articulo
+            naturaleza
+            descripcion
+            cantidad
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        totalCount
+      }
+    }
+  }
+`;
+
