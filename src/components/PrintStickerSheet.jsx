@@ -53,35 +53,63 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
  gap: '0.1in',
  }}
  >
- {bien ? (
- <>
- <QRCodeSVG 
- value={bien.qrHash || bien.numSerie || String(bien.id_bien)} 
- size={72} 
- level="H" 
- includeMargin={false} 
- />
- <div style={{ flex: 1, minWidth: 0, fontSize: '8pt', lineHeight: 1.2, fontFamily: 'sans-serif', color: 'black' }}>
- <div style={{ 
- fontWeight: 'bold', 
- fontSize: '9pt', 
- display: '-webkit-box',
- WebkitLineClamp: 2,
- WebkitBoxOrient: 'vertical',
- overflow: 'hidden',
- marginBottom: '2px'
- }}>
- {bien.ubicacion || 'Sin Ubicación'}
- </div>
- <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
- S/N: {bien.numSerie && bien.numSerie !== 'N/D' ? bien.numSerie : 'N/A'}
- </div>
- <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
- Inv: {bien.numInv && bien.numInv !== 'N/D' ? bien.numInv : 'N/A'}
- </div>
- </div>
- </>
- ) : null}
+ {bien ? (() => {
+                    const claveUnidad = String(
+                      bien.claveUnidadRef ||
+                      bien.clave_unidad_ref ||
+                      bien.unidad?.clave ||
+                      bien.originalNode?.clave_unidad_ref ||
+                      bien.originalNode?.unidad?.clave ||
+                      ''
+                    ).trim();
+                    const esDelegacion = claveUnidad === '199001';
+                    const textoUnidad = bien.unidadFisica || bien.unidad?.desc_corta || bien.unidad?.descripcion || bien.originalNode?.unidad?.desc_corta || bien.originalNode?.unidad?.descripcion || '';
+                    const mostrarUnidad = !esDelegacion && textoUnidad && textoUnidad !== 'Sin Unidad';
+
+                    return (
+                      <>
+                        <QRCodeSVG 
+                          value={bien.qrHash || bien.numSerie || String(bien.id_bien)} 
+                          size={72} 
+                          level="H" 
+                          includeMargin={false} 
+                        />
+                        <div style={{ flex: 1, minWidth: 0, fontSize: '8pt', lineHeight: 1.2, fontFamily: 'sans-serif', color: 'black' }}>
+                          {mostrarUnidad && (
+                            <div style={{ 
+                              fontWeight: 'bold', 
+                              fontSize: '8.5pt', 
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              marginBottom: '1px',
+                              borderBottom: '1.5px solid #000',
+                              paddingBottom: '1px'
+                            }}>
+                              {textoUnidad}
+                            </div>
+                          )}
+                          <div style={{ 
+                            fontWeight: mostrarUnidad ? '600' : 'bold', 
+                            fontSize: mostrarUnidad ? '8pt' : '9pt', 
+                            display: '-webkit-box',
+                            WebkitLineClamp: mostrarUnidad ? 1 : 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            marginBottom: '2px'
+                          }}>
+                            {bien.ubicacion || 'Sin Ubicación'}
+                          </div>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: mostrarUnidad ? '7.5pt' : '8pt' }}>
+                            S/N: {bien.numSerie && bien.numSerie !== 'N/D' ? bien.numSerie : 'N/A'}
+                          </div>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: mostrarUnidad ? '7.5pt' : '8pt' }}>
+                            Inv: {bien.numInv && bien.numInv !== 'N/D' ? bien.numInv : 'N/A'}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })() : null}
  </div>
  ))}
  </div>
