@@ -121,14 +121,31 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
  staleTime: 30_000,
  });
 
- const { data: usuariosData, isLoading: isLoadingUsuarios } = useQuery({
- queryKey: ['usuariosActivos'],
- queryFn: () => gqlClient.request(GET_USUARIOS, {
- estatus: true,
- pagination: { first: 1000 },
- }),
- });
- const usuariosList = usuariosData?.usuarios?.edges?.map((e) => e.node) || [];
+  const { data: usuariosData, isLoading: isLoadingUsuarios } = useQuery({
+    queryKey: ['usuariosListAll'],
+    queryFn: () => gqlClient.request(GET_USUARIOS, {
+      estatus: true,
+      pagination: { first: 20000 },
+    }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const usuariosList = React.useMemo(() => usuariosData?.usuarios?.edges?.map((e) => e.node) || [], [usuariosData]);
+
+  const usuariosOptionsMatricula = React.useMemo(() => {
+    return usuariosList.map((u) => ({
+      value: u.matricula,
+      label: `${u.matricula} — ${u.nombre_completo}`,
+      searchKey: `${u.matricula} ${u.nombre_completo}`,
+    }));
+  }, [usuariosList]);
+
+  const usuariosOptionsNombre = React.useMemo(() => {
+    return usuariosList.map((u) => ({
+      value: u.nombre_completo,
+      label: `${u.matricula} — ${u.nombre_completo}`,
+      searchKey: `${u.matricula} ${u.nombre_completo}`,
+    }));
+  }, [usuariosList]);
 
  // ─── Mutations ────────────────────────────────────────────
  const registrarSalidaMutation = useMutation({
@@ -770,11 +787,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
  setNombreAutoFilled(true);
  }
  }}
- options={usuariosList.map((u) => ({
- value: u.matricula,
- label: `${u.matricula} — ${u.nombre_completo}`,
- searchKey: `${u.matricula} ${u.nombre_completo}`
- }))}
+ options={usuariosOptionsMatricula}
  placeholder="Busca por nombre o matrícula para autollenar…"
  />
  )}
@@ -872,11 +885,7 @@ export default function SalidasForm({ isEditMode = false, initialData = null, on
  <SearchableSelect
  value={form.responsable}
  onChange={(val) => setForm(p => ({ ...p, responsable: val }))}
- options={usuariosList.map((u) => ({
- value: u.nombre_completo,
- label: `${u.matricula} — ${u.nombre_completo}`,
- searchKey: `${u.matricula} ${u.nombre_completo}`
- }))}
+ options={usuariosOptionsNombre}
  placeholder="Seleccionar o escribir..."
  allowCustom={true}
  />
