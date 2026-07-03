@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_BIEN_DETAIL_QUERY } from '../api/inventario.queries';
@@ -326,7 +326,7 @@ export default function DetalleBienVisualModal({ id_bien, onClose }) {
  <InfoField icon={<Wifi size={13} />} label="Dir. MAC Alt" value={fmt(ti.dir_mac)} mono />
  <InfoField icon={<Monitor size={13} />} label="Sistema Op." value={fmt(ti.modelo_so)} />
  <InfoField icon={<Monitor size={13} />} label="Versión Office" value={fmt(ti.version_office)} />
- <InfoField icon={<Calendar size={13} />} label="Último Escaneo" value={formatDateTime(ti.last_scan)} />
+ <InfoField icon={<Calendar size={13} />} label="Actualización antivirus" value={formatDateTime(ti.last_scan)} />
  <InfoField icon={<Tag size={13} />} label="Win Serial" value={fmt(ti.windows_serial)} mono />
  <InfoField icon={<Wifi size={13} />} label="Pto. Red" value={fmt(ti.puerto_red)} />
  <InfoField icon={<Wifi size={13} />} label="Switch Red" value={fmt(ti.switch_red)} />

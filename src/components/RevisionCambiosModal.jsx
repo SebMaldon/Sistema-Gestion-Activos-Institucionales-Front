@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { gql } from 'graphql-request';
@@ -30,7 +30,7 @@ const FIELD_LABELS = {
  nombre_host: 'Nombre de Host',
  cuenta_windows: 'Cuenta de Windows',
  correo: 'Correo Electrónico',
- last_scan: 'Último Escaneo',
+ last_scan: 'Actualización antivirus',
  tipo_user: 'Tipo de Usuario',
  windows_serial: 'Serial de Windows',
  monitores: 'Monitores Detectados',

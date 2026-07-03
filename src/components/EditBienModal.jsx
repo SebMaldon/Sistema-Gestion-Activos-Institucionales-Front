@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
@@ -2183,7 +2183,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  { key: 'windows_serial', label: 'Serial de Windows', placeholder: 'XXXXX-XXXXX-XXXXX', form: 'ti' },
  { key: 'puerto_red', label: 'Puerto de Red', placeholder: 'Pto. 12', form: 'ti' },
  { key: 'switch_red', label: 'Switch (IP/Nombre)', placeholder: '10.28.X.X', form: 'ti' },
- { key: 'last_scan', label: 'Último Escaneo', placeholder: '', type: 'datetime-local', form: 'ti' },
+ { key: 'last_scan', label: 'Actualización antivirus', placeholder: '', type: 'datetime-local', form: 'ti' },
  ].filter(({ key }) => deviceMode !== 'OTHER' || key === 'puerto_red' || key === 'switch_red' || !!tiForm[key]).map(({ key, label, placeholder, type = 'text' }) => (
  <div key={key}>
  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</label>
