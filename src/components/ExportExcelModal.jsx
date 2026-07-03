@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import * as XLSX from 'xlsx';
 import { X, FileSpreadsheet, FileText, Loader2, Download } from 'lucide-react';
@@ -246,7 +246,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
     // TI (13..26)
     'CPU', 'RAM', 'ALMACENAMIENTO', 'DIR IP', 'DIR MAC',
     'MAC ADDRESS', 'NOMBRE HOST', 'S.O.', 'OFFICE', 'PUERTO RED', 'SWITCH',
-    'NO. SERIE WINDOWS', 'CUENTAS REGISTRADAS', 'ULTIMO ESCANEO',
+    'NO. SERIE WINDOWS', 'CUENTAS REGISTRADAS', 'ACTUALIZACION ANTIVIRUS',
     // Garantía (27..29)
     'GARANTIA', 'GARANTIA VENCE', 'PROVEEDOR GARANTIA',
     // Otros Admin (30..34)

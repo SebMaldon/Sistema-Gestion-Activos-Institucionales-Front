@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
  QrCode, Search, Check, Loader2, Camera as CameraIcon, CameraOff, 
@@ -565,7 +565,7 @@ export default function EscanerQR() {
  <InfoField icon={<Wifi size={13}/>} label="Dir. MAC Alt" value={fmt(foundAsset.especificacionTI.dir_mac)} mono />
  <InfoField icon={<Monitor size={13}/>} label="Sistema Op." value={fmt(foundAsset.especificacionTI.modelo_so)} />
  <InfoField icon={<Monitor size={13}/>} label="Versión Office" value={fmt(foundAsset.especificacionTI.version_office)} />
- <InfoField icon={<Calendar size={13}/>} label="Último Escaneo" value={formatDateTime(foundAsset.especificacionTI.last_scan)} />
+ <InfoField icon={<Calendar size={13}/>} label="Actualización antivirus" value={formatDateTime(foundAsset.especificacionTI.last_scan)} />
  <InfoField icon={<Tag size={13}/>} label="Win Serial" value={fmt(foundAsset.especificacionTI.windows_serial)} mono />
  <InfoField icon={<Wifi size={13}/>} label="Pto. Red" value={fmt(foundAsset.especificacionTI.puerto_red)} />
  <InfoField icon={<Wifi size={13}/>} label="Switch Red" value={fmt(foundAsset.especificacionTI.switch_red)} />
