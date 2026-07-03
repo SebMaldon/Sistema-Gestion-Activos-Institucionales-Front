@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import ReactDOM from 'react-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_SALIDAS_ANTIGUAS } from '../api/salidas.queries';
 import {
   Search, RefreshCw, ChevronLeft, ChevronRight, User,
-  Calendar, MapPin, Phone, FileText, X, Loader2, Package, Eye
+  Calendar, MapPin, Phone, FileText, X, Loader2, Package, Eye, FileDown
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
+import { useApp } from '../context/AppContext';
+import * as XLSX from 'xlsx-js-style';
 
 function Modal({ onClose, title, children }) {
   return ReactDOM.createPortal(
@@ -218,7 +220,8 @@ function ArticulosTableCell({ salida, search, onOpenModal }) {
   );
 }
 
-export default function HistorialSalidasAntiguas() {
+const HistorialSalidasAntiguas = forwardRef(({ onStatusChange }, ref) => {
+  const { showToast } = useApp();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -227,6 +230,7 @@ export default function HistorialSalidasAntiguas() {
 
   const [viewingArticulosSalida, setViewingArticulosSalida] = useState(null);
   const [modalSearch, setModalSearch] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const [pageInput, setPageInput] = useState('');
 
   const PAGE_SIZE = 20;
@@ -264,6 +268,131 @@ export default function HistorialSalidasAntiguas() {
   const totalItems = pageInfo?.totalCount || 0;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
 
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const filter = {};
+      if (debouncedSearch) filter.search = debouncedSearch;
+      if (startDate) filter.fecha_desde = startDate;
+      if (endDate) filter.fecha_hasta = endDate;
+
+      const res = await gqlClient.request(GET_SALIDAS_ANTIGUAS, {
+        filter,
+        pagination: { first: 10000, page: 1 }
+      });
+
+      const items = res?.salidasAntiguas?.edges?.map(e => e.node) || [];
+      if (items.length === 0) {
+        showToast('No hay datos para exportar', 'warning');
+        return;
+      }
+
+      let filtrosTexto = [];
+      if (startDate || endDate) {
+        const fDesde = startDate ? formatDate(startDate) : 'Inicio';
+        const fHasta = endDate ? formatDate(endDate) : 'Presente';
+        filtrosTexto.push(`Del ${fDesde} al ${fHasta}`);
+      }
+      if (debouncedSearch) {
+        filtrosTexto.push(`Búsqueda: "${debouncedSearch}"`);
+      }
+      const textoFiltrosAplicados = filtrosTexto.length > 0
+        ? `Filtros aplicados ─ ${filtrosTexto.join(', ')}`
+        : `Filtros aplicados ─ Ninguno (Todos los registros)`;
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const isFiltered = filtrosTexto.length > 0;
+      const fileName = `Salidas_Antiguas_${isFiltered ? 'Filtradas' : 'Completas'}_${dateStr}.xlsx`;
+
+      const dataToExport = items.map(salida => {
+        const listadoArticulos = (salida.articulos || []).map((art, idx) => {
+          const cant = art.cantidad ? `[${art.cantidad}] ` : '';
+          const desc = art.descripcion || 'Sin descripción';
+          const nat = art.naturaleza ? ` (${art.naturaleza})` : '';
+          return `${idx + 1}. ${cant}${desc}${nat}`;
+        }).join('\r\n');
+
+        return {
+          'Folio': salida.id || '',
+          'Fecha': salida.fecha ? formatDate(salida.fecha) : '',
+          'Solicitante': salida.solicitante || '',
+          'Matrícula Solicitante': salida.m_solicitante || '',
+          'Puesto Solicitante': salida.p_solicitante || '',
+          'Responsable': salida.responsable || '',
+          'Matrícula Responsable': salida.m_responsable || '',
+          'Puesto Responsable': salida.p_responsable || '',
+          'Adscripción': salida.adscripcion || '',
+          'Procedencia': salida.procedencia || '',
+          'Para Su': salida.para_su || '',
+          'Unidad Bien': salida.unidad_bien || '',
+          'Área': salida.area || '',
+          'Devolución': salida.devolucion || '',
+          'Fecha Devolución': salida.fecha_devolucion ? formatDate(salida.fecha_devolucion) : '',
+          'Estado Físico': salida.estado_fisico || '',
+          'Listado de Bienes / Artículos': listadoArticulos
+        };
+      });
+
+      const colWidths = [
+        { wch: 10 }, { wch: 15 }, { wch: 25 }, { wch: 18 },
+        { wch: 22 }, { wch: 25 }, { wch: 18 }, { wch: 22 },
+        { wch: 25 }, { wch: 22 }, { wch: 25 }, { wch: 20 },
+        { wch: 20 }, { wch: 15 }, { wch: 16 }, { wch: 16 },
+        { wch: 65 }
+      ];
+
+      const headerRows = [
+        ['SISTEMA INTEGRAL DE INFRAESTRUCTURA TECNOLOGICA — IMSS Delegación Nayarit'],
+        [`Reporte de: Historial de Salidas Antiguas — ${textoFiltrosAplicados}`],
+        [`Fecha de exportación: ${today.toLocaleString('es-MX')}`],
+        [`Total de registros: ${items.length}`],
+        [] // Separator
+      ];
+
+      const worksheet = XLSX.utils.aoa_to_sheet(headerRows);
+      XLSX.utils.sheet_add_json(worksheet, dataToExport, { origin: 'A6' });
+      worksheet['!cols'] = colWidths;
+
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      range.s.r = 5;
+      worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
+      for (const key in worksheet) {
+        if (key[0] === '!') continue;
+        const cell = worksheet[key];
+        const rowNum = parseInt(key.replace(/^[A-Z]+/, ''), 10);
+
+        if (rowNum <= 4) {
+          cell.s = { font: { bold: true }, alignment: { vertical: 'top' } };
+        } else if (rowNum === 6) {
+          cell.s = { font: { bold: true }, alignment: { wrapText: true, vertical: 'top' } };
+        } else {
+          cell.s = { alignment: { wrapText: true, vertical: 'top' } };
+        }
+      }
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Salidas Antiguas');
+      XLSX.writeFile(workbook, fileName);
+      showToast('Exportación completada', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Error al exportar a Excel', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    refetch: () => refetch(),
+    handleExportExcel: () => handleExportExcel()
+  }));
+
+  useEffect(() => {
+    onStatusChange?.({ isLoading, isExporting });
+  }, [isLoading, isExporting, onStatusChange]);
+
   return (
     <div className="h-full flex flex-col space-y-4">
       {/* Search & Filters */}
@@ -278,7 +407,6 @@ export default function HistorialSalidasAntiguas() {
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-transparent text-gray-900 dark:text-gray-100"
           />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 text-sm">
             <Calendar size={14} className="text-gray-400" />
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
@@ -287,15 +415,7 @@ export default function HistorialSalidasAntiguas() {
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
               className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-teal-500 text-xs bg-transparent text-gray-800 dark:text-gray-200" />
           </div>
-          <button
-            onClick={() => refetch()}
-            title="Refrescar"
-            className="w-9 h-9 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ml-2"
-          >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-          </button>
         </div>
-      </div>
 
       {/* Table */}
       <div className="flex-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm flex flex-col min-h-0 overflow-hidden relative">
@@ -629,4 +749,6 @@ export default function HistorialSalidasAntiguas() {
       )}
     </div>
   );
-}
+});
+
+export default HistorialSalidasAntiguas;

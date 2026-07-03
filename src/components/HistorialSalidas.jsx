@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import ReactDOM from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { buildPDFBytes } from '../utils/pdfSalidas';
+import * as XLSX from 'xlsx-js-style';
 
 import SalidasForm from './SalidasForm';
 
@@ -241,7 +242,7 @@ function BienesTableCell({ salida, search, onOpenModal }) {
   );
 }
 
-export default function HistorialSalidas() {
+const HistorialSalidas = forwardRef(({ onStatusChange }, ref) => {
  const { showToast } = useApp();
  const qc = useQueryClient();
 
@@ -252,12 +253,13 @@ export default function HistorialSalidas() {
  const [endDate, setEndDate] = useState('');
 
  const [editingSalida, setEditingSalida] = useState(null);
- const [viewingBienesSalida, setViewingBienesSalida] = useState(null);
- const [modalSearch, setModalSearch] = useState('');
- const [isGeneratingPdfId, setIsGeneratingPdfId] = useState(null);
- const [pageInput, setPageInput] = useState('');
+  const [viewingBienesSalida, setViewingBienesSalida] = useState(null);
+  const [modalSearch, setModalSearch] = useState('');
+  const [isGeneratingPdfId, setIsGeneratingPdfId] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [pageInput, setPageInput] = useState('');
 
- const PAGE_SIZE = 20;
+  const PAGE_SIZE = 20;
 
  useEffect(() => {
  const timer = setTimeout(() => {
@@ -325,6 +327,124 @@ export default function HistorialSalidas() {
  }
  };
 
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const filter = {};
+      if (debouncedSearch) filter.search = debouncedSearch;
+      if (startDate) filter.fecha_desde = startDate;
+      if (endDate) filter.fecha_hasta = endDate;
+
+      const res = await gqlClient.request(GET_REGISTRO_SALIDAS, {
+        filter,
+        pagination: { first: 10000, page: 1 }
+      });
+
+      const items = res?.registroSalidas?.edges?.map(e => e.node) || [];
+      if (items.length === 0) {
+        showToast('No hay datos para exportar', 'warning');
+        return;
+      }
+
+      let filtrosTexto = [];
+      if (startDate || endDate) {
+        const fDesde = startDate ? formatDate(startDate) : 'Inicio';
+        const fHasta = endDate ? formatDate(endDate) : 'Presente';
+        filtrosTexto.push(`Del ${fDesde} al ${fHasta}`);
+      }
+      if (debouncedSearch) {
+        filtrosTexto.push(`Búsqueda: "${debouncedSearch}"`);
+      }
+      const textoFiltrosAplicados = filtrosTexto.length > 0
+        ? `Filtros aplicados ─ ${filtrosTexto.join(', ')}`
+        : `Filtros aplicados ─ Ninguno (Todos los registros)`;
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const isFiltered = filtrosTexto.length > 0;
+      const fileName = `Historial_Salidas_${isFiltered ? 'Filtradas' : 'Completas'}_${dateStr}.xlsx`;
+
+      const dataToExport = items.map(salida => {
+        const listadoBienes = (salida.bienes || []).map((b, idx) => {
+          const desc = getBienDesc(b);
+          const cant = b.cantidad_o_id ? `[${b.cantidad_o_id}] ` : '';
+          const nat = b.naturaleza ? ` (${b.naturaleza})` : '';
+          return `${idx + 1}. ${cant}${desc}${nat}`;
+        }).join('\r\n');
+
+        return {
+          'Folio': salida.folio || '',
+          'Fecha Salida': salida.fecha_salida ? formatDate(salida.fecha_salida) : '',
+          'Solicitante': salida.solicitante || '',
+          'Matrícula': salida.matricula || '',
+          'Adscripción': salida.adscripcion || '',
+          'Responsable': salida.responsable || '',
+          'Motivo': salida.motivo || '',
+          'Sujeto Devolución': (salida.sujeto_devolucion && salida.sujeto_devolucion !== 'false' && salida.sujeto_devolucion !== '0' && salida.sujeto_devolucion !== 'No') ? 'Sí' : 'No',
+          'Fecha Devolución': salida.fecha_devolucion ? formatDate(salida.fecha_devolucion) : '',
+          'Listado de Bienes': listadoBienes,
+          'Observaciones': salida.observaciones || '',
+          'Usuario Registra': salida.usuarioRegistra?.nombre_completo || ''
+        };
+      });
+
+      const colWidths = [
+        { wch: 12 }, { wch: 16 }, { wch: 28 }, { wch: 16 },
+        { wch: 28 }, { wch: 28 }, { wch: 30 }, { wch: 18 },
+        { wch: 16 }, { wch: 65 }, { wch: 35 }, { wch: 25 }
+      ];
+
+      const headerRows = [
+        ['SISTEMA INTEGRAL DE INFRAESTRUCTURA TECNOLOGICA — IMSS Delegación Nayarit'],
+        [`Reporte de: Historial de Salidas — ${textoFiltrosAplicados}`],
+        [`Fecha de exportación: ${today.toLocaleString('es-MX')}`],
+        [`Total de registros: ${items.length}`],
+        [] // Separator
+      ];
+
+      const worksheet = XLSX.utils.aoa_to_sheet(headerRows);
+      XLSX.utils.sheet_add_json(worksheet, dataToExport, { origin: 'A6' });
+      worksheet['!cols'] = colWidths;
+
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      range.s.r = 5;
+      worksheet['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
+      for (const key in worksheet) {
+        if (key[0] === '!') continue;
+        const cell = worksheet[key];
+        const rowNum = parseInt(key.replace(/^[A-Z]+/, ''), 10);
+
+        if (rowNum <= 4) {
+          cell.s = { font: { bold: true }, alignment: { vertical: 'top' } };
+        } else if (rowNum === 6) {
+          cell.s = { font: { bold: true }, alignment: { wrapText: true, vertical: 'top' } };
+        } else {
+          cell.s = { alignment: { wrapText: true, vertical: 'top' } };
+        }
+      }
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Historial Salidas');
+      XLSX.writeFile(workbook, fileName);
+      showToast('Exportación completada', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Error al exportar a Excel', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    refetch: () => refetch(),
+    handleExportExcel: () => handleExportExcel()
+  }));
+
+  useEffect(() => {
+    onStatusChange?.({ isLoading, isExporting });
+  }, [isLoading, isExporting, onStatusChange]);
+
  return (
  <div className="h-full flex flex-col space-y-4">
  {/* Search & Filters */}
@@ -348,13 +468,6 @@ export default function HistorialSalidas() {
  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} 
  className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-teal-500 text-xs" />
  </div>
- <button
- onClick={() => refetch()}
- title="Refrescar"
- className="w-9 h-9 rounded-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors ml-2"
- >
- <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
- </button>
  </div>
  </div>
 
@@ -677,6 +790,8 @@ export default function HistorialSalidas() {
  </div>
  </Modal>
  )}
- </div>
- );
-}
+  </div>
+  );
+});
+
+export default HistorialSalidas;
