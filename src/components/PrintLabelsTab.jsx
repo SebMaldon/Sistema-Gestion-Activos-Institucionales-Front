@@ -264,7 +264,7 @@ export default function PrintLabelsTab({
  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800/50 flex gap-2 items-start">
  <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
  <p className="text-xs text-amber-800 leading-relaxed">
- <strong>Importante:</strong> Al imprimir configura <strong>Márgenes: Ninguno</strong> y <strong>Escala: 100%</strong> para respetar las medidas Avery 5160.
+ <strong>Importante:</strong> Al imprimir configura <strong>Márgenes: Ninguno</strong> y <strong>Escala: 100%</strong> para respetar las medidas exactas de la hoja (21.6 x 27.9 cm) y evitar desfases.
  </p>
  </div>
  </div>

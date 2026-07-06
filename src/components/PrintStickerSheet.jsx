@@ -23,17 +23,17 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
  <div
  key={pageIndex}
  style={{
- width: '8.5in',
- height: '11in',
- paddingTop: '0.5in',
- paddingBottom: '0.5in',
- paddingLeft: '0.1875in',
- paddingRight: '0.1875in',
+ width: '21.6cm',
+ height: '27.9cm',
+ paddingTop: '1.5cm',
+ paddingBottom: '1.5cm',
+ paddingLeft: '2.5mm',
+ paddingRight: '3.5mm',
  display: 'grid',
- gridTemplateColumns: 'repeat(3, 2.625in)',
- gridTemplateRows: 'repeat(10, 1in)',
- columnGap: '0.125in',
- rowGap: '0in',
+ gridTemplateColumns: 'repeat(3, 6.65cm)',
+ gridTemplateRows: 'repeat(10, 2.5cm)',
+ columnGap: '0.45cm',
+ rowGap: '0cm',
  pageBreakAfter: 'always',
  boxSizing: 'border-box',
  backgroundColor: 'white' // Ensure white bg even if print settings vary
@@ -43,14 +43,14 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
  <div
  key={cellIndex}
  style={{
- width: '2.625in',
- height: '1in',
+ width: '6.65cm',
+ height: '2.5cm',
  boxSizing: 'border-box',
  overflow: 'hidden',
  display: 'flex',
  alignItems: 'center',
- padding: '0.05in 0.1in', // Slight padding inside the label
- gap: '0.1in',
+ padding: '2.5mm 3.5mm', // Margen de seguridad respecto al corte de la etiqueta
+ gap: '3mm',
  }}
  >
  {bien ? (() => {
@@ -70,7 +70,7 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
                       <>
                         <QRCodeSVG 
                           value={bien.qrHash || bien.numSerie || String(bien.id_bien)} 
-                          size={72} 
+                          size={64} 
                           level="H" 
                           includeMargin={false} 
                         />
