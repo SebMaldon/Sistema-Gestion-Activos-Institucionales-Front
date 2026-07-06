@@ -36,9 +36,23 @@ export const GET_GARANTIAS = gql`
         fecha_resolucion
         descripcion_falla
         resolucion
+        numero_reporte
+        tipo_dispositivo
+        tipoDispositivoObj {
+          tipo_disp
+          nombre_tipo
+        }
+        usuario_reporta
+        serie_pieza_nueva
+        fecha_atencion
         usuarioRegistra {
           nombre_completo
           matricula
+        }
+        usuarioReportaObj {
+          id_usuario
+          matricula
+          nombre_completo
         }
       }
     }
@@ -224,7 +238,21 @@ export const GET_REPORTES_GARANTIA = gql`
       fecha_reporte
       fecha_resolucion
       id_usuario_registra
+      numero_reporte
+      tipo_dispositivo
+      tipoDispositivoObj {
+        tipo_disp
+        nombre_tipo
+      }
+      usuario_reporta
+      serie_pieza_nueva
+      fecha_atencion
       usuarioRegistra {
+        id_usuario
+        matricula
+        nombre_completo
+      }
+      usuarioReportaObj {
         id_usuario
         matricula
         nombre_completo
@@ -241,6 +269,12 @@ export const CREATE_REPORTE_GARANTIA = gql`
     $estatus: String
     $descripcion_falla: String!
     $resolucion: String
+    $numero_reporte: String
+    $tipo_dispositivo: Int
+    $usuario_reporta: Int
+    $serie_pieza_nueva: String
+    $fecha_atencion: DateTime
+    $fecha_resolucion: DateTime
   ) {
     createReporteGarantia(
       id_garantia: $id_garantia
@@ -249,11 +283,26 @@ export const CREATE_REPORTE_GARANTIA = gql`
       estatus: $estatus
       descripcion_falla: $descripcion_falla
       resolucion: $resolucion
+      numero_reporte: $numero_reporte
+      tipo_dispositivo: $tipo_dispositivo
+      usuario_reporta: $usuario_reporta
+      serie_pieza_nueva: $serie_pieza_nueva
+      fecha_atencion: $fecha_atencion
+      fecha_resolucion: $fecha_resolucion
     ) {
       id_reporte_garantia
       estatus
       fecha_reporte
       fecha_resolucion
+      numero_reporte
+      tipo_dispositivo
+      tipoDispositivoObj {
+        tipo_disp
+        nombre_tipo
+      }
+      usuario_reporta
+      serie_pieza_nueva
+      fecha_atencion
     }
   }
 `;
@@ -264,16 +313,37 @@ export const UPDATE_REPORTE_GARANTIA = gql`
     $estatus: String
     $descripcion_falla: String
     $resolucion: String
+    $numero_reporte: String
+    $tipo_dispositivo: Int
+    $usuario_reporta: Int
+    $serie_pieza_nueva: String
+    $fecha_atencion: DateTime
+    $fecha_resolucion: DateTime
   ) {
     updateReporteGarantia(
       id_reporte_garantia: $id_reporte_garantia
       estatus: $estatus
       descripcion_falla: $descripcion_falla
       resolucion: $resolucion
+      numero_reporte: $numero_reporte
+      tipo_dispositivo: $tipo_dispositivo
+      usuario_reporta: $usuario_reporta
+      serie_pieza_nueva: $serie_pieza_nueva
+      fecha_atencion: $fecha_atencion
+      fecha_resolucion: $fecha_resolucion
     ) {
       id_reporte_garantia
       estatus
       fecha_resolucion
+      numero_reporte
+      tipo_dispositivo
+      tipoDispositivoObj {
+        tipo_disp
+        nombre_tipo
+      }
+      usuario_reporta
+      serie_pieza_nueva
+      fecha_atencion
     }
   }
 `;

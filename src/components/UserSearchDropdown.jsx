@@ -36,14 +36,17 @@ export default function UserSearchDropdown({ usuarios, value, onChange }) {
  };
  }, [wrapperRef, selectedUser]);
 
+ const normalize = (str) => (str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
  const filteredUsers = usuarios
  .filter(u => {
- const term = searchTerm.toLowerCase();
- const matchName = u.nombre_completo?.toLowerCase().includes(term);
- const matchMatricula = u.matricula?.toLowerCase().includes(term);
+ const term = normalize(searchTerm);
+ if (!term) return true;
+ const matchName = normalize(u.nombre_completo).includes(term);
+ const matchMatricula = normalize(u.matricula).includes(term);
  return matchName || matchMatricula;
  })
- .slice(0, 50);
+ .slice(0, 100);
 
  return (
  <div className="relative w-full" ref={wrapperRef}>
@@ -53,7 +56,7 @@ export default function UserSearchDropdown({ usuarios, value, onChange }) {
  </span>
  <input
  type="text"
- className="w-full border border-gray-300 dark:border-gray-600 pl-8 pr-8 py-2 rounded-lg text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500"
+ className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 pl-8 pr-8 py-2 rounded-lg text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors"
  placeholder="Buscar por Nombre o Matrícula..."
  value={searchTerm}
  onChange={(e) => {
@@ -89,7 +92,7 @@ export default function UserSearchDropdown({ usuarios, value, onChange }) {
  {filteredUsers.map(u => (
  <li
  key={u.id_usuario}
- className="px-3 py-2 hover:bg-green-50 cursor-pointer flex flex-col items-start border-b border-gray-50 dark:border-gray-800 last:border-0"
+ className="px-3 py-2 hover:bg-green-50 dark:hover:bg-green-900/30 cursor-pointer flex flex-col items-start border-b border-gray-100 dark:border-gray-700/50 last:border-0 transition-colors"
  onMouseDown={(e) => {
  e.preventDefault();
  onChange(String(u.id_usuario));

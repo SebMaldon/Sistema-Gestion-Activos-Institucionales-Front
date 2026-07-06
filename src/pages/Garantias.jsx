@@ -60,35 +60,35 @@ function EstatusBadge({ estatus }) {
  );
 }
 
-function Modal({ onClose, title, subtitle, children, wide = false, small = false }) {
- return ReactDOM.createPortal(
- <div
- className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
- onMouseDown={(e) => {
- if (e.target === e.currentTarget) onClose();
- }}
- >
- <div className="absolute inset-0 bg-black/50 dark:bg-black/70 pointer-events-none" />
- <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${small ? 'max-w-sm' : wide ? 'max-w-3xl' : 'max-w-lg'}`}>
- {/* Header */}
- <div className="bg-[#00472e] dark:bg-[#002618] px-5 sm:px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
- <div>
- <h3 className="text-xl font-bold">{title}</h3>
- {subtitle && <p className="text-sm text-green-100 mt-0.5">{subtitle}</p>}
- </div>
- <button onClick={onClose}
- className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
- <X size={20} />
- </button>
- </div>
- {/* Body scrollable */}
- <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
- {children}
- </div>
- </div>
- </div>,
- document.body
- );
+function Modal({ onClose, title, subtitle, children, wide = false, extraWide = false, small = false }) {
+  return ReactDOM.createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="absolute inset-0 bg-black/50 dark:bg-black/70 pointer-events-none" />
+      <div className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] ${small ? 'max-w-sm' : extraWide ? 'max-w-5xl' : wide ? 'max-w-4xl' : 'max-w-2xl'}`}>
+        {/* Header */}
+        <div className="bg-[#00472e] dark:bg-[#002618] px-5 sm:px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
+          <div>
+            <h3 className="text-xl font-bold">{title}</h3>
+            {subtitle && <p className="text-sm text-green-100 mt-0.5">{subtitle}</p>}
+          </div>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        {/* Body scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-5">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 // ─── Modal Detalles Garantía ───────────────────────────────────────────
@@ -100,7 +100,7 @@ function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
   const isAdministrador = userRole === 2;
 
   return (
- <Modal onClose={onClose} title="Detalles de Garantía" subtitle={`Garantía del bien S/N: ${garantia.bien?.num_serie || 'N/A'}`} wide>
+ <Modal onClose={onClose} title="Detalles de Garantía" subtitle={`Garantía del bien S/N: ${garantia.bien?.num_serie || 'N/A'}`} extraWide>
  <div className="space-y-6">
  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 ">
  <h4 className="font-bold text-gray-700 dark:text-gray-300 mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">Información General</h4>
@@ -325,7 +325,7 @@ function GarantiaModal({ garantia, onClose, proveedores = [] }) {
 
  return (
  <>
- <Modal onClose={onClose} title={isEdit ? 'Editar Garantía' : 'Registrar Garantía'} subtitle="Dar de alta una nueva garantía o póliza" wide={isEdit}>
+ <Modal onClose={onClose} title={isEdit ? 'Editar Garantía' : 'Registrar Garantía'} subtitle="Dar de alta una nueva garantía o póliza" extraWide>
  <div className="flex flex-col gap-5">
  
         {isEditMode && (
@@ -677,7 +677,7 @@ function GenerarReporteModal({ onClose }) {
 
   return (
     <>
-    <Modal onClose={onClose} title="Generar Nuevo Reporte / Nota" subtitle="Asigna un reporte buscando el equipo">
+    <Modal onClose={onClose} title="Generar Nuevo Reporte / Nota" subtitle="Asigna un reporte buscando el equipo" extraWide>
       <div className="space-y-6">
         
         {/* Buscador de Bien */}
@@ -1114,30 +1114,40 @@ export default function Garantias() {
  fileName = 'Control_Garantias.xlsx';
 
  } else if (activeTab === 'REPORTES') {
- garantiasConReportes.forEach(g => {
- const reportesFormateados = g.reportes && g.reportes.length > 0
- ? g.reportes.map((r, i) => {
- let autor = 'Usuario desconocido';
- if (r.usuarioRegistra) {
- autor = `${r.usuarioRegistra.nombre_completo} (${r.usuarioRegistra.matricula || 'Sin matrícula'})`;
- }
- return `${i + 1}. [${r.fecha_reporte ? formatDate(r.fecha_reporte) : 'S/F'}] ${autor} ─ Estatus: ${r.estatus}\nFalla: ${r.descripcion_falla}${r.resolucion ? `\nResolución: ${r.resolucion}` : ''}`;
- }).join('\n\n')
- : 'Sin Reportes';
+    garantiasConReportes.forEach(g => {
+      const reportesFormateados = g.reportes && g.reportes.length > 0
+        ? g.reportes.map((r, i) => {
+            let autor = 'Usuario desconocido';
+            if (r.usuarioRegistra) {
+              autor = `${r.usuarioRegistra.nombre_completo} (${r.usuarioRegistra.matricula || 'Sin matrícula'})`;
+            }
+            let detallesExtra = [];
+            if (r.numero_reporte) detallesExtra.push(`No. Reporte: ${r.numero_reporte}`);
+            const tipoStr = r.tipoDispositivoObj?.nombre_tipo || r.tipo_dispositivo;
+            if (tipoStr) detallesExtra.push(`Tipo: ${tipoStr}`);
+            if (r.serie_pieza_nueva) detallesExtra.push(`Pieza Nueva: ${r.serie_pieza_nueva}`);
+            if (r.fecha_atencion) detallesExtra.push(`Atención: ${formatDate(r.fecha_atencion)}`);
+            if (r.usuarioReportaObj) detallesExtra.push(`Reportó: ${r.usuarioReportaObj.nombre_completo}`);
+            const extraStr = detallesExtra.length > 0 ? `\n[${detallesExtra.join(' | ')}]` : '';
+            return `${i + 1}. [${r.fecha_reporte ? formatDate(r.fecha_reporte) : 'S/F'}] ${autor} ─ Estatus: ${r.estatus}${extraStr}\nFalla: ${r.descripcion_falla}${r.resolucion ? `\nResolución: ${r.resolucion}` : ''}`;
+          }).join('\n\n')
+        : 'Sin Reportes';
 
- dataToExport.push({
- 'ID Garantía': g.id_garantia,
- 'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
- 'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
- 'Número de Serie': g.bien?.num_serie || 'N/A',
- 'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
- 'Estado Garantía': g.estado_garantia,
- 'Último Estatus': g.reportes && g.reportes.length > 0 ? g.reportes[0].estatus : 'Sin Reportes',
- 'Inicio Garantía': formatDate(g.fecha_inicio),
- 'Fin Garantía': formatDate(g.fecha_fin),
- 'Reportes / Bitácora': reportesFormateados
- });
- });
+      dataToExport.push({
+        'ID Garantía': g.id_garantia,
+        'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
+        'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
+        'Número de Serie': g.bien?.num_serie || 'N/A',
+        'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
+        'Estado Garantía': g.estado_garantia,
+        'Último Estatus': g.reportes && g.reportes.length > 0 ? g.reportes[0].estatus : 'Sin Reportes',
+        'Último No. Reporte': g.reportes && g.reportes.length > 0 ? g.reportes[0].numero_reporte || 'N/A' : 'N/A',
+        'Última Pieza Nueva': g.reportes && g.reportes.length > 0 ? g.reportes[0].serie_pieza_nueva || 'N/A' : 'N/A',
+        'Inicio Garantía': formatDate(g.fecha_inicio),
+        'Fin Garantía': formatDate(g.fecha_fin),
+        'Reportes / Bitácora': reportesFormateados
+      });
+    });
 
  colWidths = [
  { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, { wch: 28 }, 
@@ -1784,8 +1794,9 @@ export default function Garantias() {
  <th className="px-5 py-4 font-bold tracking-wider">Equipo / Bien</th>
  <th className="px-5 py-4 font-bold tracking-wider">Proveedor</th>
  <th className="px-5 py-4 font-bold tracking-wider">Último Estatus</th>
- <th className="px-5 py-4 font-bold tracking-wider">Fecha Reporte</th>
- <th className="px-5 py-4 font-bold tracking-wider">Falla Reportada</th>
+ <th className="px-5 py-4 font-bold tracking-wider">No. Reporte (Ult.)</th>
+ <th className="px-5 py-4 font-bold tracking-wider">Fecha Reporte (Ult.)</th>
+ <th className="px-5 py-4 font-bold tracking-wider">Falla Reportada (Ult.)</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1834,6 +1845,15 @@ export default function Garantias() {
  </span>
  ) : (
  <span className="text-gray-400 text-xs italic">Sin datos</span>
+ )}
+ </td>
+ <td className="px-5 py-4">
+ {ultimoReporte && ultimoReporte.numero_reporte ? (
+ <span className="font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
+ {highlightText(ultimoReporte.numero_reporte, searchFilter)}
+ </span>
+ ) : (
+ <span className="text-gray-400 text-xs italic">N/A</span>
  )}
  </td>
  <td className="px-5 py-4">

@@ -186,7 +186,7 @@ export const GET_TIPOS_INCIDENCIA_QUERY = gql`
 
 export const GET_USUARIOS_QUERY = gql`
   query GetUsuariosActivos {
-    usuarios(estatus: true, pagination: { first: 200 }) {
+    usuarios(estatus: true, pagination: { first: 20000 }) {
       edges {
         node {
           id_usuario

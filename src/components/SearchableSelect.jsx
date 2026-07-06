@@ -24,36 +24,39 @@ export default function SearchableSelect({
  (options || []).find(opt => opt && opt.value === value),
  [options, value]);
 
- const filteredOptions = useMemo(() => {
- const safeOptions = options || [];
- let result = safeOptions;
- if (query && !onInputChange) {
- const lowercaseQuery = query.toLowerCase();
- result = safeOptions.filter(opt => {
- if (!opt) return false;
- const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
- const searchKeyStr = opt.searchKey ? String(opt.searchKey).toLowerCase() : '';
- return labelStr.includes(lowercaseQuery) || searchKeyStr.includes(lowercaseQuery);
- });
- }
+  const filteredOptions = useMemo(() => {
+    const safeOptions = options || [];
+    let result = safeOptions;
+    const normalize = (str) => (str || '').toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
- result = [...result].sort((a, b) => {
- const aSelected = a.value === value;
- const bSelected = b.value === value;
- if (aSelected && !bSelected) return -1;
- if (!aSelected && bSelected) return 1;
- return 0;
- });
+    if (query && !onInputChange) {
+      const normQuery = normalize(query);
+      result = safeOptions.filter(opt => {
+        if (!opt) return false;
+        const labelStr = normalize(opt.label);
+        const searchKeyStr = normalize(opt.searchKey);
+        return labelStr.includes(normQuery) || searchKeyStr.includes(normQuery);
+      });
+    }
 
- if (allowCustom && query && query.trim() !== '') {
- const exactMatch = safeOptions.find(o => o.label?.toLowerCase() === query.trim().toLowerCase() || o.value?.toLowerCase() === query.trim().toLowerCase());
- if (!exactMatch) {
- result.unshift({ value: query.trim(), label: `Usar "${query.trim()}"`, isCustom: true });
- }
- }
+    result = [...result].sort((a, b) => {
+      const aSelected = a.value === value;
+      const bSelected = b.value === value;
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    });
 
- return result.slice(0, 100);
- }, [options, query, value, onInputChange, allowCustom]);
+    if (allowCustom && query && query.trim() !== '') {
+      const normQuery = normalize(query);
+      const exactMatch = safeOptions.find(o => normalize(o.label) === normQuery || normalize(o.value) === normQuery);
+      if (!exactMatch) {
+        result.unshift({ value: query.trim(), label: `Usar "${query.trim()}"`, isCustom: true });
+      }
+    }
+
+    return result.slice(0, 100);
+  }, [options, query, value, onInputChange, allowCustom]);
 
  useEffect(() => {
  const handleClickOutside = (event) => {
