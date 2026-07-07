@@ -14,6 +14,8 @@ import {
  GET_BIEN_BY_TERMINO,
  CREATE_REPORTE_GARANTIA,
 } from '../api/garantias.queries';
+import { GET_MARCAS_TIPOS_QUERY } from '../api/inventario.queries';
+import { useUsuariosActivos } from '../hooks/useIncidencias';
 import {
  ShieldCheck, Plus, Search, Edit, Trash2, X, RefreshCw, AlertCircle, Info, CalendarClock, Box, Loader2, Wifi, Tag, Hash, ChevronRight, Building, Phone, Mail, User, MapPin, BarChart2, ArrowUpDown, ChevronUp, ChevronDown, Filter, ChevronLeft, FileText, Download, FileSpreadsheet, CheckCircle2
 } from 'lucide-react';
@@ -95,9 +97,6 @@ function Modal({ onClose, title, subtitle, children, wide = false, extraWide = f
 
 function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
   const proveedorFull = proveedores.find(p => String(p.id_proveedor) === String(garantia.id_proveedor)) || garantia.proveedorObj;
-  const userRole = useAuthStore(state => state.user?.id_rol);
-  const isMaestro = userRole === 1;
-  const isAdministrador = userRole === 2;
 
   return (
  <Modal onClose={onClose} title="Detalles de Garantía" subtitle={`Garantía del bien S/N: ${garantia.bien?.num_serie || 'N/A'}`} extraWide>
@@ -153,7 +152,7 @@ function GarantiaDetalleModal({ garantia, proveedores = [], onClose }) {
  </div>
  
   <div>
-    <ReportesSeccion garantia={garantia} readOnly={!(isMaestro || isAdministrador)} />
+    <ReportesSeccion garantia={garantia} readOnly={false} />
   </div>
  </div>
  </Modal>
@@ -885,10 +884,17 @@ export default function Garantias() {
  const { data: proveedoresData } = useQuery({
  queryKey: ['proveedores'],
  queryFn: () => gqlClient.request(GET_PROVEEDORES),
- select: d => d.proveedores ?? [],
  });
 
- const proveedores = proveedoresData || [];
+ const { data: catData } = useQuery({
+    queryKey: ['marcas-tipos'],
+    queryFn: () => gqlClient.request(GET_MARCAS_TIPOS_QUERY),
+    staleTime: 5 * 60 * 1000
+  });
+  const tiposDispositivo = catData?.tiposDispositivo ?? [];
+  const { data: usuarios = [] } = useUsuariosActivos();
+
+  const proveedores = proveedoresData?.proveedores || [];
 
  const proveedorOptions = useMemo(() => {
  return proveedores.map(p => ({
@@ -1088,73 +1094,192 @@ export default function Garantias() {
  const paginatedReportes = garantiasConReportes.slice((currentPageReportes - 1) * PAGE_SIZE, currentPageReportes * PAGE_SIZE);
 
 
- const handleExportarExcel = () => {
- let dataToExport = [];
- let sheetName = '';
- let fileName = '';
- let colWidths = [];
+  const handleExportarExcel = () => {
+    let dataToExport = [];
+    let sheetName = '';
+    let fileName = '';
+    let colWidths = [];
 
- if (activeTab === 'GARANTIAS') {
- dataToExport = filteredGarantias.map(g => ({
- 'ID Garantía': g.id_garantia,
- 'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
- 'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
- 'Número de Serie': g.bien?.num_serie || 'N/A',
- 'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
- 'Estado Garantía': g.estado_garantia,
- 'Inicio Garantía': formatDate(g.fecha_inicio),
- 'Fin Garantía': formatDate(g.fecha_fin),
- }));
-
- colWidths = [
- { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, 
- { wch: 28 }, { wch: 18 }, { wch: 15 }, { wch: 15 }
- ];
- sheetName = 'Control de Garantías';
- fileName = 'Control_Garantias.xlsx';
-
- } else if (activeTab === 'REPORTES') {
-    garantiasConReportes.forEach(g => {
-      const reportesFormateados = g.reportes && g.reportes.length > 0
-        ? g.reportes.map((r, i) => {
-            let autor = 'Usuario desconocido';
-            if (r.usuarioRegistra) {
-              autor = `${r.usuarioRegistra.nombre_completo} (${r.usuarioRegistra.matricula || 'Sin matrícula'})`;
-            }
-            let detallesExtra = [];
-            if (r.numero_reporte) detallesExtra.push(`No. Reporte: ${r.numero_reporte}`);
-            const tipoStr = r.tipoDispositivoObj?.nombre_tipo || r.tipo_dispositivo;
-            if (tipoStr) detallesExtra.push(`Tipo: ${tipoStr}`);
-            if (r.serie_pieza_nueva) detallesExtra.push(`Pieza Nueva: ${r.serie_pieza_nueva}`);
-            if (r.fecha_atencion) detallesExtra.push(`Atención: ${formatDate(r.fecha_atencion)}`);
-            if (r.usuarioReportaObj) detallesExtra.push(`Reportó: ${r.usuarioReportaObj.nombre_completo}`);
-            const extraStr = detallesExtra.length > 0 ? `\n[${detallesExtra.join(' | ')}]` : '';
-            return `${i + 1}. [${r.fecha_reporte ? formatDate(r.fecha_reporte) : 'S/F'}] ${autor} ─ Estatus: ${r.estatus}${extraStr}\nFalla: ${r.descripcion_falla}${r.resolucion ? `\nResolución: ${r.resolucion}` : ''}`;
-          }).join('\n\n')
-        : 'Sin Reportes';
-
-      dataToExport.push({
-        'ID Garantía': g.id_garantia,
-        'Equipo (Tipo)': g.bien ? `${g.bien.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'}` : 'N/A',
-        'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
-        'Número de Serie': g.bien?.num_serie || 'N/A',
-        'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
-        'Estado Garantía': g.estado_garantia,
-        'Último Estatus': g.reportes && g.reportes.length > 0 ? g.reportes[0].estatus : 'Sin Reportes',
-        'Último No. Reporte': g.reportes && g.reportes.length > 0 ? g.reportes[0].numero_reporte || 'N/A' : 'N/A',
-        'Última Pieza Nueva': g.reportes && g.reportes.length > 0 ? g.reportes[0].serie_pieza_nueva || 'N/A' : 'N/A',
-        'Inicio Garantía': formatDate(g.fecha_inicio),
-        'Fin Garantía': formatDate(g.fecha_fin),
-        'Reportes / Bitácora': reportesFormateados
+    const getBitacoraGroups = (g) => {
+      if (!g.reportes || g.reportes.length === 0) {
+        return [{
+          key: 'Sin bitácora',
+          reportes: [],
+          estatus: 'Sin Reportes',
+          piezaNueva: 'N/A'
+        }];
+      }
+      const groupMap = new Map();
+      const sinReporte = [];
+      g.reportes.forEach(rep => {
+        const key = rep.numero_reporte?.trim();
+        if (!key) {
+          sinReporte.push(rep);
+        } else {
+          if (!groupMap.has(key)) {
+            groupMap.set(key, { 
+              key, 
+              reportes: [], 
+              estatus: rep.estatus || 'Sin Estatus', 
+              piezaNueva: rep.serie_pieza_nueva || 'N/A' 
+            });
+          }
+          groupMap.get(key).reportes.push(rep);
+        }
       });
-    });
+      const result = Array.from(groupMap.values());
+      if (sinReporte.length > 0) {
+        result.push({
+          key: 'Sin número de reporte',
+          reportes: sinReporte,
+          estatus: sinReporte[0]?.estatus || 'Sin Estatus',
+          piezaNueva: sinReporte[0]?.serie_pieza_nueva || 'N/A'
+        });
+      }
+      return result;
+    };
 
- colWidths = [
- { wch: 12 }, { wch: 20 }, { wch: 35 }, { wch: 22 }, { wch: 28 }, 
- { wch: 18 }, { wch: 22 }, { wch: 15 }, { wch: 15 }, { wch: 60 }
- ];
- sheetName = 'Reportes de Garantía';
- fileName = 'Reportes_Garantias.xlsx';
+    const getNombreTipo = (r) => {
+      if (r.tipoDispositivoObj?.nombre_tipo) return r.tipoDispositivoObj.nombre_tipo;
+      if (r.tipo_dispositivo) {
+        const match = tiposDispositivo.find(t => String(t.tipo_disp) === String(r.tipo_dispositivo) || t.nombre_tipo?.toLowerCase() === String(r.tipo_dispositivo).toLowerCase());
+        if (match?.nombre_tipo) return match.nombre_tipo;
+      }
+      return r.tipo_dispositivo || '';
+    };
+
+    const getNombreUsuarioReporta = (r) => {
+      if (r.usuarioReportaObj) {
+        const nom = r.usuarioReportaObj.nombre_completo || 'Usuario';
+        const mat = r.usuarioReportaObj.matricula || 'Sin matrícula';
+        return `${nom} (${mat})`;
+      }
+      if (r.usuario_reporta) {
+        const match = usuarios.find(u => String(u.id_usuario) === String(r.usuario_reporta) || String(u.matricula) === String(r.usuario_reporta) || u.nombre_completo?.toLowerCase() === String(r.usuario_reporta).toLowerCase());
+        if (match) {
+          const nom = match.nombre_completo || 'Usuario';
+          const mat = match.matricula || 'Sin matrícula';
+          return `${nom} (${mat})`;
+        }
+        return `${r.usuario_reporta} (Sin matrícula)`;
+      }
+      return '';
+    };
+
+    const formatLista = (arr) => {
+      if (!arr || arr.length === 0) return 'N/A';
+      if (arr.length === 1) return arr[0];
+      return arr.map(item => `• ${item}`).join('\n');
+    };
+
+    if (activeTab === 'GARANTIAS') {
+      filteredGarantias.forEach(g => {
+        const bitacoraGroups = getBitacoraGroups(g);
+        const unidadStr = g.bien?.unidad?.descripcion || g.bien?.unidad?.desc_corta || g.bien?.unidad?.clave || 'Sin unidad';
+
+        bitacoraGroups.forEach(group => {
+          const dispArr = group.reportes.length > 0
+            ? [...new Set(group.reportes.map(r => getNombreTipo(r)).filter(Boolean))]
+            : [g.bien?.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'];
+          const dispositivos = formatLista(dispArr);
+
+          const userArr = group.reportes.length > 0
+            ? [...new Set(group.reportes.map(r => getNombreUsuarioReporta(r)).filter(Boolean))]
+            : [];
+          const usuariosReporta = formatLista(userArr);
+
+          dataToExport.push({
+            'No. Reporte': group.key,
+            'Tipo de dispositivo(s)': dispositivos,
+            'Unidad': unidadStr,
+            'Usuario(s) que Reporta(n)': usuariosReporta,
+            'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
+            'Número de Serie': g.bien?.num_serie || 'N/A',
+            'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
+            'Estado Garantía': g.estado_garantia,
+            'Inicio Garantía': formatDate(g.fecha_inicio),
+            'Fin Garantía': formatDate(g.fecha_fin),
+          });
+        });
+      });
+
+      colWidths = [
+        { wch: 22 }, { wch: 25 }, { wch: 30 }, { wch: 35 }, { wch: 35 }, 
+        { wch: 22 }, { wch: 28 }, { wch: 18 }, { wch: 15 }, { wch: 15 }
+      ];
+      sheetName = 'Control de Garantías';
+      fileName = 'Control_Garantias.xlsx';
+
+    } else if (activeTab === 'REPORTES') {
+      garantiasConReportes.forEach(g => {
+        const bitacoraGroups = getBitacoraGroups(g);
+        const unidadStr = g.bien?.unidad?.descripcion || g.bien?.unidad?.desc_corta || g.bien?.unidad?.clave || 'Sin unidad';
+
+        bitacoraGroups.forEach(group => {
+          const reportesFormateados = group.reportes.length > 0
+            ? group.reportes.map((r, i) => {
+                let autor = 'Usuario desconocido';
+                if (r.usuarioRegistra) {
+                  autor = `${r.usuarioRegistra.nombre_completo} (${r.usuarioRegistra.matricula || 'Sin matrícula'})`;
+                }
+                const tipoStr = getNombreTipo(r);
+                const reportoStr = getNombreUsuarioReporta(r);
+                
+                let lineas = [
+                  `${i + 1}. [${r.fecha_reporte ? formatDate(r.fecha_reporte) : 'S/F'}] — Estatus: ${r.estatus || 'Sin Estatus'}`,
+                  `   • Registró: ${autor}`
+                ];
+                if (reportoStr) lineas.push(`   • Reportó: ${reportoStr}`);
+                if (tipoStr) lineas.push(`   • Equipo: ${tipoStr}`);
+                if (r.serie_pieza_nueva) lineas.push(`   • Pieza Nueva: ${r.serie_pieza_nueva}`);
+                lineas.push(`   • Falla: ${r.descripcion_falla || 'Sin descripción'}`);
+                if (r.resolucion) lineas.push(`   • Resolución: ${r.resolucion}`);
+                
+                return lineas.join('\n');
+              }).join('\n\n')
+            : 'Sin Reportes';
+
+          const dispArr = group.reportes.length > 0
+            ? [...new Set(group.reportes.map(r => getNombreTipo(r)).filter(Boolean))]
+            : [g.bien?.modelo?.tipoDispositivo?.nombre_tipo || 'Desconocido'];
+          const dispositivos = formatLista(dispArr);
+
+          const userArr = group.reportes.length > 0
+            ? [...new Set(group.reportes.map(r => getNombreUsuarioReporta(r)).filter(Boolean))]
+            : [];
+          const usuariosReporta = formatLista(userArr);
+
+          const atencionArr = group.reportes.length > 0
+            ? [...new Set(group.reportes.map(r => r.fecha_atencion ? formatDate(r.fecha_atencion) : null).filter(Boolean))]
+            : [];
+          const fechasAtencion = formatLista(atencionArr);
+
+          dataToExport.push({
+            'No. Reporte': group.key,
+            'Tipo de dispositivo(s)': dispositivos,
+            'Unidad': unidadStr,
+            'Usuario(s) que Reporta(n)': usuariosReporta,
+            'Descripción Equipo': g.bien ? `${g.bien.modelo?.marca?.marca} ${g.bien.modelo?.descrip_disp}` : 'N/A',
+            'Número de Serie': g.bien?.num_serie || 'N/A',
+            'Proveedor': g.proveedorObj?.nombre_proveedor || 'N/A',
+            'Estado Garantía': g.estado_garantia,
+            'Último Estatus': group.estatus,
+            'No. de Serie de Última Pieza Nueva': group.piezaNueva,
+            'Fecha de Atención': fechasAtencion,
+            'Inicio Garantía': formatDate(g.fecha_inicio),
+            'Fin Garantía': formatDate(g.fecha_fin),
+            'Reportes / Bitácora': reportesFormateados
+          });
+        });
+      });
+
+      colWidths = [
+        { wch: 22 }, { wch: 25 }, { wch: 30 }, { wch: 35 }, { wch: 35 }, 
+        { wch: 22 }, { wch: 28 }, { wch: 18 }, { wch: 22 }, { wch: 30 }, 
+        { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 65 }
+      ];
+      sheetName = 'Reportes de Garantía';
+      fileName = 'Reportes_Garantias.xlsx';
  } else {
  return; // No hay exportación para PROVEEDORES u otros tabs en este momento
  }

@@ -19,6 +19,11 @@ export const GET_GARANTIAS = gql`
         num_serie
         num_inv
         clave_modelo
+        unidad {
+          clave
+          descripcion
+          desc_corta
+        }
         modelo {
           descrip_disp
           marca {
