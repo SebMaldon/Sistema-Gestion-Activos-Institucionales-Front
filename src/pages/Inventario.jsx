@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
@@ -2003,16 +2003,19 @@ export default function Inventario() {
                         <div>
                           <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Segmento</label>
                           <MultiSearchableSelect
-                            placeholder={advFilters.clave_unidad_ref.length === 0 ? "Seleccione unidad primero" : "Seleccionar segmentos..."}
+                            placeholder="Seleccionar segmentos..."
                             value={advFilters.id_segmento}
-                            disabled={advFilters.clave_unidad_ref.length === 0}
                             onChange={(val) => { setAdvFilters(p => ({ ...p, id_segmento: val.map(String), id_ubicacion: [] })); setCursor(null); setCursors([]); }}
-                            options={(catalogos?.segmentos ?? [])
-                              .filter(s => advFilters.clave_unidad_ref.length === 0 || advFilters.clave_unidad_ref.includes(String(s.clave)))
-                              .map(s => ({
+                            options={(catalogos?.segmentos ?? []).map(s => {
+                              const base = s.ip ? `${s.ip}/${s.bits || ''} - ${s.nombre}` : (s.nombre || s.clave || s.id_segmento);
+                              const unidadObj = (catalogos?.unidades ?? []).find(un => un.clave === s.clave);
+                              const unidadNombre = unidadObj ? (unidadObj.desc_corta || unidadObj.descripcion) : s.clave;
+                              const label = unidadNombre ? `${base} (Propiedad de: ${unidadNombre})` : base;
+                              return {
                                 value: String(s.id_segmento),
-                                label: s.nombre || s.clave || s.id_segmento
-                              }))}
+                                label
+                              };
+                            })}
                           />
                         </div>
                         <div>
