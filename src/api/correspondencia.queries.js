@@ -17,6 +17,7 @@ export const GET_MESA_CORRESPONDENCIAS = gql`
         cursor
         node {
           Folio
+          Anio
           NoOficio
           FechaRecepcion
           FechaOficio
@@ -53,23 +54,25 @@ export const CREAR_MESA_CORRESPONDENCIA = gql`
   mutation CrearMesaCorrespondencia($input: MesaCorrespondenciaInput!) {
     crearMesaCorrespondencia(input: $input) {
       Folio
+      Anio
       NoOficio
     }
   }
 `;
 
 export const EDITAR_MESA_CORRESPONDENCIA = gql`
-  mutation EditarMesaCorrespondencia($Folio: Int!, $input: MesaCorrespondenciaInput!) {
-    editarMesaCorrespondencia(Folio: $Folio, input: $input) {
+  mutation EditarMesaCorrespondencia($Folio: Int!, $Anio: Int, $input: MesaCorrespondenciaInput!) {
+    editarMesaCorrespondencia(Folio: $Folio, Anio: $Anio, input: $input) {
       Folio
+      Anio
       NoOficio
     }
   }
 `;
 
 export const ELIMINAR_MESA_CORRESPONDENCIA = gql`
-  mutation EliminarMesaCorrespondencia($Folio: Int!) {
-    eliminarMesaCorrespondencia(Folio: $Folio)
+  mutation EliminarMesaCorrespondencia($Folio: Int!, $Anio: Int) {
+    eliminarMesaCorrespondencia(Folio: $Folio, Anio: $Anio)
   }
 `;
 
@@ -88,12 +91,20 @@ export const crearMesaCorrespondencia = async (input) => {
   return crearMesaCorrespondencia;
 };
 
-export const editarMesaCorrespondencia = async (Folio, input) => {
-  const { editarMesaCorrespondencia } = await gqlClient.request(EDITAR_MESA_CORRESPONDENCIA, { Folio, input });
+export const editarMesaCorrespondencia = async (Folio, Anio, input) => {
+  if (typeof Anio === 'object' && !input) {
+    input = Anio;
+    Anio = undefined;
+  }
+  const { editarMesaCorrespondencia } = await gqlClient.request(EDITAR_MESA_CORRESPONDENCIA, { Folio, Anio, input });
   return editarMesaCorrespondencia;
 };
 
-export const eliminarMesaCorrespondencia = async (Folio) => {
-  const { eliminarMesaCorrespondencia } = await gqlClient.request(ELIMINAR_MESA_CORRESPONDENCIA, { Folio });
+export const eliminarMesaCorrespondencia = async (Folio, Anio) => {
+  if (typeof Folio === 'object' && Folio !== null && Folio.Folio !== undefined) {
+    Anio = Folio.Anio;
+    Folio = Folio.Folio;
+  }
+  const { eliminarMesaCorrespondencia } = await gqlClient.request(ELIMINAR_MESA_CORRESPONDENCIA, { Folio, Anio });
   return eliminarMesaCorrespondencia;
 };

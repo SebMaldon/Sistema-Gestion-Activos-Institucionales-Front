@@ -13,11 +13,13 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
     const queryClient = useQueryClient();
     const { showToast } = useApp();
     const usuario = useAuthStore((s) => s.usuario);
+    const isMaestroAdmin = usuario?.id_rol === 1 || usuario?.id_rol === 2;
     const [isManualFolio, setIsManualFolio] = useState(!!initialData);
     const [isManualNoOficio, setIsManualNoOficio] = useState(!!initialData);
 
     const [formData, setFormData] = useState({
         Folio: '',
+        Anio: new Date().getFullYear(),
         Tipo: 1, // 1: Enviada, 2: Recibida
         NoOficio: '',
         FechaOficio: new Date().toISOString().split('T')[0],
@@ -72,7 +74,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
     });
 
     const editMutation = useMutation({
-        mutationFn: (data) => editarMesaCorrespondencia(initialData.Folio, data),
+        mutationFn: (data) => editarMesaCorrespondencia(initialData.Folio, initialData.Anio, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['mesaCorrespondencias'] });
             showToast('Registro actualizado exitosamente', 'success');
@@ -93,6 +95,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
             if (initialData) {
                 setFormData({
                     Folio: initialData.Folio || '',
+                    Anio: initialData.Anio || new Date().getFullYear(),
                     Tipo: initialData.Tipo,
                     NoOficio: initialData.NoOficio || '',
                     FechaOficio: initialData.FechaOficio ? new Date(initialData.FechaOficio).toISOString().split('T')[0] : '',
@@ -105,6 +108,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
             } else {
                 setFormData({
                     Folio: '',
+                    Anio: new Date().getFullYear(),
                     Tipo: 1,
                     NoOficio: '',
                     FechaOficio: new Date().toISOString().split('T')[0],
@@ -122,7 +126,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'Tipo' || name === 'Archivo' || name === 'Folio' ? parseInt(value) || value : value,
+            [name]: name === 'Tipo' || name === 'Archivo' || name === 'Folio' || name === 'Anio' ? parseInt(value) || value : value,
             ...(name === 'Clave_unidad' ? { id_ubicacion: '' } : {})
         }));
     };
@@ -153,6 +157,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
 
         const input = {
             Folio: formData.Folio ? parseInt(formData.Folio) : undefined,
+            Anio: parseInt(formData.Anio) || new Date().getFullYear(),
             Tipo: formData.Tipo,
             NoOficio: formData.NoOficio?.trim() || undefined,
             FechaOficio: new Date(formData.FechaOficio).toISOString(),
@@ -170,6 +175,8 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
         }
     };
 
+    const aniosDisponibles = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + 1 - i);
+
     return (
         <Dialog.Root open={isOpen} onOpenChange={onClose}>
             <Dialog.Portal>
@@ -179,7 +186,7 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
                     <div className="bg-[#00472e] dark:bg-[#002618] p-5 flex justify-between items-center text-white shrink-0">
                         <div>
                             <Dialog.Title className="text-xl font-bold">{initialData ? 'Editar Correspondencia' : 'Control de Correspondencia'}</Dialog.Title>
-                            <p className="text-green-100 text-sm mt-1">{initialData ? `Editando folio ${initialData.Folio}` : 'Registrar un nuevo oficio o correspondencia'}</p>
+                            <p className="text-green-100 text-sm mt-1">{initialData ? `Editando folio ${initialData.Folio} (${initialData.Anio || 'Sin Año'})` : 'Registrar un nuevo oficio o correspondencia'}</p>
                         </div>
                         <Dialog.Close asChild>
                             <button className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
@@ -189,6 +196,33 @@ export default function FormCorrespondenciaModal({ isOpen, onClose, initialData 
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-5">
+                        {isMaestroAdmin && (
+                            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
+                                <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                                    <span className="text-base">🛡️</span>
+                                    <div>
+                                        <span className="font-semibold block sm:inline">Control de Foliaje Maestro:</span>{' '}
+                                        <span className="text-amber-700 dark:text-amber-300 text-xs sm:text-sm">
+                                            Seleccione el Año para continuar o reiniciar el consecutivo de folios y oficios.
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                                    <label className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">Año:</label>
+                                    <select
+                                        name="Anio"
+                                        value={formData.Anio}
+                                        onChange={handleChange}
+                                        className="bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 text-amber-950 dark:text-white font-bold rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 shadow-sm"
+                                    >
+                                        {aniosDisponibles.map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="flex items-center justify-between text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
