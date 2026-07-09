@@ -46,7 +46,7 @@ export default function Correspondencia() {
  };
 
  // Estado de filtros
- const [filters, setFilters] = useState({ Tipo: '', NoOficio: '', Folio: '', PalabraClave: '' });
+ const [filters, setFilters] = useState({ Tipo: '', NoOficio: '', Folio: '', Anio: '', PalabraClave: '' });
  const [activeFilters, setActiveFilters] = useState({});
  const [dateFilterType, setDateFilterType] = useState('NONE');
  const [startDate, setStartDate] = useState('');
@@ -75,7 +75,7 @@ export default function Correspondencia() {
  const totalPages = pageInfo?.totalCount ? Math.max(1, Math.ceil(pageInfo.totalCount / PAGE_SIZE)) : 1;
 
  const deleteMutation = useMutation({
- mutationFn: eliminarMesaCorrespondencia,
+ mutationFn: (params) => eliminarMesaCorrespondencia(params.Folio, params.Anio),
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ['mesaCorrespondencias'] });
  showToast('Registro eliminado exitosamente', 'success');
@@ -92,7 +92,7 @@ export default function Correspondencia() {
 
  const handleConfirmDelete = () => {
  if (recordToDelete) {
- deleteMutation.mutate(recordToDelete.Folio);
+ deleteMutation.mutate({ Folio: recordToDelete.Folio, Anio: recordToDelete.Anio });
  setIsDeleteModalOpen(false);
  setRecordToDelete(null);
  }
@@ -130,6 +130,7 @@ export default function Correspondencia() {
  if (filters.Tipo) newFilters.Tipo = parseInt(filters.Tipo);
  if (filters.NoOficio) newFilters.NoOficio = filters.NoOficio;
  if (filters.Folio) newFilters.Folio = parseInt(filters.Folio);
+ if (filters.Anio) newFilters.Anio = parseInt(filters.Anio);
  if (filters.PalabraClave) newFilters.PalabraClave = filters.PalabraClave;
  if (dateFilterType !== 'NONE' && (startDate || endDate)) {
    newFilters.DateFilterType = dateFilterType;
@@ -215,6 +216,17 @@ export default function Correspondencia() {
   />
   </div>
   <div className="flex gap-2 w-full sm:w-auto">
+  <select
+  name="Anio"
+  value={filters.Anio}
+  onChange={handleFilterChange}
+  className="w-full sm:w-32 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+  >
+  <option value="">Todos los años</option>
+  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + 1 - i).map(y => (
+  <option key={y} value={y}>Año {y}</option>
+  ))}
+  </select>
   <input
   type="text"
   name="NoOficio"
@@ -321,8 +333,17 @@ export default function Correspondencia() {
  </thead>
  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
  {correspondencias.map(corr => (
- <tr key={corr.Folio} className="hover:bg-gray-50 dark:hover:bg-gray-800/50/80 dark:hover:bg-gray-700/80 transition-colors group">
- <td className="px-3 py-2.5 font-bold text-gray-800 dark:text-gray-200 ">{corr.Folio}</td>
+ <tr key={`${corr.Anio}-${corr.Folio}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50/80 dark:hover:bg-gray-700/80 transition-colors group">
+ <td className="px-3 py-2.5 font-bold text-gray-800 dark:text-gray-200 ">
+  <div className="flex flex-col">
+    <span>#{corr.Folio}</span>
+    {corr.Anio && (
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/60 text-green-700 dark:text-green-300 font-bold border border-green-200 dark:border-green-800 w-fit mt-0.5">
+        {corr.Anio}
+      </span>
+    )}
+  </div>
+ </td>
  <td className="px-3 py-2.5 text-blue-600 dark:text-blue-400 font-semibold">
  <HighlightText text={corr.NoOficio || '—'} highlight={activeFilters.NoOficio || activeFilters.PalabraClave} />
  </td>
