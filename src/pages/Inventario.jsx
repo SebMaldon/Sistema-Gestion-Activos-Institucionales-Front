@@ -1126,6 +1126,8 @@ export default function Inventario() {
   // ── Estado para Impresión ─────────────────────────────────────────────────
   const [printSelectedBienes, setPrintSelectedBienes] = useState([]);
   const [printStartOffset, setPrintStartOffset] = useState(0);
+  const [printShowUnidades, setPrintShowUnidades] = useState(true);
+  const [printShowUbicaciones, setPrintShowUbicaciones] = useState(true);
 
   // ── Estado para Exportar y Reporte ───────────────────────────────────────
   const [showExportModal, setShowExportModal] = useState(false);
@@ -2317,6 +2319,10 @@ export default function Inventario() {
                   setSelectedBienes={setPrintSelectedBienes}
                   startOffset={printStartOffset}
                   setStartOffset={setPrintStartOffset}
+                  showUnidades={printShowUnidades}
+                  setShowUnidades={setPrintShowUnidades}
+                  showUbicaciones={printShowUbicaciones}
+                  setShowUbicaciones={setPrintShowUbicaciones}
                   pageInfo={pageInfo}
                   cursors={cursors}
                   onNextPage={handleNextPage}
@@ -3329,7 +3335,12 @@ export default function Inventario() {
           type="warning"
         />
       </div>
-      <PrintStickerSheet items={printSelectedBienes} startOffset={printStartOffset} />
+      <PrintStickerSheet 
+        items={printSelectedBienes} 
+        startOffset={printStartOffset}
+        showUnidades={printShowUnidades}
+        showUbicaciones={printShowUbicaciones}
+      />
     </>
   );
 }

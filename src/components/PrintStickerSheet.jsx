@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 
-export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
+export default function PrintStickerSheet({ items = [], startOffset = 0, showUnidades = true, showUbicaciones = true }) {
  // Combine offsets and items into a single array of cells
  const cells = [
  ...Array(startOffset).fill(null),
@@ -18,7 +18,7 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
  if (pages.length === 0) return null;
 
  return ReactDOM.createPortal(
- <div className="print-only">
+ <div className="print-only" id="print-labels-portal">
  {pages.map((pageCells, pageIndex) => (
  <div
  key={pageIndex}
@@ -64,7 +64,14 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
                     ).trim();
                     const esDelegacion = claveUnidad === '199001';
                     const textoUnidad = bien.unidadFisica || bien.unidad?.desc_corta || bien.unidad?.descripcion || bien.originalNode?.unidad?.desc_corta || bien.originalNode?.unidad?.descripcion || '';
-                    const mostrarUnidad = !esDelegacion && textoUnidad && textoUnidad !== 'Sin Unidad';
+                    const mostrarUnidad = showUnidades && !esDelegacion && Boolean(textoUnidad && textoUnidad !== 'Sin Unidad');
+                    const mostrarUbicacion = showUbicaciones;
+
+                    const hasBoth = mostrarUnidad && mostrarUbicacion;
+                    const hasOnlyOne = (mostrarUnidad && !mostrarUbicacion) || (!mostrarUnidad && mostrarUbicacion);
+                    const hasNeither = !mostrarUnidad && !mostrarUbicacion;
+
+                    const fontSizeSerieInv = hasBoth ? '7.5pt' : hasOnlyOne ? '8.5pt' : '9.5pt';
 
                     return (
                       <>
@@ -74,7 +81,7 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
                           level="H" 
                           includeMargin={false} 
                         />
-                        <div style={{ flex: 1, minWidth: 0, fontSize: '8pt', lineHeight: 1.2, fontFamily: 'sans-serif', color: 'black' }}>
+                        <div style={{ flex: 1, minWidth: 0, fontSize: '8pt', lineHeight: 1.25, fontFamily: 'sans-serif', color: 'black', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           {mostrarUnidad && (
                             <div style={{ 
                               fontWeight: 'bold', 
@@ -82,28 +89,30 @@ export default function PrintStickerSheet({ items = [], startOffset = 0 }) {
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              marginBottom: '1px',
+                              marginBottom: mostrarUbicacion ? '1px' : '3px',
                               borderBottom: '1.5px solid #000',
                               paddingBottom: '1px'
                             }}>
                               {textoUnidad}
                             </div>
                           )}
-                          <div style={{ 
-                            fontWeight: mostrarUnidad ? '600' : 'bold', 
-                            fontSize: mostrarUnidad ? '8pt' : '9pt', 
-                            display: '-webkit-box',
-                            WebkitLineClamp: mostrarUnidad ? 1 : 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            marginBottom: '2px'
-                          }}>
-                            {bien.ubicacion || 'Sin Ubicación'}
-                          </div>
-                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: mostrarUnidad ? '7.5pt' : '8pt' }}>
+                          {mostrarUbicacion && (
+                            <div style={{ 
+                              fontWeight: mostrarUnidad ? '600' : 'bold', 
+                              fontSize: mostrarUnidad ? '8pt' : '9pt', 
+                              display: '-webkit-box',
+                              WebkitLineClamp: mostrarUnidad ? 1 : 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              marginBottom: '2px'
+                            }}>
+                              {bien.ubicacion || 'Sin Ubicación'}
+                            </div>
+                          )}
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: fontSizeSerieInv, fontWeight: hasNeither ? '600' : 'normal', marginTop: hasNeither ? '1px' : '0' }}>
                             S/N: {bien.numSerie && bien.numSerie !== 'N/D' ? bien.numSerie : 'N/A'}
                           </div>
-                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: mostrarUnidad ? '7.5pt' : '8pt' }}>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: fontSizeSerieInv, fontWeight: hasNeither ? '600' : 'normal' }}>
                             Inv: {bien.numInv && bien.numInv !== 'N/D' ? bien.numInv : 'N/A'}
                           </div>
                         </div>
