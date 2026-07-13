@@ -29,6 +29,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
  const [unidadId, setUnidadId] = useState('');
  const [alias, setAlias] = useState('');
  const [requerimiento, setRequerimiento] = useState('');
+ const [numeroIncidencia, setNumeroIncidencia] = useState('');
 
  const [errors, setErrors] = useState({});
 
@@ -39,6 +40,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
  setDescripcion(incidencia.falla ?? '');
  setAlias(incidencia.alias ?? '');
  setRequerimiento(incidencia.requerimiento ?? '');
+ setNumeroIncidencia(incidencia.numero_incidencia ?? '');
  setErrors({});
 
  // Resolver el id_unidad desde el objeto que viene del mapIncidenciaNode o _raw
@@ -80,6 +82,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
  id_unidad: unidadId || undefined,
  alias: alias,
  requerimiento: requerimiento,
+ numero_incidencia: numeroIncidencia.trim() || null,
  });
  onUpdated?.();
  onClose();
@@ -87,7 +90,7 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
  const msg = err?.response?.errors?.[0]?.message || 'Error al actualizar la incidencia';
  setErrors(prev => ({ ...prev, global: msg }));
  }
- }, [incidencia, idTipo, descripcion, unidadId, alias, requerimiento, updateIncidencia, onUpdated, onClose, validate]);
+ }, [incidencia, idTipo, descripcion, unidadId, alias, requerimiento, numeroIncidencia, updateIncidencia, onUpdated, onClose, validate]);
 
  if (!isOpen || !incidencia) return null;
 
@@ -197,8 +200,17 @@ export default function EditarIncidenciaModal({ isOpen, onClose, onUpdated, inci
  />
  </div>
 
-
-
+ {/* Número de Incidencia */}
+ <div className="sm:col-span-2">
+ <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Núm. Incidencia (Ej: INC-1231)</label>
+ <input
+ type="text"
+ value={numeroIncidencia}
+ onChange={(e) => setNumeroIncidencia(e.target.value)}
+ placeholder="INC-0000"
+ className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white dark:bg-gray-800 font-mono"
+ />
+ </div>
 
  </div>
 

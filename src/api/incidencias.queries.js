@@ -8,6 +8,7 @@ export const UPDATE_INCIDENCIA_MUTATION = gql`
     $id_unidad: String
     $alias: String
     $requerimiento: String
+    $numero_incidencia: String
   ) {
     updateIncidencia(
       id_incidencia: $id_incidencia
@@ -16,6 +17,7 @@ export const UPDATE_INCIDENCIA_MUTATION = gql`
       id_unidad: $id_unidad
       alias: $alias
       requerimiento: $requerimiento
+      numero_incidencia: $numero_incidencia
     ) {
       id_incidencia
       id_tipo_incidencia
@@ -23,6 +25,7 @@ export const UPDATE_INCIDENCIA_MUTATION = gql`
       id_unidad
       alias
       requerimiento
+      numero_incidencia
       estatus_reparacion
     }
   }
@@ -69,6 +72,7 @@ export const GET_INCIDENCIAS_QUERY = gql`
           fecha_resolucion
           alias
           requerimiento
+          numero_incidencia
           id_unidad
           tipoIncidencia {
             id_tipo_incidencia
@@ -129,6 +133,7 @@ export const GET_INCIDENCIA_BY_ID_QUERY = gql`
       fecha_resolucion
       alias
       requerimiento
+      numero_incidencia
       id_unidad
       tipoIncidencia {
         id_tipo_incidencia
@@ -244,6 +249,7 @@ export const CREATE_INCIDENCIA_MUTATION = gql`
     $id_unidad: String
     $alias: String
     $requerimiento: String
+    $numero_incidencia: String
   ) {
     createIncidencia(
       id_bien: $id_bien
@@ -252,6 +258,7 @@ export const CREATE_INCIDENCIA_MUTATION = gql`
       id_unidad: $id_unidad
       alias: $alias
       requerimiento: $requerimiento
+      numero_incidencia: $numero_incidencia
     ) {
       id_incidencia
       estatus_reparacion

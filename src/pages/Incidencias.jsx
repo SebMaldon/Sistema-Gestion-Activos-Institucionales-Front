@@ -187,21 +187,38 @@ const IncidenciaCard = memo(function IncidenciaCard({
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {inc.requerimiento && (
-            <div 
-              onClick={(e) => {
-                e.stopPropagation();
-                copyTextToClipboard(inc.requerimiento);
-                showToast('Requerimiento copiado', 'success');
-              }}
-              className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 dark:text-blue-300 font-bold px-2.5 py-1 rounded-lg border border-blue-100 dark:border-blue-800/50 hover:bg-blue-100 hover:text-blue-800 dark:text-blue-300 transition-all cursor-pointer shadow-sm"
-              title="Copiar Requerimiento"
-            >
-              <span>REQ: {highlightText(inc.requerimiento, searchTerm)}</span>
- <Copy size={12} className="shrink-0" />
- </div>
- )}
+        <div className="flex items-start gap-2 shrink-0">
+          {/* Badges apilados: INC arriba, REQ abajo */}
+          <div className="flex flex-col items-end gap-1.5">
+            {inc.numero_incidencia && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyTextToClipboard(inc.numero_incidencia);
+                  showToast('Número de incidencia copiado', 'success');
+                }}
+                className="flex items-center gap-1.5 text-xs bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 font-bold px-2.5 py-1 rounded-lg border border-purple-100 dark:border-purple-800/50 hover:bg-purple-100 transition-all cursor-pointer shadow-sm"
+                title="Copiar Número de Incidencia"
+              >
+                <span>{highlightText(inc.numero_incidencia, searchTerm)}</span>
+                <Copy size={12} className="shrink-0" />
+              </div>
+            )}
+            {inc.requerimiento && (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyTextToClipboard(inc.requerimiento);
+                  showToast('Requerimiento copiado', 'success');
+                }}
+                className="flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 dark:text-blue-300 font-bold px-2.5 py-1 rounded-lg border border-blue-100 dark:border-blue-800/50 hover:bg-blue-100 hover:text-blue-800 dark:text-blue-300 transition-all cursor-pointer shadow-sm"
+                title="Copiar Requerimiento"
+              >
+                <span>REQ: {highlightText(inc.requerimiento, searchTerm)}</span>
+                <Copy size={12} className="shrink-0" />
+              </div>
+            )}
+          </div>
 
  {(canEdit || canDelete) && (
  <div className="relative">
@@ -240,10 +257,16 @@ const IncidenciaCard = memo(function IncidenciaCard({
 
  {/* Contenido Principal */}
  <div className="space-y-3">
- <div className="flex flex-wrap gap-2">
+ <div className="flex flex-wrap gap-2 items-center">
  <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full border shadow-sm transition-all group-hover:shadow-md ${colConfig.bgClass} ${colConfig.colorClass} ${colConfig.borderClass}`}>
  {inc.tipoIncidencia}
  </span>
+ {(inc.estatus === 'Resuelto' || inc.estatus === 'Cerrado') && inc.fechaResolucion && (
+   <span className="flex items-center gap-1 text-[10px] font-black text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full border border-green-200 dark:border-green-800/50 shadow-sm">
+     <CheckCircle size={10} className="shrink-0" />
+     {inc.fechaResolucion}
+   </span>
+ )}
  </div>
  
       <div className="flex gap-2.5 items-start bg-gray-50/30 dark:bg-gray-900/20 p-2.5 rounded-xl border border-gray-50 dark:border-gray-800/50 group-hover:bg-white dark:bg-gray-800 group-hover:border-gray-100 dark:border-gray-800 transition-all">
@@ -435,18 +458,16 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  if (fechaHasta) f_resolucion_hasta = new Date(fechaHasta + 'T23:59:59').toISOString();
  }
 
- const limit = data?.pageInfo?.totalCount || 5000;
- 
- const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
- estatus_reparacion: estatusFiltro || undefined,
- search: debouncedSearch || undefined,
- fecha_creacion_desde: f_creacion_desde,
- fecha_creacion_hasta: f_creacion_hasta,
- fecha_resolucion_desde: f_resolucion_desde,
- fecha_resolucion_hasta: f_resolucion_hasta,
- first: limit === 0 ? 1 : limit,
- page: 1,
- });
+  const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
+  estatus_reparacion: estatusFiltro || undefined,
+  search: debouncedSearch || undefined,
+  fecha_creacion_desde: f_creacion_desde,
+  fecha_creacion_hasta: f_creacion_hasta,
+  fecha_resolucion_desde: f_resolucion_desde,
+  fecha_resolucion_hasta: f_resolucion_hasta,
+  first: 99999,
+  page: 1,
+  });
 
  const items = res.incidencias.edges.map(e => mapIncidenciaNode(e.node));
 

@@ -41,6 +41,7 @@ export function mapIncidenciaNode(node) {
     unidad: node.unidad?.descripcion || node.bien?.unidad?.descripcion || '',
     alias: node.alias || '',
     requerimiento: node.requerimiento || '',
+    numero_incidencia: node.numero_incidencia || '',
     fecha: (() => {
       const d = parseServerDate(node.fecha_reporte);
       return d ? d.toLocaleDateString('es-MX') : '';

@@ -118,6 +118,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
  const [unidadId, setUnidadId] = useState('');
  const [alias, setAlias] = useState('');
  const [requerimiento, setRequerimiento] = useState('');
+ const [numeroIncidencia, setNumeroIncidencia] = useState('');
 
  // ── Estado Sección 3: Estatus y Resolución ──
  const [estatus, setEstatus] = useState('Pendiente');
@@ -154,7 +155,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
  if (!isOpen) {
  setNumSerieInput(''); setNumSerie(''); setEquipoEncontrado(null);
  setTipoIncidencia(''); setNuevoTipo(''); setIsAddingTipo(false);
- setDescripcion(''); setUnidadId(''); setAlias(''); setRequerimiento('');
+ setDescripcion(''); setUnidadId(''); setAlias(''); setRequerimiento(''); setNumeroIncidencia('');
  setEstatus('Pendiente'); setNotaSeguimiento(''); setResolucionTextual('');
  setErrors({});
  }
@@ -217,6 +218,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
  id_unidad: unidadId || undefined,
  alias,
  requerimiento,
+ numero_incidencia: numeroIncidencia.trim() || undefined,
  });
 
  const idNueva = result.createIncidencia.id_incidencia;
@@ -418,7 +420,7 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
  </div>
 
  {/* Requerimiento */}
- <div className="md:col-span-2">
+ <div className="md:col-span-1">
  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Requerimiento (Folio/Ticket)</label>
  <input
  type="text"
@@ -429,10 +431,20 @@ export default function IncidenciaModal({ isOpen, onClose, onCreated }) {
  />
  </div>
 
-
+ {/* Número de Incidencia */}
+ <div className="md:col-span-1">
+ <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Núm. Incidencia (Ej: INC-1231)</label>
+ <input
+ type="text"
+ value={numeroIncidencia}
+ onChange={(e) => setNumeroIncidencia(e.target.value)}
+ placeholder="INC-0000"
+ className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+ />
+ </div>
 
  {/* Unidad */}
- <div className="md:col-span-2">
+ <div className="md:col-span-3">
  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
  Unidad
  {equipoEncontrado?.unidad?.nombre && (
