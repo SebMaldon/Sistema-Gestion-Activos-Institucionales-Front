@@ -87,43 +87,40 @@ function lightenHex(hex, amount = 0.45) {
 
 // ─── Barra horizontal segmentada por tipo de dispositivo ─────────────────────
 function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
- const unidadData = allUnits?.find(u => u.jefatura === selectedDrilldownUnit);
- const clave = unidadData?.clave;
+  const drilldownData = React.useMemo(() => {
+    if (!metricsRawData || !selectedDrilldownUnit) return [];
+    const typeMap = {};
+    
+    metricsRawData.forEach(row => {
+      // Filtrar por la unidad seleccionada
+      if (row.jefatura !== selectedDrilldownUnit) return;
 
- const drilldownData = React.useMemo(() => {
- if (!metricsRawData || !selectedDrilldownUnit) return [];
- const typeMap = {};
- 
- metricsRawData.forEach(row => {
- // Filtrar por la unidad seleccionada
- if (row.jefatura !== selectedDrilldownUnit) return;
+      const t = row.nombre_tipo || 'Otro';
+      const st = (row.estatus_operativo || '').toUpperCase();
+      const isValid = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO' || st === 'INACTIVO';
 
- const isMonitor = String(row.tipo_disp) === '12' || (row.nombre_tipo || '').toUpperCase().includes('MONITOR');
- if (isMonitor) return;
+      if (!isValid) return;
 
- const t = row.nombre_tipo || 'Otro';
- const st = (row.estatus_operativo || '').toUpperCase();
- const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+      if (!typeMap[t]) typeMap[t] = { activo: 0, prestamo: 0, inactivo: 0 };
+      if (st === 'PRÉSTAMO' || st === 'PRESTAMO') {
+        typeMap[t].prestamo += row.count;
+      } else if (st === 'INACTIVO') {
+        typeMap[t].inactivo += row.count;
+      } else {
+        typeMap[t].activo += row.count;
+      }
+    });
 
- if (!isActive) return;
-
- if (!typeMap[t]) typeMap[t] = { activo: 0, prestamo: 0 };
- if (st === 'PRÉSTAMO' || st === 'PRESTAMO') {
- typeMap[t].prestamo += row.count;
- } else {
- typeMap[t].activo += row.count;
- }
- });
-
- return Object.entries(typeMap)
- .map(([tipo, { activo, prestamo }]) => ({
- tipo,
- activo,
- prestamo,
- count: activo + prestamo,
- }))
- .sort((a, b) => b.count - a.count);
- }, [metricsRawData, selectedDrilldownUnit]);
+    return Object.entries(typeMap)
+      .map(([tipo, { activo, prestamo, inactivo }]) => ({
+        tipo,
+        activo,
+        prestamo,
+        inactivo,
+        count: activo + prestamo + (inactivo || 0),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [metricsRawData, selectedDrilldownUnit]);
 
  const total = drilldownData.reduce((s, d) => s + d.count, 0);
  const totalPrestamo = drilldownData.reduce((s, d) => s + (d.prestamo || 0), 0);
@@ -143,23 +140,28 @@ function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
  <div className="flex items-center gap-3 flex-shrink-0">
  <div className="flex items-center gap-1.5">
  <div className="w-4 h-3 rounded-sm bg-gray-800" />
- <span className="text-xs text-gray-500 dark:text-gray-400 ">Activo</span>
+ <span className="text-xs text-gray-500 dark:text-gray-400">Activo</span>
  </div>
  <div className="flex items-center gap-1.5">
  <div className="w-4 h-3 rounded-sm" style={{ background: 'repeating-linear-gradient(45deg, #9ca3af 0px, #9ca3af 2px, #e5e7eb 2px, #e5e7eb 6px)' }} />
- <span className="text-xs text-gray-500 dark:text-gray-400 ">Préstamo</span>
+ <span className="text-xs text-gray-500 dark:text-gray-400">Préstamo</span>
+ </div>
+ <div className="flex items-center gap-1.5">
+ <div className="w-4 h-3 rounded-sm bg-gray-400 dark:bg-gray-600" />
+ <span className="text-xs text-gray-500 dark:text-gray-400">Inactivo</span>
  </div>
  </div>
  </div>
 
  {drilldownData.length > 0 ? (
  <>
- {/* ── Barra única horizontal: cada tipo tiene 2 sub-segmentos ── */}
+ {/* ── Barra única horizontal ── */}
  <div className="relative w-full h-11 rounded-xl overflow-hidden flex mb-1 shadow-sm" style={{ background: '#f3f4f6' }}>
  {drilldownData.map((item, idx) => {
  const typePct = total > 0 ? (item.count / total) * 100 : 0;
  const activoPct = item.count > 0 ? (item.activo / item.count) * 100 : 0;
  const prestamoPct = item.count > 0 ? (item.prestamo / item.count) * 100 : 0;
+ const inactivoPct = item.count > 0 ? (item.inactivo / item.count) * 100 : 0;
  const baseColor = DEVICE_COLORS[idx % DEVICE_COLORS.length];
  const lightColor = lightenHex(baseColor, 0.45);
  const isHov = hovered === idx;
@@ -167,7 +169,7 @@ function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
  return (
  <div
  key={item.tipo}
- title={`${item.tipo}\nActivos: ${item.activo} | Préstamo: ${item.prestamo}`}
+ title={`${item.tipo}\nActivos: ${item.activo} | Préstamo: ${item.prestamo} | Inactivos: ${item.inactivo}`}
  onMouseEnter={() => setHovered(idx)}
  onMouseLeave={() => setHovered(null)}
  style={{
@@ -206,6 +208,24 @@ function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
  {prestamoPct >= 10 && typePct >= 8 && (
  <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, userSelect: 'none', textShadow: '0 0 3px rgba(0,0,0,0.5)' }} className="truncate px-0.5">
  {item.prestamo}
+ </span>
+ )}
+ </div>
+ )}
+ {/* Sub-bloque INACTIVO */}
+ {item.inactivo > 0 && (
+ <div
+ style={{
+ width: `${inactivoPct}%`,
+ minWidth: '2px',
+ backgroundColor: '#9ca3af',
+ transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)'
+ }}
+ className="flex items-center justify-center overflow-hidden"
+ >
+ {inactivoPct >= 10 && typePct >= 8 && (
+ <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, userSelect: 'none' }} className="truncate px-0.5">
+ {item.inactivo}
  </span>
  )}
  </div>
@@ -253,11 +273,11 @@ function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
  {item.count}
  <span className="text-xs font-normal text-gray-400 ml-1">en total</span>
  </p>
- {/* Desglose activo / préstamo */}
+ {/* Desglose activo / préstamo / inactivo */}
  <div className="flex flex-wrap gap-x-3 gap-y-0.5">
  <div className="flex items-center gap-1">
  <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: baseColor }} />
- <span className="text-xs text-gray-600 dark:text-gray-400 ">{item.activo} activos</span>
+ <span className="text-xs text-gray-600 dark:text-gray-400">{item.activo} activos</span>
  </div>
  {item.prestamo > 0 ? (
  <div className="flex items-center gap-1">
@@ -266,6 +286,12 @@ function DeviceTypeBar({ selectedDrilldownUnit, allUnits, metricsRawData }) {
  </div>
  ) : (
  <span className="text-xs text-gray-300">sin préstamos</span>
+ )}
+ {item.inactivo > 0 && (
+ <div className="flex items-center gap-1">
+ <div className="w-2 h-2 rounded-sm flex-shrink-0 bg-gray-400 dark:bg-gray-500" />
+ <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{item.inactivo} inactivos</span>
+ </div>
  )}
  </div>
  </div>
@@ -380,25 +406,24 @@ export default function Dashboard() {
 
  // --- CHART LOGIC ---
  const allUnits = useMemo(() => {
- if (!metricsRawData) return [];
- 
- const unitMap = {};
- metricsRawData.forEach(row => {
- const isMonitor = String(row.tipo_disp) === '12' || (row.nombre_tipo || '').toUpperCase().includes('MONITOR');
- const st = row.estatus_operativo || '';
- const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
- 
- if (!isMonitor && isActive) {
- const u = row.jefatura || 'Sin Unidad';
- if (!unitMap[u]) {
- unitMap[u] = { jefatura: u, clave: row.clave_unidad, equipos: 0 };
- }
- unitMap[u].equipos += row.count;
- }
- });
+    if (!metricsRawData) return [];
+    
+    const unitMap = {};
+    metricsRawData.forEach(row => {
+      const st = row.estatus_operativo || '';
+      const isActive = st === 'ACTIVO' || st === 'PRESTAMO' || st === 'PRÉSTAMO';
+      
+      if (isActive) {
+        const u = row.jefatura || 'Sin Unidad';
+        if (!unitMap[u]) {
+          unitMap[u] = { jefatura: u, clave: row.clave_unidad, equipos: 0 };
+        }
+        unitMap[u].equipos += row.count;
+      }
+    });
 
- return Object.values(unitMap).sort((a, b) => b.equipos - a.equipos);
- }, [metricsRawData]);
+    return Object.values(unitMap).sort((a, b) => b.equipos - a.equipos);
+  }, [metricsRawData]);
 
  const [selectedUnits, setSelectedUnits] = useState([]);
  const [selectedDrilldownUnit, setSelectedDrilldownUnit] = useState(null);
