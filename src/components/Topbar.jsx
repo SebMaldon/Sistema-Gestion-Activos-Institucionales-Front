@@ -35,15 +35,17 @@ export default function Topbar() {
  const RoleIcon = rolConf.icon;
 
  const cargarNotificaciones = async () => {
- try {
- const res = await gqlClient.request(OBTENER_MIS_NOTIFICACIONES, { mostrarOcultas: false });
- setNotificaciones(res.misNotificaciones || []);
- const countRes = await gqlClient.request(NOTIFICACIONES_NO_LEIDAS_QUERY);
- setNoLeidas(countRes.notificacionesNoLeidas ?? 0);
- } catch (err) {
- console.error('Error cargando notificaciones:', err);
- }
- };
+    try {
+      const [res, countRes] = await Promise.all([
+        gqlClient.request(OBTENER_MIS_NOTIFICACIONES, { mostrarOcultas: false }),
+        gqlClient.request(NOTIFICACIONES_NO_LEIDAS_QUERY)
+      ]);
+      setNotificaciones(res.misNotificaciones || []);
+      setNoLeidas(countRes.notificacionesNoLeidas ?? 0);
+    } catch (err) {
+      console.error('Error cargando notificaciones:', err);
+    }
+  };
 
  useEffect(() => {
  cargarNotificaciones();
@@ -51,50 +53,61 @@ export default function Topbar() {
  return () => clearInterval(interval);
  }, []);
 
- const handleMarcarLeida = async (idNotif) => {
- try {
- await gqlClient.request(MARCAR_LEIDA_MUTATION, { idNotificacion: parseInt(idNotif, 10) });
- cargarNotificaciones();
- } catch (err) {
- console.error(err);
- }
- };
-
  const handleNotificationClick = async (n) => {
- await handleMarcarLeida(n.id_notificacion);
- setShowNotif(false);
- 
- const titulo = (n.titulo || '').toLowerCase();
- const mensaje = (n.mensaje || '').toLowerCase();
+    setShowNotif(false);
+    
+    // Optimistic UI
+    if (!n.leida) {
+      setNotificaciones(prev => prev.map(x => x.id_notificacion === n.id_notificacion ? { ...x, leida: true } : x));
+      setNoLeidas(prev => Math.max(0, prev - 1));
+      
+      // Fire and forget
+      gqlClient.request(MARCAR_LEIDA_MUTATION, { idNotificacion: parseInt(n.id_notificacion, 10) }).catch(console.error);
+    }
 
- if (titulo.includes('solicitud') || titulo.includes('cambio') || mensaje.includes('solicitud') || mensaje.includes('cambio')) {
- navigate('/aprobaciones');
- } else if (titulo.includes('incidencia') || mensaje.includes('incidencia')) {
- navigate('/incidencias');
- } else if (titulo.includes('garantía') || mensaje.includes('garantía') || titulo.includes('garantia') || mensaje.includes('garantia')) {
- navigate('/garantias');
- }
- };
+    const titulo = (n.titulo || '').toLowerCase();
+    const mensaje = (n.mensaje || '').toLowerCase();
+
+    if (titulo.includes('solicitud') || titulo.includes('cambio') || mensaje.includes('solicitud') || mensaje.includes('cambio')) {
+      navigate('/aprobaciones');
+    } else if (titulo.includes('incidencia') || mensaje.includes('incidencia')) {
+      navigate('/incidencias');
+    } else if (titulo.includes('garantía') || mensaje.includes('garantía') || titulo.includes('garantia') || mensaje.includes('garantia')) {
+      navigate('/garantias');
+    }
+  };
 
  const handleOcultar = async (e, idNotif) => {
- e.preventDefault();
- e.stopPropagation();
- try {
- await gqlClient.request(OCULTAR_NOTIFICACION_MUTATION, { idNotificacion: parseInt(idNotif, 10) });
- cargarNotificaciones();
- } catch (err) {
- console.error('Error al ocultar notificacion:', err);
- }
- };
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Optimistic UI
+    const targetNotif = notificaciones.find(x => x.id_notificacion === idNotif);
+    setNotificaciones(prev => prev.filter(x => x.id_notificacion !== idNotif));
+    if (targetNotif && !targetNotif.leida) {
+      setNoLeidas(prev => Math.max(0, prev - 1));
+    }
+
+    try {
+      await gqlClient.request(OCULTAR_NOTIFICACION_MUTATION, { idNotificacion: parseInt(idNotif, 10) });
+    } catch (err) {
+      console.error('Error al ocultar notificacion:', err);
+      cargarNotificaciones(); // revert on fail
+    }
+  };
 
  const handleMarcarTodasLeidas = async () => {
- try {
- await gqlClient.request(MARCAR_TODAS_LEIDAS_MUTATION);
- cargarNotificaciones();
- } catch (err) {
- console.error(err);
- }
- };
+    // Optimistic UI
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+    setNoLeidas(0);
+
+    try {
+      await gqlClient.request(MARCAR_TODAS_LEIDAS_MUTATION);
+    } catch (err) {
+      console.error(err);
+      cargarNotificaciones(); // revert on fail
+    }
+  };
 
  const formatTime = (dateStr) => {
  try {
@@ -178,10 +191,10 @@ export default function Topbar() {
  >
  <Bell size={17} className="text-gray-600 dark:text-gray-400 " />
  {noLeidas > 0 && (
- <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white dark:border-gray-800 shadow-sm">
- {noLeidas}
- </span>
- )}
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white dark:border-gray-800 shadow-sm">
+            {noLeidas > 99 ? '99+' : noLeidas}
+          </span>
+        )}
  </button>
 
  {showNotif && (
@@ -197,12 +210,12 @@ export default function Topbar() {
  >
  Marcar todo leído
  </button>
- <span className="text-xs text-white bg-red-500 rounded-full px-2 py-0.5">{noLeidas}</span>
+ <span className="text-xs text-white font-bold bg-red-500 rounded-full px-2 py-0.5">{noLeidas > 99 ? '99+' : noLeidas}</span>
  </>
  )}
  </div>
  </div>
- <div className="max-h-80 overflow-y-auto">
+ <div className="max-h-80 overflow-y-auto custom-scrollbar">
  {notificaciones.length === 0 ? (
  <div className="p-4 text-center text-xs text-gray-400 italic">
  Sin notificaciones

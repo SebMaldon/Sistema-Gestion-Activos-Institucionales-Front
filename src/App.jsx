@@ -22,6 +22,7 @@ import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
 import Aprobaciones from './pages/Aprobaciones';
 import Correspondencia from './pages/Correspondencia';
+import Anuncios from './pages/Anuncios';
 import SinAcceso from './pages/SinAcceso';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { useVersionCheck } from './hooks/useVersionCheck';
@@ -190,6 +191,11 @@ export default function App() {
  <Route path="/correspondencia" element={
  <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
  <AppLayout page="correspondencia"><Correspondencia /></AppLayout>
+ </RoleRoute>
+ } />
+ <Route path="/anuncios" element={
+ <RoleRoute allowedRoles={[ROL_MAESTRO]}>
+ <AppLayout page="anuncios"><Anuncios /></AppLayout>
  </RoleRoute>
  } />
 

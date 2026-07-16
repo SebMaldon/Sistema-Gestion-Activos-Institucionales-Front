@@ -3,33 +3,113 @@ import { useApp } from '../context/AppContext';
 import { CheckCircle, AlertTriangle, Info, XCircle, X } from 'lucide-react';
 
 const TOAST_CONFIG = {
- success: { icon: CheckCircle, bg: '#dcfce7', border: '#86efac', text: '#166534', iconColor: '#16a34a' },
- error: { icon: XCircle, bg: '#fee2e2', border: '#fca5a5', text: '#991b1b', iconColor: '#dc2626' },
- warning: { icon: AlertTriangle, bg: '#fef9c3', border: '#fde047', text: '#854d0e', iconColor: '#ca8a04' },
- info: { icon: Info, bg: '#dbeafe', border: '#93c5fd', text: '#1e40af', iconColor: '#2563eb' },
+  success: {
+    icon: CheckCircle,
+    bar: 'bg-green-500',
+    iconColor: 'text-green-500 dark:text-green-400',
+    bg: 'bg-white dark:bg-gray-800',
+    border: 'border-green-200 dark:border-green-700',
+    title: 'text-green-800 dark:text-green-200',
+    text: 'text-gray-600 dark:text-gray-300',
+    close: 'text-green-400 hover:text-green-600 dark:hover:text-green-300',
+    duration: 3000,
+  },
+  error: {
+    icon: XCircle,
+    bar: 'bg-red-500',
+    iconColor: 'text-red-500 dark:text-red-400',
+    bg: 'bg-white dark:bg-gray-800',
+    border: 'border-red-200 dark:border-red-700',
+    title: 'text-red-800 dark:text-red-200',
+    text: 'text-gray-600 dark:text-gray-300',
+    close: 'text-red-400 hover:text-red-600 dark:hover:text-red-300',
+    duration: 7000,
+  },
+  warning: {
+    icon: AlertTriangle,
+    bar: 'bg-amber-400',
+    iconColor: 'text-amber-500 dark:text-amber-400',
+    bg: 'bg-white dark:bg-gray-800',
+    border: 'border-amber-200 dark:border-amber-700',
+    title: 'text-amber-800 dark:text-amber-200',
+    text: 'text-gray-600 dark:text-gray-300',
+    close: 'text-amber-400 hover:text-amber-600 dark:hover:text-amber-300',
+    duration: 5000,
+  },
+  info: {
+    icon: Info,
+    bar: 'bg-blue-500',
+    iconColor: 'text-blue-500 dark:text-blue-400',
+    bg: 'bg-white dark:bg-gray-800',
+    border: 'border-blue-200 dark:border-blue-700',
+    title: 'text-blue-800 dark:text-blue-200',
+    text: 'text-gray-600 dark:text-gray-300',
+    close: 'text-blue-400 hover:text-blue-600 dark:hover:text-blue-300',
+    duration: 4000,
+  },
 };
 
-export default function Toast() {
- const { toast, showToast } = useApp();
+function ToastItem({ entry, onDismiss }) {
+  const conf = TOAST_CONFIG[entry.type] ?? TOAST_CONFIG.info;
+  const Icon = conf.icon;
+  const durationS = `${conf.duration / 1000}s`;
 
- if (!toast) return null;
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className={[
+        'relative flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border w-full max-w-sm overflow-hidden',
+        conf.bg,
+        conf.border,
+        entry.exiting ? 'toast-exit' : 'toast-enter',
+      ].join(' ')}
+    >
+      {/* Progress bar */}
+      <div
+        className={`absolute bottom-0 left-0 h-[3px] ${conf.bar} toast-progress`}
+        style={{ '--toast-duration': durationS }}
+      />
 
- const conf = TOAST_CONFIG[toast.type] || TOAST_CONFIG.success;
- const Icon = conf.icon;
- return (
- <div
- className="fixed bottom-6 right-6 z-[99999] flex items-start gap-3 px-5 py-4 rounded-xl shadow-2xl border max-w-sm toast-enter"
- style={{ backgroundColor: conf.bg, borderColor: conf.border, color: conf.text }}
- >
- <Icon size={20} style={{ color: conf.iconColor }} className="flex-shrink-0 mt-0.5" />
- <p className="text-sm font-medium flex-1 leading-snug">{toast.message}</p>
- <button
- onClick={() => showToast(null)}
- className="ml-2 hover:opacity-70 transition-opacity"
- style={{ color: conf.iconColor }}
- >
- <X size={16} />
- </button>
- </div>
- );
+      {/* Icon */}
+      <div className={`flex-shrink-0 mt-0.5 ${conf.iconColor}`}>
+        <Icon size={18} />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {entry.title && (
+          <p className={`text-xs font-bold mb-0.5 ${conf.title}`}>{entry.title}</p>
+        )}
+        <p className={`text-sm leading-snug ${conf.text}`}>{entry.message}</p>
+      </div>
+
+      {/* Close */}
+      <button
+        onClick={onDismiss}
+        className={`flex-shrink-0 transition-colors mt-0.5 ${conf.close}`}
+        aria-label="Cerrar notificación"
+      >
+        <X size={15} />
+      </button>
+    </div>
+  );
 }
+
+export default function Toast() {
+  const { toastQueue } = useApp();
+
+  if (!toastQueue.length) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-[99999] flex flex-col-reverse gap-2 items-end pointer-events-none">
+      {toastQueue.map(entry => (
+        <div key={entry.id} className="pointer-events-auto w-full max-w-sm">
+          <ToastItem entry={entry} onDismiss={entry.onDismiss} />
+        </div>
+      ))}
+    </div>
+  );
+}
+

@@ -163,13 +163,32 @@ body.zoom-tables-enabled tbody td:hover .line-clamp-2 {
 
 /* Toast notification */
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(110%); opacity: 0; }
+}
+
+@keyframes shrinkWidth {
+  from { width: 100%; }
+  to   { width: 0%; }
 }
 
 .toast-enter {
-  animation: slideInRight 0.3s ease-out;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.toast-exit {
+  animation: slideOutRight 0.25s ease-in forwards;
+}
+
+.toast-progress {
+  animation: shrinkWidth var(--toast-duration, 4s) linear forwards;
+}
+
 
 /* Kanban card hover */
 .kanban-card {

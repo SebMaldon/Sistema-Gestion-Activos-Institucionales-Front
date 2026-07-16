@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Package, AlertTriangle, ArrowLeftFromLine,
   QrCode, Users, Settings, ShieldCheck, LogOut, ChevronRight,
-  Building2, ClipboardList, X, Mail
+  Building2, ClipboardList, X, Mail, Bell
 } from 'lucide-react';
 
 // ─── 1 = Maestro,  2 = Administrador,  3 = Usuario Estándar, 4 = Sin Acceso ──
@@ -21,6 +21,7 @@ const NAV_BY_ROL = {
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
     { path: '/aprobaciones', label: 'Aprobaciones', icon: ClipboardList, group: 'Sistema' },
+    { path: '/anuncios', label: 'Anuncios', icon: Bell, group: 'Sistema' },
     { path: '/usuarios', label: 'Gestión de Usuarios', icon: Users, group: 'Sistema' },
     { path: '/auditoria', label: 'Bitácora de Auditoría', icon: ShieldCheck, group: 'Sistema' },
     { path: '/configuracion', label: 'Configuración', icon: Settings, group: 'Sistema' },
