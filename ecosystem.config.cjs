@@ -1,9 +1,9 @@
 module.exports = {
     apps: [
         {
-            name: "inventario-bienes-frontend",
-            script: "./node_modules/vite/bin/vite.js",
-            args: "preview --host --port 5173",
+            name: "frontend-inventarios-bienes",
+            script: "./node_modules/serve/bin/serve.js",
+            args: "-s dist -l 5173",
             interpreter: "node"
         }
     ]
