@@ -117,12 +117,19 @@ export const buildPDFBytes = async (folioStr, form, bienesSeleccionados) => {
       setTextField('FechaDevolucion', '');
     }
 
+    const padTextCenter = (text, minLength) => {
+      if (!text) return '';
+      if (text.length >= minLength) return text;
+      const pad = minLength - text.length;
+      return ' '.repeat(Math.floor(pad / 2)) + text + ' '.repeat(Math.ceil(pad / 2));
+    };
+
     // Bienes
     pageItems.forEach((bien, i) => {
       const row = i + 1;
       setTextField(pdfRowField(row, 1), String(bien.cantidad || bien.cantidad_o_id || ''), true);
-      setTextField(pdfRowField(row, 2), bien.naturaleza || '', true);
-      setTextField(pdfRowField(row, 3), bien.descripcion || '', true);
+      setTextField(pdfRowField(row, 2), padTextCenter(bien.naturaleza || '', 35), true);
+      setTextField(pdfRowField(row, 3), padTextCenter(bien.descripcion || '', 85), true);
     });
 
     pdfForm.getFields().forEach((f) => {
