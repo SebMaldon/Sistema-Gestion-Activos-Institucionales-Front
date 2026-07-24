@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import ReactDOM from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
-import { GET_REGISTRO_SALIDAS, ACTUALIZAR_SALIDA } from '../api/salidas.queries';
+import { GET_REGISTRO_SALIDAS, ACTUALIZAR_SALIDA, ELIMINAR_SALIDA } from '../api/salidas.queries';
 import { useApp } from '../context/AppContext';
 import {
  Search, RefreshCw, Edit2, FileDown, ChevronLeft, ChevronRight, Hash, User,
- Calendar, MapPin, Phone, Briefcase, FileText, Check, X, Loader2, Package, Eye
+ Calendar, MapPin, Phone, Briefcase, FileText, Check, X, Loader2, Package, Eye, Trash2, AlertTriangle
 } from 'lucide-react';
 import { formatDate } from '../lib/utils';
 import { buildPDFBytes } from '../utils/pdfSalidas';
@@ -258,6 +258,8 @@ const HistorialSalidas = forwardRef(({ onStatusChange }, ref) => {
   const [isGeneratingPdfId, setIsGeneratingPdfId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [pageInput, setPageInput] = useState('');
+  // Estado para confirmación de eliminación
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id_salida, folio }
 
   const PAGE_SIZE = 20;
 
@@ -293,6 +295,25 @@ const HistorialSalidas = forwardRef(({ onStatusChange }, ref) => {
  const pageInfo = data?.registroSalidas?.pageInfo;
  const totalItems = pageInfo?.totalCount || 0;
  const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+
+ const mutEliminar = useMutation({
+  mutationFn: (vars) => gqlClient.request(ELIMINAR_SALIDA, vars),
+  onSuccess: (_, vars) => {
+   qc.invalidateQueries({ queryKey: ['registroSalidas'] });
+   qc.invalidateQueries({ queryKey: ['folioSalidas'] });
+   showToast(`Salida #${confirmDelete?.folio || vars.id_salida} eliminada correctamente`, 'success');
+   setConfirmDelete(null);
+  },
+  onError: (e) => {
+   const msg = e?.response?.errors?.[0]?.message ?? 'Error al eliminar la salida';
+   showToast(msg, 'error');
+  },
+ });
+
+ const handleEliminarSalida = () => {
+  if (!confirmDelete) return;
+  mutEliminar.mutate({ id_salida: confirmDelete.id_salida });
+ };
 
  const handleRegenerarPdf = async (salida) => {
  setIsGeneratingPdfId(salida.id_salida);
@@ -565,6 +586,13 @@ const HistorialSalidas = forwardRef(({ onStatusChange }, ref) => {
  >
  <Edit2 size={16} />
  </button>
+ <button
+  onClick={() => setConfirmDelete({ id_salida: salida.id_salida, folio: salida.folio })}
+  title="Eliminar salida"
+  className="w-8 h-8 flex items-center justify-center rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800/50"
+ >
+  <Trash2 size={16} />
+ </button>
  </div>
  </td>
  </tr>
@@ -790,6 +818,52 @@ const HistorialSalidas = forwardRef(({ onStatusChange }, ref) => {
  </div>
  </Modal>
  )}
+  {/* Modal de confirmación de eliminación */}
+  {confirmDelete && ReactDOM.createPortal(
+  <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60">
+   <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+    <div className="flex items-start gap-4">
+     <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+      <AlertTriangle size={24} className="text-red-600 dark:text-red-400" />
+     </div>
+     <div>
+      <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+       Eliminar Salida #{confirmDelete.folio}
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+       Esta acción eliminará permanentemente el registro de salida y todos sus bienes asociados.
+      </p>
+      <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+       <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+       <span>
+        Si el folio <strong>#{confirmDelete.folio}</strong> es el último emitido, el contador de folios se revertirá para que el siguiente registro retome ese número.
+       </span>
+      </div>
+     </div>
+    </div>
+    <div className="flex gap-3 justify-end">
+     <button
+      onClick={() => setConfirmDelete(null)}
+      disabled={mutEliminar.isPending}
+      className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+     >
+      Cancelar
+     </button>
+     <button
+      onClick={handleEliminarSalida}
+      disabled={mutEliminar.isPending}
+      className="px-4 py-2 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all disabled:opacity-60"
+      style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)' }}
+     >
+      {mutEliminar.isPending
+       ? <><Loader2 size={15} className="animate-spin" /> Eliminando...</>
+       : <><Trash2 size={15} /> Sí, eliminar</>}
+     </button>
+    </div>
+   </div>
+  </div>,
+  document.body
+  )}
   </div>
   );
 });

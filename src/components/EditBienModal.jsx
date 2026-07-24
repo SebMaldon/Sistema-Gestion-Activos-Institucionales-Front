@@ -23,7 +23,7 @@ import { useLocation } from 'react-router-dom';
 import {
  GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION,
  GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
- CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
+ CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION, UPDATE_CAT_MODELO_MUTATION,
  GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION,
  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION,
  CHECK_DUPLICATE_IP_QUERY, CLEAR_IP_FROM_OTHER_BIENES_MUTATION
@@ -138,6 +138,9 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  const [localSelected, setLocalSelected] = useState(modeloActual || '');
  // Toggle del mini-formulario de creación
  const [showCrearForm, setShowCrearForm] = useState(false);
+ // Estado para edición de modelo
+ const [editingModelo, setEditingModelo] = useState(null); // clave_modelo del modelo que se edita
+ const [editModeloForm, setEditModeloForm] = useState({ descrip_disp: '', clave_marca: '', tipo_disp: '' });
 
  // Ref para scroll al modelo seleccionado
  const selectedItemRef = useRef(null);
@@ -251,6 +254,21 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  },
  });
 
+ const mutUpdateModelo = useMutation({
+  mutationFn: (vars) => gqlClient.request(UPDATE_CAT_MODELO_MUTATION, vars),
+  onSuccess: (data) => {
+  qc.invalidateQueries({ queryKey: ['catalogos-bienes'] });
+  const m = data.updateCatModelo;
+  showToast(`Modelo "${m.descrip_disp || m.clave_modelo}" actualizado`, 'success');
+  setEditingModelo(null);
+  setEditModeloForm({ descrip_disp: '', clave_marca: '', tipo_disp: '' });
+  },
+  onError: (e) => {
+  const msg = e?.response?.errors?.[0]?.message ?? '';
+  showToast(msg || 'Error al actualizar el modelo', 'error');
+  },
+ });
+
  const handleCrearMarca = () => {
  const trimmed = nuevaMarca.trim();
  if (!trimmed) return;
@@ -280,23 +298,43 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  };
 
  const handleCrearModelo = () => {
- const clave = nuevoModelo.clave_modelo.trim().toUpperCase();
- if (!clave) return showToast('La clave del modelo es obligatoria', 'warning');
- // Verificar duplicado local
- const dup = modelos.find(m => m.clave_modelo?.toUpperCase() === clave);
- if (dup) {
- showToast(`El modelo "${clave}" ya existe. Seleccionándolo automáticamente.`, 'warning');
- onSelectModelo(dup.clave_modelo, { tipo_disp: dup.tipo_disp });
- onClose();
- return;
- }
- const vars = {
- clave_modelo: clave,
- descrip_disp: nuevoModelo.descrip_disp?.trim() || null,
- clave_marca: nuevoModelo.clave_marca ? parseInt(nuevoModelo.clave_marca) : null,
- tipo_disp: nuevoModelo.tipo_disp ? parseInt(nuevoModelo.tipo_disp) : null,
+  const clave = nuevoModelo.clave_modelo.trim().toUpperCase();
+  if (!clave) return showToast('La clave del modelo es obligatoria', 'warning');
+  // Verificar duplicado local
+  const dup = modelos.find(m => m.clave_modelo?.toUpperCase() === clave);
+  if (dup) {
+  showToast(`El modelo "${clave}" ya existe. Seleccionándolo automáticamente.`, 'warning');
+  onSelectModelo(dup.clave_modelo, { tipo_disp: dup.tipo_disp });
+  onClose();
+  return;
+  }
+  const vars = {
+  clave_modelo: clave,
+  descrip_disp: nuevoModelo.descrip_disp?.trim() || null,
+  clave_marca: nuevoModelo.clave_marca ? parseInt(nuevoModelo.clave_marca) : null,
+  tipo_disp: nuevoModelo.tipo_disp ? parseInt(nuevoModelo.tipo_disp) : null,
+  };
+  mutModelo.mutate(vars);
  };
- mutModelo.mutate(vars);
+
+ const handleStartEditModelo = (m) => {
+  setShowCrearForm(false);
+  setEditingModelo(m.clave_modelo);
+  setEditModeloForm({
+  descrip_disp: m.descrip_disp || '',
+  clave_marca: m.clave_marca ? String(m.clave_marca) : '',
+  tipo_disp: m.tipo_disp ? String(m.tipo_disp) : '',
+  });
+ };
+
+ const handleGuardarEditModelo = () => {
+  if (!editingModelo) return;
+  mutUpdateModelo.mutate({
+  clave_modelo: editingModelo,
+  descrip_disp: editModeloForm.descrip_disp?.trim() || null,
+  clave_marca: editModeloForm.clave_marca ? parseInt(editModeloForm.clave_marca) : null,
+  tipo_disp: editModeloForm.tipo_disp ? parseInt(editModeloForm.tipo_disp) : null,
+  });
  };
 
  const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white dark:bg-gray-800 ';
@@ -427,6 +465,51 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  : <><X size={15} /> Confirmar: quitar modelo</>}
  </button>
 
+ {/* Panel edicion modelo arriba */}
+ {editingModelo && (
+  <div className="rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-2 fade-in">
+   <div className="flex items-center justify-between">
+    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+     <Edit size={11} /> Editar modelo <span className="font-mono bg-amber-100 dark:bg-amber-800/40 px-1.5 py-0.5 rounded">{editingModelo}</span>
+    </p>
+    <button onClick={() => setEditingModelo(null)} className="p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-800/40 text-amber-500 transition-colors">
+     <X size={13} />
+    </button>
+   </div>
+   <div className="grid grid-cols-3 gap-2">
+    <div className="col-span-3">
+     <label className="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Descripción</label>
+     <input type="text" value={editModeloForm.descrip_disp}
+      onChange={e => setEditModeloForm(p => ({ ...p, descrip_disp: e.target.value }))}
+      placeholder="Descripción del modelo..."
+      className={inputCls} />
+    </div>
+    <div>
+     <label className="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Marca</label>
+     <SearchableSelect value={editModeloForm.clave_marca}
+      onChange={val => setEditModeloForm(p => ({ ...p, clave_marca: val }))}
+      options={marcas.map(mk => ({ value: String(mk.clave_marca), label: mk.marca }))}
+      placeholder="Ninguna" />
+    </div>
+    <div>
+     <label className="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Tipo</label>
+     <SearchableSelect value={editModeloForm.tipo_disp}
+      onChange={val => setEditModeloForm(p => ({ ...p, tipo_disp: val }))}
+      options={tipos.map(t => ({ value: String(t.tipo_disp), label: t.nombre_tipo }))}
+      placeholder="Ninguno" />
+    </div>
+    <div className="flex items-end">
+     <button onClick={handleGuardarEditModelo} disabled={mutUpdateModelo.isPending}
+      className="w-full py-2 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all"
+      style={{ background: 'linear-gradient(135deg, #b45309, #92400e)' }}>
+      {mutUpdateModelo.isPending ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+      {mutUpdateModelo.isPending ? 'Guardando...' : 'Guardar'}
+     </button>
+    </div>
+   </div>
+  </div>
+ )}
+ 
  {/* —— Buscador + Filtros —— */}
  <div className="flex flex-col gap-2">
  <div className="relative">
@@ -473,11 +556,12 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  </div>
 
  {/* —— Encabezado de columnas —— */}
- <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-3 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+ <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-3 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
  <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">Clave</span>
  <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</span>
  <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marca</span>
  <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</span>
+ <span className="w-5" />
  </div>
 
  {/* —— Lista de modelos —— */}
@@ -487,55 +571,67 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
  const marcaObj = marcaDeModelo(m);
  const isHighlighted = m.clave_modelo === localSelected;
  const isOriginal = m.clave_modelo === modeloActual && !isHighlighted;
+ const isEditing = editingModelo === m.clave_modelo;
  return (
- <button
- key={m.clave_modelo}
- ref={isHighlighted ? selectedItemRef : null}
- onClick={() => setLocalSelected(m.clave_modelo)}
- className={`w-full grid grid-cols-[auto_1fr_auto_auto] gap-x-3 items-center px-3 py-2.5 text-left text-sm transition-colors ${
+ <div key={m.clave_modelo} ref={isHighlighted ? selectedItemRef : null}>
+ <div
+ className={`w-full grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-2 items-center px-3 py-2.5 text-left text-sm transition-colors ${
  isHighlighted
  ? 'bg-green-50 dark:bg-green-900/20 border-l-[3px] border-green-500'
  : isOriginal
- ? 'bg-gray-50 dark:bg-gray-900 border-l-[3px] border-gray-300 dark:border-gray-600 '
- : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 border-l-[3px] border-transparent'
+ ? 'bg-gray-50 dark:bg-gray-900 border-l-[3px] border-gray-300 dark:border-gray-600'
+ : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-l-[3px] border-transparent'
  }`}
  >
- {/* Clave */}
- <div className="flex items-center gap-1.5 w-16">
+ {/* Clave - clickable para seleccionar */}
+ <button onClick={() => setLocalSelected(m.clave_modelo)} className="flex items-center gap-1.5 w-16 text-left">
  {isHighlighted
  ? <Check size={11} className="text-green-600 dark:text-green-400 shrink-0" />
  : <span className="w-[11px] shrink-0" />}
  <span className={`font-mono text-[11px] font-bold truncate ${
- isHighlighted ? 'text-green-700 dark:text-green-400 dark:text-green-300' : 'text-gray-500 dark:text-gray-400 '
+ isHighlighted ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
  }`}>
  {m.clave_modelo}
  </span>
- </div>
- {/* Descripción */}
- <span className={`text-xs truncate ${
- isHighlighted ? 'text-green-800 dark:text-green-300 font-semibold' : 'text-gray-700 dark:text-gray-300 '
+ </button>
+ {/* Descripción - clickable para seleccionar */}
+ <button onClick={() => setLocalSelected(m.clave_modelo)} className={`text-xs truncate text-left ${
+ isHighlighted ? 'text-green-800 dark:text-green-300 font-semibold' : 'text-gray-700 dark:text-gray-300'
  }`}>
  {m.descrip_disp || <em className="text-gray-400">Sin descripción</em>}
- </span>
- {/* Marca (String lookup) */}
+ </button>
+ {/* Marca */}
  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 max-w-[80px] truncate border ${
  marcaObj
  ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-100 dark:border-purple-800/50'
- : 'bg-gray-50 dark:bg-gray-900 text-gray-400 border-gray-200 dark:border-gray-700 '
+ : 'bg-gray-50 dark:bg-gray-900 text-gray-400 border-gray-200 dark:border-gray-700'
  }`}>
  {marcaObj?.marca || '—'}
  </span>
- {/* Tipo (String lookup) */}
+ {/* Tipo */}
  {tipoObj ? (
  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 dark:text-blue-300 border border-blue-100 dark:border-blue-800/50 shrink-0 max-w-[80px] truncate">
  {tipoObj.nombre_tipo}
  </span>
  ) : (
  <span className="text-[10px] text-gray-300 shrink-0 w-[72px]">—</span>
- )}
- </button>
- );
- })}
+  )}
+  {/* Botón Editar */}
+  <button
+  onClick={(e) => { e.stopPropagation(); isEditing ? setEditingModelo(null) : handleStartEditModelo(m); }}
+  title={isEditing ? 'Cancelar edición' : 'Editar modelo'}
+  className={`p-1 rounded transition-colors shrink-0 ${
+  isEditing
+  ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100'
+  : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+  }`}
+  >
+  <Edit size={12} />
+  </button>
+  </div>
+  </div>
+  );
+  })}
  {modelosFiltrados.length === 0 && (
  <p className="text-center text-xs text-gray-400 py-6">
  Sin resultados para los filtros aplicados
