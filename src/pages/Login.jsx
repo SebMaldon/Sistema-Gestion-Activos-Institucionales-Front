@@ -76,31 +76,54 @@ export default function Login() {
  </div>
  ))}
 
- {/* Enlace de descarga App Escritorio (Panel Izquierdo Desktop) */}
- <div className="pt-3">
- <a
- href="/descargas/SGHI.rar"
- download="SGHI.rar"
- className="flex items-center justify-between p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all group text-white no-underline shadow-lg cursor-pointer"
- title="Descargar herramienta complementaria para Windows (Escritorio)"
- >
- <div className="flex items-center gap-3.5 min-w-0 pr-2">
- <div className="w-11 h-11 rounded-xl bg-yellow-400/20 text-yellow-300 flex items-center justify-center shrink-0 border border-yellow-400/30 group-hover:scale-110 transition-transform shadow-inner">
- <Monitor size={22} />
- </div>
- <div className="min-w-0">
- <p className="text-sm font-bold text-white group-hover:text-yellow-300 transition-colors flex items-center gap-2 truncate">
- Herramienta de Escritorio Complementaria
- <span className="text-[10px] bg-yellow-400 text-[#00472e] px-1.5 py-0.5 rounded font-black tracking-wider shrink-0">RAR</span>
- </p>
- <p className="text-xs text-green-100/70 truncate mt-0.5">Sistema Gestor de Hardware IMSS</p>
- </div>
- </div>
- <div className="w-9 h-9 rounded-lg bg-white/10 group-hover:bg-yellow-400 group-hover:text-[#00472e] flex items-center justify-center transition-all shrink-0">
- <Download size={18} />
- </div>
- </a>
- </div>
+          {/* Enlaces de descarga (Panel Izquierdo Desktop) */}
+          <div className="pt-3 flex flex-col gap-3">
+            <a
+              href="/descargas/SGHI.rar"
+              download="SGHI.rar"
+              className="flex items-center justify-between p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all group text-white no-underline shadow-lg cursor-pointer"
+              title="Descargar herramienta complementaria para Windows (Escritorio)"
+            >
+              <div className="flex items-center gap-3.5 min-w-0 pr-2">
+                <div className="w-11 h-11 rounded-xl bg-yellow-400/20 text-yellow-300 flex items-center justify-center shrink-0 border border-yellow-400/30 group-hover:scale-110 transition-transform shadow-inner">
+                  <Monitor size={22} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white group-hover:text-yellow-300 transition-colors flex items-center gap-2 truncate">
+                    Herramienta de Escritorio Complementaria
+                    <span className="text-[10px] bg-yellow-400 text-[#00472e] px-1.5 py-0.5 rounded font-black tracking-wider shrink-0">RAR</span>
+                  </p>
+                  <p className="text-xs text-green-100/70 truncate mt-0.5">Sistema Gestor de Hardware IMSS</p>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-white/10 group-hover:bg-yellow-400 group-hover:text-[#00472e] flex items-center justify-center transition-all shrink-0">
+                <Download size={18} />
+              </div>
+            </a>
+
+            <a
+              href="/descargas/Limpiador_IMSS.rar"
+              download="Limpiador_IMSS.rar"
+              className="flex items-center justify-between p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all group text-white no-underline shadow-lg cursor-pointer"
+              title="Descargar Limpiador IMSS"
+            >
+              <div className="flex items-center gap-3.5 min-w-0 pr-2">
+                <div className="w-11 h-11 rounded-xl bg-blue-400/20 text-blue-300 flex items-center justify-center shrink-0 border border-blue-400/30 group-hover:scale-110 transition-transform shadow-inner">
+                  <Shield size={22} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors flex items-center gap-2 truncate">
+                    Limpiador IMSS
+                    <span className="text-[10px] bg-blue-400 text-[#00472e] px-1.5 py-0.5 rounded font-black tracking-wider shrink-0">RAR</span>
+                  </p>
+                  <p className="text-xs text-green-100/70 truncate mt-0.5">Utilidad de limpieza del sistema</p>
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-white/10 group-hover:bg-blue-400 group-hover:text-blue-900 flex items-center justify-center transition-all shrink-0">
+                <Download size={18} />
+              </div>
+            </a>
+          </div>
 
  <div className="mt-8 pt-6 border-t border-white dark:border-gray-800/10">
  <div className="flex items-center gap-2">
