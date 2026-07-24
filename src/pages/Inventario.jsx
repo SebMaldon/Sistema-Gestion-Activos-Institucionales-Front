@@ -26,7 +26,7 @@ import {
   GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
   CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
   GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION,
-  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION
+  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION, UPDATE_CAT_MODELO_MUTATION
 } from '../api/inventario.queries';
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA, CREATE_PROVEEDOR } from '../api/garantias.queries';
 import { formatDate, formatDateTime, copyTextToClipboard } from '../lib/utils';
@@ -198,8 +198,9 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
   const [selectedMarcaFilter, setSelectedMarcaFilter] = useState('');
   // Estado de selección local (dos pasos: resaltar → confirmar)
   const [localSelected, setLocalSelected] = useState(modeloActual || '');
-  // Toggle del mini-formulario de creación
-  const [showCrearForm, setShowCrearForm] = useState(false);
+  // Toggle del mini-formulario: 'create', 'edit' o null
+  const [formMode, setFormMode] = useState(null);
+  const [editingClave, setEditingClave] = useState(null);
 
   // Ref para scroll al modelo seleccionado
   const selectedItemRef = useRef(null);
@@ -313,6 +314,22 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
     },
   });
 
+  const mutUpdateModelo = useMutation({
+    mutationFn: (vars) => gqlClient.request(UPDATE_CAT_MODELO_MUTATION, vars),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['catalogos-bienes'] });
+      const m = data.updateCatModelo;
+      showToast(`Modelo "${m.descrip_disp || m.clave_modelo}" actualizado`, 'success');
+      setNuevoModelo({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
+      setFormMode(null);
+      setEditingClave(null);
+      setLocalSelected(m.clave_modelo);
+    },
+    onError: (e) => {
+      showToast(e?.response?.errors?.[0]?.message || 'Error al actualizar modelo', 'error');
+    },
+  });
+
   const handleCrearMarca = () => {
     const trimmed = nuevaMarca.trim();
     if (!trimmed) return;
@@ -359,6 +376,37 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
       tipo_disp: nuevoModelo.tipo_disp ? parseInt(nuevoModelo.tipo_disp) : null,
     };
     mutModelo.mutate(vars);
+  };
+
+  const handleEditarClick = (e, m) => {
+    e.stopPropagation();
+    setNuevoModelo({
+      clave_modelo: m.clave_modelo,
+      descrip_disp: m.descrip_disp || '',
+      clave_marca: m.clave_marca || '',
+      tipo_disp: m.tipo_disp || ''
+    });
+    setEditingClave(m.clave_modelo);
+    setFormMode('edit');
+    // Scroll al formulario
+    setTimeout(() => {
+      if (listContainerRef.current) {
+        listContainerRef.current.parentElement.scrollTo({ top: 1000, behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  const handleGuardarForm = () => {
+    if (formMode === 'create') handleCrearModelo();
+    else if (formMode === 'edit') {
+      const vars = {
+        clave_modelo: editingClave, // No permitimos cambiar la clave principal
+        descrip_disp: nuevoModelo.descrip_disp?.trim() || null,
+        clave_marca: nuevoModelo.clave_marca ? parseInt(nuevoModelo.clave_marca) : null,
+        tipo_disp: nuevoModelo.tipo_disp ? parseInt(nuevoModelo.tipo_disp) : null,
+      };
+      mutUpdateModelo.mutate(vars);
+    }
   };
 
   const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 outline-none bg-white dark:bg-gray-800 ';
@@ -462,28 +510,42 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                   </div>
                 )}
 
-                {/* —— Botón Confirmar / Quitar —— siempre visible cuando hay cambio pendiente */}
-                <button
-                  onClick={() => {
-                    const m = localSelected ? modelos.find(x => x.clave_modelo === localSelected) : null;
-                    onSelectModelo(localSelected, m ? { tipo_disp: m.tipo_disp } : null);
-                    onClose();
-                  }}
-                  disabled={!hasPendingChange}
-                  className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${hasPendingChange
-                    ? 'text-white shadow-md hover:opacity-90 cursor-pointer'
-                    : 'text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
-                    }`}
-                  style={hasPendingChange ? {
-                    background: localSelected
-                      ? 'linear-gradient(135deg, #006341, #004d32)'
-                      : 'linear-gradient(135deg, #B91C1C, #991B1B)'
-                  } : {}}
-                >
-                  {localSelected
-                    ? <><Check size={15} /> {hasPendingChange ? `Confirmar “${modeloLocal?.descrip_disp || localSelected}”` : 'Selección confirmada'}</>
-                    : <><X size={15} /> Confirmar: quitar modelo</>}
-                </button>
+                {/* —— Botones Confirmar / Editar —— siempre visible cuando hay cambio pendiente o modelo seleccionado */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const m = localSelected ? modelos.find(x => x.clave_modelo === localSelected) : null;
+                      onSelectModelo(localSelected, m ? { tipo_disp: m.tipo_disp } : null);
+                      onClose();
+                    }}
+                    disabled={!hasPendingChange}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${hasPendingChange
+                      ? 'text-white shadow-md hover:opacity-90 cursor-pointer'
+                      : 'text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                      }`}
+                    style={hasPendingChange ? {
+                      background: localSelected
+                        ? 'linear-gradient(135deg, #006341, #004d32)'
+                        : 'linear-gradient(135deg, #B91C1C, #991B1B)'
+                    } : {}}
+                  >
+                    {localSelected
+                      ? <><Check size={15} /> {hasPendingChange ? `Confirmar “${modeloLocal?.descrip_disp || localSelected}”` : 'Selección confirmada'}</>
+                      : <><X size={15} /> Confirmar: quitar modelo</>}
+                  </button>
+                  {localSelected && (
+                    <button
+                      onClick={(e) => {
+                        const m = modelos.find(x => x.clave_modelo === localSelected) || { clave_modelo: localSelected, descrip_disp: '', clave_marca: '', tipo_disp: '' };
+                        handleEditarClick(e, m);
+                      }}
+                      className="px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-blue-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+                      title="Editar este modelo"
+                    >
+                      <Edit size={15} /> Editar
+                    </button>
+                  )}
+                </div>
 
                 {/* —— Buscador + Filtros —— */}
                 <div className="flex flex-col gap-2">
@@ -604,20 +666,36 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                 {/* —— Toggle mini-formulario —— */}
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
                   <button
-                    onClick={() => setShowCrearForm(v => !v)}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-300 hover:text-blue-600 bg-gray-50 dark:bg-gray-800/30 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all"
+                    onClick={() => {
+                      if (formMode) {
+                        setFormMode(null);
+                        setEditingClave(null);
+                      } else {
+                        setFormMode('create');
+                        setNuevoModelo({ clave_modelo: '', descrip_disp: '', clave_marca: '', tipo_disp: '' });
+                      }
+                    }}
+                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                      formMode
+                        ? 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        : 'border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-blue-300 hover:text-blue-600 bg-gray-50 dark:bg-gray-800/30 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                    }`}
                   >
-                    {showCrearForm ? <><X size={13} /> Cerrar formulario</> : <><Plus size={13} /> Crear nuevo modelo</>}
+                    {formMode ? <><X size={13} /> Cerrar formulario</> : <><Plus size={13} /> Crear nuevo modelo</>}
                   </button>
 
-                  {showCrearForm && (
-                    <div className="mt-3 space-y-3">
+                  {formMode && (
+                    <div className="mt-3 space-y-3 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800 fade-in">
+                      <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">
+                        {formMode === 'create' ? 'Crear Nuevo Modelo' : `Editar Modelo: ${editingClave}`}
+                      </p>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Clave <span className="text-red-500">*</span></label>
-                          <input type="text" value={nuevoModelo.clave_modelo} placeholder="Ej: HP-1020"
+                          <input type="text" value={formMode === 'edit' ? editingClave : nuevoModelo.clave_modelo} placeholder="Ej: HP-1020"
                             onChange={e => setNuevoModelo(p => ({ ...p, clave_modelo: e.target.value }))}
-                            className={inputCls} />
+                            disabled={formMode === 'edit'}
+                            className={`${inputCls} ${formMode === 'edit' ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed' : ''}`} />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Descripción</label>
@@ -645,12 +723,12 @@ function ModeloCatalogModal({ onClose, onSelectModelo, modeloActual, catalogos }
                         </div>
                       </div>
                       <button
-                        onClick={handleCrearModelo}
-                        disabled={mutModelo.isPending || !nuevoModelo.clave_modelo.trim()}
-                        className="w-full py-2 rounded-xl text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border-2 border-blue-100 dark:border-blue-800/50 hover:border-blue-300 hover:bg-blue-50 text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                        onClick={handleGuardarForm}
+                        disabled={mutModelo.isPending || mutUpdateModelo.isPending || (formMode === 'create' && !nuevoModelo.clave_modelo.trim())}
+                        className="w-full py-2 rounded-xl text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border-2 border-blue-100 dark:border-blue-800/50 hover:border-blue-300 hover:bg-blue-50 text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition-all mt-2"
                       >
-                        {mutModelo.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                        {mutModelo.isPending ? 'Creando...' : 'Crear y seleccionar'}
+                        {(mutModelo.isPending || mutUpdateModelo.isPending) ? <Loader2 size={13} className="animate-spin" /> : (formMode === 'create' ? <Plus size={13} /> : <Save size={13} />)}
+                        {(mutModelo.isPending || mutUpdateModelo.isPending) ? 'Guardando...' : (formMode === 'create' ? 'Crear y seleccionar' : 'Guardar cambios')}
                       </button>
                     </div>
                   )}

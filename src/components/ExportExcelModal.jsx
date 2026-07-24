@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import * as XLSX from 'xlsx';
 import { X, FileSpreadsheet, FileText, Loader2, Download } from 'lucide-react';
@@ -286,7 +286,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
       // Datos Generales (10..12)
       b.clavePresupuestal === '—' ? '' : (b.clavePresupuestal || ''),
       segmentoNombre,
-      b.resguardo || '',
+      b.usuarioResguardo?.matricula ? `${b.usuarioResguardo.nombre_completo} - ${b.usuarioResguardo.matricula}` : (b.resguardo || ''),
       // TI (13..26)
       b.especificacionTI?.cpu_info || '',
       b.especificacionTI?.ram_gb ?? '',

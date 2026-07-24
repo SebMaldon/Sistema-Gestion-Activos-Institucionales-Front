@@ -164,6 +164,12 @@ export const ACTUALIZAR_SALIDA = gql`
   }
 `;
 
+export const ELIMINAR_SALIDA = gql`
+  mutation EliminarSalida($id_salida: Int!) {
+    eliminarSalida(id_salida: $id_salida)
+  }
+`;
+
 export const GET_SALIDAS_ANTIGUAS = gql`
   query GetSalidasAntiguas($filter: SalidasAntiguoFilterInput, $pagination: PaginationInput) {
     salidasAntiguas(filter: $filter, pagination: $pagination) {

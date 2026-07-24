@@ -675,6 +675,17 @@ export const CREATE_CAT_MODELO_MUTATION = gql`
   }
 `;
 
+export const UPDATE_CAT_MODELO_MUTATION = gql`
+  mutation UpdateCatModelo($clave_modelo: ID!, $clave_marca: Int, $descrip_disp: String, $tipo_disp: Int) {
+    updateCatModelo(clave_modelo: $clave_modelo, clave_marca: $clave_marca, descrip_disp: $descrip_disp, tipo_disp: $tipo_disp) {
+      clave_modelo
+      descrip_disp
+      clave_marca
+      tipo_disp
+    }
+  }
+`;
+
 export const CREATE_BIENES_BULK_MUTATION = gql`
   mutation CreateBienesBulk($bienes: [BienBulkInput!]!) {
     createBienesBulk(bienes: $bienes)
