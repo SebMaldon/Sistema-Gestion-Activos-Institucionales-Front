@@ -17,6 +17,7 @@ const NAV_BY_ROL = {
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Gestión' },
 
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Gestión' },
+    { path: '/prestamos', label: 'Préstamos', icon: Package, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
@@ -32,6 +33,7 @@ const NAV_BY_ROL = {
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Administración' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Administración' },
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Administración' },
+    { path: '/prestamos', label: 'Préstamos', icon: Package, group: 'Administración' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Administración' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Administración' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },

@@ -45,6 +45,22 @@ export const CREATE_PRESTAMO_MUTATION = gql`
   }
 `;
 
+export const CREATE_MULTIPLE_PRESTAMOS_MUTATION = gql`
+  mutation CrearMultiplesPrestamosBienes(
+    $ids_bienes: [ID!]!
+    $fecha_inicio_prestamo: DateTime
+    $fecha_a_terminar_prestamo: DateTime
+    $descripcion_prestamo_inicio: String
+  ) {
+    crearMultiplesPrestamosBienes(
+      ids_bienes: $ids_bienes
+      fecha_inicio_prestamo: $fecha_inicio_prestamo
+      fecha_a_terminar_prestamo: $fecha_a_terminar_prestamo
+      descripcion_prestamo_inicio: $descripcion_prestamo_inicio
+    )
+  }
+`;
+
 export const FINALIZAR_PRESTAMO_MUTATION = gql`
   mutation FinalizarPrestamoBien(
     $id_bien: ID!
