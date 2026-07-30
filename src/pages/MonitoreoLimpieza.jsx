@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search, RefreshCw, Loader2, AlertTriangle, FileText,
-  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, MonitorSmartphone
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, MonitorSmartphone, FilterX
 } from 'lucide-react';
-import { getMonitoreoImpresiones } from '../api/monitoreo.queries';
+import { getMonitoreoImpresiones, GET_MONITOREO_RESUMEN_UNIDADES } from '../api/monitoreo.queries';
 import { useAuthStore } from '../store/auth.store';
+import { gqlClient } from '../api/client';
+import { GET_CATALOGOS_BIENES_QUERY } from '../api/inventario.queries';
+import MultiSearchableSelect from '../components/MultiSearchableSelect';
 
 const HighlightText = ({ text, highlight }) => {
   if (!highlight || !text) return <>{text}</>;
@@ -24,7 +27,7 @@ const HighlightText = ({ text, highlight }) => {
 
 export default function MonitoreoLimpieza() {
   const usuario = useAuthStore((s) => s.usuario);
-  const [filters, setFilters] = useState({ search: '', version: '', ubicacion: '' });
+  const [filters, setFilters] = useState({ search: '', version: '', ubicacion: '', unidades: [] });
   const [activeFilters, setActiveFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
 
@@ -39,6 +42,35 @@ export default function MonitoreoLimpieza() {
       { ...activeFilters, sortBy: sortConfig.key || undefined, sortOrder: sortConfig.direction || undefined },
       { first: PAGE_SIZE, page: currentPage }
     ),
+  });
+
+  const { data: catData } = useQuery({
+    queryKey: ['catalogos-bienes'],
+    queryFn: () => gqlClient.request(GET_CATALOGOS_BIENES_QUERY),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: resumenData } = useQuery({
+    queryKey: ['monitoreoResumenUnidades'],
+    queryFn: async () => {
+      const res = await gqlClient.request(GET_MONITOREO_RESUMEN_UNIDADES);
+      return res.monitoreoResumenUnidades;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const unidadesOpciones = (catData?.unidades || []).map(u => {
+    const resumen = (resumenData || []).find(r => r.clave === u.clave);
+    const total = resumen ? resumen.total_impresiones : null;
+    return {
+      value: u.clave,
+      label: u.descripcion || u.desc_corta || u.clave,
+      extra: total != null ? (
+        <span className="text-gray-400 font-mono text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+          {total.toLocaleString()}
+        </span>
+      ) : null
+    };
   });
 
   const monitoreoData = data?.edges?.map(e => e.node) || [];
@@ -73,6 +105,7 @@ export default function MonitoreoLimpieza() {
       if (filters.search) newFilters.search = filters.search;
       if (filters.version) newFilters.version = filters.version;
       if (filters.ubicacion) newFilters.ubicacion = filters.ubicacion;
+      if (filters.unidades && filters.unidades.length > 0) newFilters.unidades = filters.unidades;
       setActiveFilters(newFilters);
     }, 400);
     return () => clearTimeout(timer);
@@ -86,6 +119,11 @@ export default function MonitoreoLimpieza() {
       }
       return { key, direction: 'ASC' };
     });
+  };
+
+  const handleReset = () => {
+    setFilters({ search: '', version: '', ubicacion: '', unidades: [] });
+    setSortConfig({ key: '', direction: '' });
   };
 
   const SortIcon = ({ columnKey }) => {
@@ -111,6 +149,14 @@ export default function MonitoreoLimpieza() {
         </div>
 
         <div className="flex items-center gap-3">
+          {data?.totalImpresiones != null && (
+            <div className="bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-xl border border-green-100 dark:border-green-800/30 mr-2 shadow-sm">
+              <p className="text-[10px] text-green-600 dark:text-green-400 font-bold mb-0.5 uppercase tracking-wider">Suma Total</p>
+              <p className="text-lg font-bold text-green-700 dark:text-green-300 leading-none">
+                {data.totalImpresiones.toLocaleString()}
+              </p>
+            </div>
+          )}
           <button
             onClick={() => refetch()}
             className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
@@ -135,6 +181,14 @@ export default function MonitoreoLimpieza() {
               className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
             />
           </div>
+          <div className="flex-1 min-w-[250px] w-full sm:w-auto">
+            <MultiSearchableSelect
+              placeholder="Seleccionar unidades..."
+              value={filters.unidades}
+              onChange={(val) => setFilters(prev => ({ ...prev, unidades: val }))}
+              options={unidadesOpciones}
+            />
+          </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <input
               type="text"
@@ -152,6 +206,16 @@ export default function MonitoreoLimpieza() {
               placeholder="Ubicación..."
               className="flex-1 sm:flex-none w-full sm:w-48 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
             />
+            {Object.values(filters).some(v => Array.isArray(v) ? v.length > 0 : v !== '') && (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-xl transition-colors"
+                title="Limpiar filtros"
+              >
+                <FilterX size={16} />
+                Limpiar
+              </button>
+            )}
           </div>
         </div>
       </div>
