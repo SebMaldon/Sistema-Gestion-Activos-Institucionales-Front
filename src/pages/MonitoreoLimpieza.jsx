@@ -27,7 +27,7 @@ const HighlightText = ({ text, highlight }) => {
 
 export default function MonitoreoLimpieza() {
   const usuario = useAuthStore((s) => s.usuario);
-  const [filters, setFilters] = useState({ search: '', version: '', ubicacion: '', unidades: [] });
+  const [filters, setFilters] = useState({ search: '', version: '', ubicacion: '', unidades: [], fechaInicio: '', fechaFin: '' });
   const [activeFilters, setActiveFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
 
@@ -106,6 +106,8 @@ export default function MonitoreoLimpieza() {
       if (filters.version) newFilters.version = filters.version;
       if (filters.ubicacion) newFilters.ubicacion = filters.ubicacion;
       if (filters.unidades && filters.unidades.length > 0) newFilters.unidades = filters.unidades;
+      if (filters.fechaInicio) newFilters.fechaInicio = filters.fechaInicio;
+      if (filters.fechaFin) newFilters.fechaFin = filters.fechaFin;
       setActiveFilters(newFilters);
     }, 400);
     return () => clearTimeout(timer);
@@ -122,7 +124,7 @@ export default function MonitoreoLimpieza() {
   };
 
   const handleReset = () => {
-    setFilters({ search: '', version: '', ubicacion: '', unidades: [] });
+    setFilters({ search: '', version: '', ubicacion: '', unidades: [], fechaInicio: '', fechaFin: '' });
     setSortConfig({ key: '', direction: '' });
   };
 
@@ -189,14 +191,14 @@ export default function MonitoreoLimpieza() {
               options={unidadesOpciones}
             />
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <input
               type="text"
               name="version"
               value={filters.version}
               onChange={handleFilterChange}
               placeholder="Versión..."
-              className="w-full sm:w-32 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
+              className="flex-1 min-w-[120px] sm:flex-none sm:w-32 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
             />
             <input
               type="text"
@@ -204,12 +206,37 @@ export default function MonitoreoLimpieza() {
               value={filters.ubicacion}
               onChange={handleFilterChange}
               placeholder="Ubicación..."
-              className="flex-1 sm:flex-none w-full sm:w-48 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
+              className="flex-1 min-w-[150px] sm:flex-none sm:w-48 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
             />
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex flex-1 items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-2 py-1.5 focus-within:ring-2 focus-within:ring-green-600 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Desde</span>
+                <input
+                  type="date"
+                  name="fechaInicio"
+                  value={filters.fechaInicio}
+                  max={filters.fechaFin || new Date().toISOString().split('T')[0]}
+                  onChange={handleFilterChange}
+                  className="bg-transparent border-none outline-none text-sm w-full sm:w-[110px] text-gray-700 dark:text-gray-200 cursor-pointer"
+                />
+              </div>
+              <div className="flex flex-1 items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-2 py-1.5 focus-within:ring-2 focus-within:ring-green-600 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Hasta</span>
+                <input
+                  type="date"
+                  name="fechaFin"
+                  value={filters.fechaFin}
+                  min={filters.fechaInicio}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={handleFilterChange}
+                  className="bg-transparent border-none outline-none text-sm w-full sm:w-[110px] text-gray-700 dark:text-gray-200 cursor-pointer"
+                />
+              </div>
+            </div>
             {Object.values(filters).some(v => Array.isArray(v) ? v.length > 0 : v !== '') && (
               <button
                 onClick={handleReset}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-xl transition-colors"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-xl transition-colors w-full sm:w-auto"
                 title="Limpiar filtros"
               >
                 <FilterX size={16} />
@@ -249,6 +276,7 @@ export default function MonitoreoLimpieza() {
                   <col style={{ minWidth: '150px' }} />
                   <col style={{ minWidth: '150px' }} />
                   <col style={{ width: '8rem' }} />
+                  <col style={{ width: '8rem' }} />
                   <col style={{ width: '11.5rem' }} />
                 </colgroup>
                 <thead className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-bold shadow-sm sticky top-0 z-10">
@@ -267,6 +295,9 @@ export default function MonitoreoLimpieza() {
                     </th>
                     <th className="px-3 py-2.5 whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('version')}>
                       Versión <SortIcon columnKey="version" />
+                    </th>
+                    <th className="px-3 py-2.5 whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('fecha')}>
+                      Fecha <SortIcon columnKey="fecha" />
                     </th>
                     <th className="px-3 py-2.5 text-center whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('total_impresiones')}>
                       Total Impresiones <SortIcon columnKey="total_impresiones" />
@@ -294,6 +325,9 @@ export default function MonitoreoLimpieza() {
                             <HighlightText text={item.version} highlight={activeFilters.version} />
                           </span>
                         ) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        {item.fecha ? new Date(item.fecha).toLocaleDateString() : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-center font-bold text-gray-700 dark:text-gray-300">
                         {item.total_impresiones != null ? item.total_impresiones.toLocaleString() : '0'}

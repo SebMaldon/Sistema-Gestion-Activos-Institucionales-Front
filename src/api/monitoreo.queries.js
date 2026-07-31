@@ -2,8 +2,8 @@ import { gql } from 'graphql-request';
 import { gqlClient } from './client';
 
 export const GET_MONITOREO_IMPRESIONES = gql`
-  query GetMonitoreoImpresiones($search: String, $version: String, $ubicacion: String, $unidades: [String!], $sortBy: String, $sortOrder: String, $pagination: PaginationInput) {
-    monitoreoImpresiones(search: $search, version: $version, ubicacion: $ubicacion, unidades: $unidades, sortBy: $sortBy, sortOrder: $sortOrder, pagination: $pagination) {
+  query GetMonitoreoImpresiones($search: String, $version: String, $ubicacion: String, $unidades: [String!], $fechaInicio: DateTime, $fechaFin: DateTime, $sortBy: String, $sortOrder: String, $pagination: PaginationInput) {
+    monitoreoImpresiones(search: $search, version: $version, ubicacion: $ubicacion, unidades: $unidades, fechaInicio: $fechaInicio, fechaFin: $fechaFin, sortBy: $sortBy, sortOrder: $sortOrder, pagination: $pagination) {
       edges {
         node {
           num_serie
@@ -12,6 +12,7 @@ export const GET_MONITOREO_IMPRESIONES = gql`
           total_impresiones
           version
           nombre_ubicacion
+          fecha
         }
         cursor
       }
@@ -42,6 +43,8 @@ export async function getMonitoreoImpresiones(filters = {}, pagination = {}) {
     version: filters.version || undefined,
     ubicacion: filters.ubicacion || undefined,
     unidades: filters.unidades && filters.unidades.length > 0 ? filters.unidades : undefined,
+    fechaInicio: filters.fechaInicio || undefined,
+    fechaFin: filters.fechaFin || undefined,
     sortBy: filters.sortBy || undefined,
     sortOrder: filters.sortOrder || undefined,
     pagination,
