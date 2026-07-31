@@ -327,7 +327,11 @@ export default function MonitoreoLimpieza() {
                         ) : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {item.fecha ? new Date(item.fecha).toLocaleDateString() : '—'}
+                        {item.fecha ? (() => {
+                          const datePart = item.fecha.split('T')[0];
+                          const [year, month, day] = datePart.split('-');
+                          return `${day}/${month}/${year}`;
+                        })() : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-center font-bold text-gray-700 dark:text-gray-300">
                         {item.total_impresiones != null ? item.total_impresiones.toLocaleString() : '0'}
