@@ -12,7 +12,8 @@ export const GET_MONITOREO_IMPRESIONES = gql`
           total_impresiones
           version
           nombre_ubicacion
-          fecha
+          fecha_min
+          fecha_max
         }
         cursor
       }

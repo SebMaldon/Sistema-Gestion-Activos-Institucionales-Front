@@ -276,7 +276,7 @@ export default function MonitoreoLimpieza() {
                   <col style={{ minWidth: '150px' }} />
                   <col style={{ minWidth: '150px' }} />
                   <col style={{ width: '8rem' }} />
-                  <col style={{ width: '8rem' }} />
+                  <col style={{ width: '12rem' }} />
                   <col style={{ width: '11.5rem' }} />
                 </colgroup>
                 <thead className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-bold shadow-sm sticky top-0 z-10">
@@ -297,7 +297,7 @@ export default function MonitoreoLimpieza() {
                       Versión <SortIcon columnKey="version" />
                     </th>
                     <th className="px-3 py-2.5 whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('fecha')}>
-                      Fecha <SortIcon columnKey="fecha" />
+                      Rango de Fecha <SortIcon columnKey="fecha" />
                     </th>
                     <th className="px-3 py-2.5 text-center whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('total_impresiones')}>
                       Total Impresiones <SortIcon columnKey="total_impresiones" />
@@ -326,11 +326,15 @@ export default function MonitoreoLimpieza() {
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {item.fecha ? (() => {
-                          const datePart = item.fecha.split('T')[0];
-                          const [year, month, day] = datePart.split('-');
-                          return `${day}/${month}/${year}`;
+                      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap text-[11px] font-medium tracking-wide">
+                        {item.fecha_min ? (() => {
+                          const formatDate = (isoStr) => {
+                            const [year, month, day] = isoStr.split('T')[0].split('-');
+                            return `${day}/${month}/${year}`;
+                          };
+                          const minD = formatDate(item.fecha_min);
+                          const maxD = item.fecha_max ? formatDate(item.fecha_max) : minD;
+                          return minD === maxD ? minD : `${minD} - ${maxD}`;
                         })() : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-center font-bold text-gray-700 dark:text-gray-300">
