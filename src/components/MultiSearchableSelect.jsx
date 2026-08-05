@@ -2,6 +2,16 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 're
 import { ChevronDown, Check, X, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
+const normalizeString = (str) => {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[.,-]/g, '') // Remove dots, commas, dashes
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .toLowerCase();
+};
+
 export default function MultiSearchableSelect({ 
  value = [], 
  onChange, 
@@ -22,11 +32,11 @@ export default function MultiSearchableSelect({
  const filteredOptions = useMemo(() => {
  let opts = options;
  if (query) {
- const lowercaseQuery = query.toLowerCase();
+ const normalizedQuery = normalizeString(query);
  opts = options.filter(opt => {
  if (!opt) return false;
- const labelStr = opt.label ? String(opt.label).toLowerCase() : '';
- return labelStr.includes(lowercaseQuery);
+ const labelStr = normalizeString(String(opt.label));
+ return labelStr.includes(normalizedQuery);
  });
  }
  
@@ -196,6 +206,7 @@ export default function MultiSearchableSelect({
  <span className={`block truncate min-w-0 flex-1 ${isSelected ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300 '}`}>
  {opt.label}
  </span>
+ {opt.extra && <span className="ml-2 flex-shrink-0">{opt.extra}</span>}
  </label>
  );
  })

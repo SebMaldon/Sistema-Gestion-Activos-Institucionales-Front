@@ -22,8 +22,10 @@ import Garantias from './pages/Garantias';
 import Unidades from './pages/Unidades';
 import Aprobaciones from './pages/Aprobaciones';
 import Correspondencia from './pages/Correspondencia';
+import MonitoreoLimpieza from './pages/MonitoreoLimpieza';
 import Anuncios from './pages/Anuncios';
 import SinAcceso from './pages/SinAcceso';
+import Prestamos from './pages/Prestamos';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { useVersionCheck } from './hooks/useVersionCheck';
 
@@ -183,6 +185,11 @@ export default function App() {
  <AppLayout page="garantias"><Garantias /></AppLayout>
  </RoleRoute>
  } />
+ <Route path="/prestamos" element={
+    <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
+      <AppLayout page="prestamos"><Prestamos /></AppLayout>
+    </RoleRoute>
+  } />
  <Route path="/incidencias" element={
  <RoleRoute allowedRoles={[ROL_ADMIN, ROL_MAESTRO]}>
  <AppLayout page="incidencias"><Incidencias /></AppLayout>
@@ -196,6 +203,11 @@ export default function App() {
  <Route path="/anuncios" element={
  <RoleRoute allowedRoles={[ROL_MAESTRO]}>
  <AppLayout page="anuncios"><Anuncios /></AppLayout>
+ </RoleRoute>
+ } />
+ <Route path="/monitoreo-limpieza" element={
+ <RoleRoute allowedRoles={[ROL_MAESTRO]}>
+ <AppLayout page="monitoreo-limpieza"><MonitoreoLimpieza /></AppLayout>
  </RoleRoute>
  } />
 

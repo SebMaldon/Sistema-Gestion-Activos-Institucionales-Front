@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Send, Trash2, Users, Building2, User, Globe, Loader2, AlertTriangle, RefreshCcw } from 'lucide-react';
 import { gqlClient } from '../api/client';
-import { CREATE_NOTIFICACION_MUTATION, TODAS_NOTIFICACIONES_QUERY, DELETE_NOTIFICACION_MUTATION } from '../api/anuncios.queries';
+import { obtenerTodasNotificaciones, crearNotificacion, eliminarNotificacion } from '../api/anuncios.service';
 import { GET_USUARIOS } from '../api/usuarios.queries';
 import { GET_UNIDADES_FISICAS_QUERY } from '../api/unidades.queries';
 import { useApp } from '../context/AppContext';
@@ -85,8 +85,8 @@ export default function Anuncios() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const res = await gqlClient.request(TODAS_NOTIFICACIONES_QUERY, { limit, offset: page * limit });
-      setNotifs(res.todasNotificaciones ?? []);
+      const data = await obtenerTodasNotificaciones(limit, page * limit);
+      setNotifs(data ?? []);
     } catch (err) {
       showToast('Error al cargar anuncios.', 'error');
     } finally {
@@ -153,7 +153,7 @@ export default function Anuncios() {
 
     setSending(true);
     try {
-      await gqlClient.request(CREATE_NOTIFICACION_MUTATION, {
+      await crearNotificacion({
         titulo: titulo.trim(),
         mensaje: mensaje.trim(),
         tipo_audiencia: tipoAudiencia,
@@ -177,7 +177,7 @@ export default function Anuncios() {
   const handleDelete = async () => {
     if (!confirmDel) return;
     try {
-      await gqlClient.request(DELETE_NOTIFICACION_MUTATION, { id_notificacion: confirmDel });
+      await eliminarNotificacion(confirmDel);
       showToast('Anuncio eliminado.', 'success');
       setConfirmDel(null);
       cargar();

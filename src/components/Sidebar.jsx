@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Package, AlertTriangle, ArrowLeftFromLine,
   QrCode, Users, Settings, ShieldCheck, LogOut, ChevronRight,
-  Building2, ClipboardList, X, Mail, Bell
+  Building2, ClipboardList, X, Mail, Bell, Printer
 } from 'lucide-react';
 
 // ─── 1 = Maestro,  2 = Administrador,  3 = Usuario Estándar, 4 = Sin Acceso ──
@@ -18,8 +18,10 @@ const NAV_BY_ROL = {
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Gestión' },
 
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Gestión' },
+    { path: '/prestamos', label: 'Préstamos', icon: Package, group: 'Gestión' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Gestión' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Gestión' },
+    { path: '/monitoreo-limpieza', label: 'Monitoreo de Impresiones', icon: Printer, group: 'Gestión' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
     { path: '/aprobaciones', label: 'Aprobaciones', icon: ClipboardList, group: 'Sistema' },
     { path: '/anuncios', label: 'Anuncios', icon: Bell, group: 'Sistema' },
@@ -33,6 +35,7 @@ const NAV_BY_ROL = {
     { path: '/incidencias', label: 'Incidencias', icon: AlertTriangle, group: 'Administración' },
     { path: '/garantias', label: 'Garantías', icon: ShieldCheck, group: 'Administración' },
     { path: '/movimientos', label: 'Salidas', icon: ArrowLeftFromLine, group: 'Administración' },
+    { path: '/prestamos', label: 'Préstamos', icon: Package, group: 'Administración' },
     { path: '/unidades', label: 'Catálogo de Unidades', icon: Building2, group: 'Administración' },
     { path: '/correspondencia', label: 'Correspondencia', icon: Mail, group: 'Administración' },
     { path: '/escaner', label: 'Escáner QR', icon: QrCode, group: 'Operación' },
@@ -84,7 +87,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 flex-shrink-0 flex flex-col h-screen`}
+    <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} transition-all duration-300 flex-shrink-0 flex flex-col h-screen`}
       style={{ backgroundColor: '#00472e' }}>
 
       {/* Logo */}
@@ -150,10 +153,10 @@ export default function Sidebar() {
                 >
                   <Icon
                     size={18}
-                    className={isActive ? 'text-yellow-300' : 'text-green-200/60 group-hover:text-yellow-300'}
+                    className={`${isActive ? 'text-yellow-300' : 'text-green-200/60 group-hover:text-yellow-300'} flex-shrink-0`}
                   />
-                  {!sidebarCollapsed && <span className="flex-1 text-left whitespace-nowrap">{item.label}</span>}
-                  {isActive && !sidebarCollapsed && <ChevronRight size={14} className="text-yellow-300" />}
+                  {!sidebarCollapsed && <span className="flex-1 text-left whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>}
+                  {isActive && !sidebarCollapsed && <ChevronRight size={14} className="text-yellow-300 flex-shrink-0" />}
                 </button>
               );
             })}
