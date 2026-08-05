@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useApp } from '../context/AppContext';
 import {
   LayoutDashboard, Package, AlertTriangle, ArrowLeftFromLine,
@@ -50,11 +51,13 @@ const NAV_BY_ROL = {
 
 export default function Sidebar() {
   const { setSidebarOpen, sidebarCollapsed } = useApp();
-  const usuario = useAuthStore((s) => s.usuario);
+  const { data: currentUserData } = useCurrentUser();
+  const usuarioLocal = useAuthStore((s) => s.usuario);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
   const location = useLocation();
 
+  const usuario = currentUserData || usuarioLocal;
   const idRol = usuario?.id_rol ?? 3;
   const navItems = NAV_BY_ROL[idRol] ?? NAV_BY_ROL[3];
 

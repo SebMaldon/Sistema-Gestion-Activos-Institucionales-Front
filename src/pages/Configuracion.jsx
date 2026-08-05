@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, Save, Building, Database, Shield, Bell, Monitor, Key, Eye, EyeOff } from 'lucide-react';
+import { Settings, Save, Building, Database, Shield, Bell, Monitor, Key, Eye, EyeOff, MapPin, Clock } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { CHANGE_PASSWORD_MUTATION } from '../api/auth.queries';
+import { SOLICITAR_CAMBIO_UNIDAD, GET_MI_SOLICITUD_CAMBIO_UNIDAD } from '../api/aprobaciones.queries';
+import { GET_TODAS_LAS_UNIDADES_QUERY } from '../api/unidades.queries';
+
+const ROL_MAESTRO = 1;
+const ROL_ADMIN = 2;
+const ROL_USUARIO = 3;
 
 export default function Configuracion() {
   const { showToast, hoverZoomScale, updateHoverZoomScale } = useApp();
+  const queryClient = useQueryClient();
   const [config, setConfig] = useState({
     institucion: 'IMSS — Delegación Nayarit',
     delegacion: 'Delegación Nayarit',
@@ -37,6 +44,55 @@ export default function Configuracion() {
       showToast(e?.response?.errors?.[0]?.message ?? 'Error al cambiar contraseña', 'error');
     }
   });
+
+  // ── Cambio de Unidad ──────────────────────────────────────────────────
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState('');
+  const [unidadSearch, setUnidadSearch] = useState('');
+
+  const { data: miSolicitudData } = useQuery({
+    queryKey: ['miSolicitudCambioUnidad'],
+    queryFn: () => gqlClient.request(GET_MI_SOLICITUD_CAMBIO_UNIDAD),
+    enabled: [ROL_ADMIN, ROL_USUARIO].includes(usuario?.id_rol),
+  });
+  const solicitudPendiente = (() => {
+    const s = miSolicitudData?.miSolicitudCambioUnidad;
+    if (!s) return null;
+    try {
+      return typeof s.datos_nuevos === 'string' ? JSON.parse(s.datos_nuevos) : s.datos_nuevos;
+    } catch { return null; }
+  })();
+
+  const { data: catUnidadesData } = useQuery({
+    queryKey: ['todasLasUnidades'],
+    queryFn: () => gqlClient.request(GET_TODAS_LAS_UNIDADES_QUERY),
+    enabled: [ROL_ADMIN, ROL_USUARIO].includes(usuario?.id_rol),
+  });
+  const catUnidades = catUnidadesData?.todasLasUnidades || [];
+  const unidadesFiltradas = catUnidades.filter(u => {
+    if (!unidadSearch) return true;
+    const q = unidadSearch.toLowerCase();
+    return (
+      u.descripcion?.toLowerCase().includes(q) ||
+      u.clave?.toLowerCase().includes(q) ||
+      u.desc_corta?.toLowerCase().includes(q)
+    );
+  });
+
+  const solicitarUnidadMut = useMutation({
+    mutationFn: (vars) => gqlClient.request(SOLICITAR_CAMBIO_UNIDAD, vars),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['miSolicitudCambioUnidad'] });
+      showToast('Solicitud enviada. Un Maestro debe aprobarla.', 'success');
+    },
+    onError: (e) => {
+      showToast(e?.response?.errors?.[0]?.message ?? 'Error al enviar solicitud', 'error');
+    }
+  });
+
+  const handleSolicitarUnidad = () => {
+    if (!unidadSeleccionada) return showToast('Selecciona una unidad', 'warning');
+    solicitarUnidadMut.mutate({ clave_unidad_nueva: unidadSeleccionada });
+  };
 
   const handleSave = () => {
     showToast('Configuración del sistema guardada correctamente.', 'success');
@@ -168,6 +224,77 @@ export default function Configuracion() {
             </div>
           </div>
         </div>
+        {/* Cambio de Unidad — solo Admin y Estándar */}
+        {[ROL_ADMIN, ROL_USUARIO].includes(usuario?.id_rol) && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-4 max-w-2xl">
+            <h2 className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              <MapPin size={15} style={{ color: '#006341' }} />
+              Solicitar Cambio de Unidad
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Selecciona la unidad a la que deseas pertenecer. La solicitud quedará pendiente hasta que un <strong>Maestro</strong> la apruebe.
+            </p>
+
+            {solicitudPendiente ? (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
+                <Clock size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Solicitud pendiente de aprobación</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
+                    Unidad solicitada: <span className="font-medium">{solicitudPendiente.descripcion_unidad || solicitudPendiente.clave_unidad_nueva}</span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Buscar Unidad</label>
+                  <input
+                    type="text"
+                    value={unidadSearch}
+                    onChange={e => setUnidadSearch(e.target.value)}
+                    placeholder="Nombre o clave de la unidad..."
+                    className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white dark:bg-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Unidad</label>
+                  <div className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-green-500/20 focus-within:border-green-500 transition-all">
+                    <div className="max-h-48 overflow-y-auto">
+                      {unidadesFiltradas.length > 0 ? (
+                        unidadesFiltradas.map(u => (
+                          <button
+                            key={u.clave}
+                            type="button"
+                            onClick={() => setUnidadSeleccionada(u.clave)}
+                            className={`w-full text-left px-3 py-2.5 transition-colors border-b border-gray-50 dark:border-gray-800/50 last:border-0 ${
+                              unidadSeleccionada === u.clave 
+                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-semibold' 
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
+                          >
+                            <span className="font-mono text-[11px] opacity-60 mr-1.5">[{u.clave}]</span>
+                            <span className="truncate">{u.descripcion || u.desc_corta}</span>
+                          </button>
+                        ))
+                      ) : (
+                         <div className="px-4 py-6 text-center text-gray-400 text-xs">No se encontraron unidades con esa búsqueda</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSolicitarUnidad}
+                  disabled={solicitarUnidadMut.isPending || !unidadSeleccionada}
+                  className="px-5 py-2.5 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-all disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg, #006341, #004d32)' }}
+                >
+                  {solicitarUnidadMut.isPending ? 'Enviando...' : 'Enviar Solicitud'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

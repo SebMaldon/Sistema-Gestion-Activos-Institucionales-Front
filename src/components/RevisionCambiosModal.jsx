@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { gql } from 'graphql-request';
@@ -38,7 +38,7 @@ const FIELD_LABELS = {
 };
 
 // Campos a ignorar en la comparación
-const IGNORE_FIELDS = ['_esCreacion', 'id_bien', 'especificacionTI', '_idBienTemporal'];
+const IGNORE_FIELDS = ['_esCreacion', 'id_bien', 'especificacionTI', '_idBienTemporal', '_tipo', 'clave_unidad_nueva', 'descripcion_unidad', 'id_usuario_solicitante'];
 
 const CATALOGS_QUERY = gql`
  query GetModalCatalogs {
@@ -74,6 +74,7 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
  }, [solicitud.datos_nuevos]);
 
  const esCreacion = datosNuevos._esCreacion === true;
+ const esCambioUnidad = datosNuevos._tipo === 'CAMBIO_UNIDAD';
 
  // Datos actuales del bien (puede ser null si es creación)
  const bienActual = solicitud.bien || {};
@@ -202,7 +203,7 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
  )}
  <div>
  <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 ">
- {esCreacion ? 'Solicitud de Creación' : 'Revisión de Cambios'}
+ {esCambioUnidad ? 'Solicitud de Cambio de Unidad' : esCreacion ? 'Solicitud de Creación' : 'Revisión de Cambios'}
  </h2>
  <p className="text-sm text-gray-500 dark:text-gray-400 ">
  Solicitado por <strong>{solicitud.solicitante?.nombre_completo}</strong>
@@ -222,24 +223,46 @@ export default function RevisionCambiosModal({ solicitud, onAprobar, onRechazar,
  </div>
 
  {/* Info del Equipo */}
- <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex flex-wrap gap-x-6 gap-y-2 text-sm">
- <div>
- <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">No. Serie:</span>
- <span className="ml-1.5 font-semibold text-gray-800 dark:text-gray-200 ">{bienActual.num_serie || datosNuevos.num_serie || 'N/A'}</span>
- </div>
- <div>
- <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">No. Inventario:</span>
- <span className="ml-1.5 font-semibold text-gray-800 dark:text-gray-200 ">{bienActual.num_inv || datosNuevos.num_inv || 'N/A'}</span>
- </div>
- <div>
- <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">Modelo:</span>
- <span className="ml-1.5 font-semibold text-gray-800 dark:text-gray-200 ">{bienActual.modelo?.descrip_disp || datosNuevos.clave_modelo || 'N/A'}</span>
- </div>
- </div>
+ {!esCambioUnidad && (
+  <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+  <div>
+  <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">No. Serie:</span>
+  <span className="ml-1.5 font-semibold text-gray-800 dark:text-gray-200 ">{bienActual.num_serie || datosNuevos.num_serie || 'N/A'}</span>
+  </div>
+  <div>
+  <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">No. Inventario:</span>
+  <span className="ml-1.5 font-semibold text-gray-800 dark:text-gray-200 ">{bienActual.num_inv || datosNuevos.num_inv || 'N/A'}</span>
+  </div>
+  <div>
+  <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wider">Modelo:</span>
+  <span className="ml-1.5 font-semibold text-gray-800 dark:text-gray-200 ">{bienActual.modelo?.descrip_disp || datosNuevos.clave_modelo || 'N/A'}</span>
+  </div>
+  </div>
+ )}
 
  {/* Body — Comparación */}
  <div className="flex-1 overflow-y-auto px-6 py-4">
- {camposComparar.length === 0 ? (
+ {esCambioUnidad ? (
+  <div className="flex flex-col gap-4">
+  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-xl">
+  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2">Cambio de Unidad Solicitado</p>
+  <div className="flex items-center gap-3">
+  <div className="text-sm">
+  <span className="text-gray-500 dark:text-gray-400">Unidad actual: </span>
+  <span className="font-semibold text-gray-800 dark:text-gray-200">{solicitud.solicitante?.unidadFisica?.descripcion || solicitud.solicitante?.clave_unidad || '—'}</span>
+  {solicitud.solicitante?.unidadFisica?.descripcion && <span className="ml-1 text-xs text-gray-400">({solicitud.solicitante?.clave_unidad})</span>}
+  </div>
+  <ArrowRight className="w-4 h-4 text-purple-500 shrink-0" />
+  <div className="text-sm">
+  <span className="text-gray-500 dark:text-gray-400">Nueva unidad: </span>
+  <span className="font-semibold text-purple-700 dark:text-purple-300">{datosNuevos.descripcion_unidad || datosNuevos.clave_unidad_nueva}</span>
+  <span className="ml-1 text-xs text-gray-400">({datosNuevos.clave_unidad_nueva})</span>
+  </div>
+  </div>
+  </div>
+  <p className="text-xs text-gray-500 dark:text-gray-400">Al aprobar, la unidad del usuario será actualizada inmediatamente.</p>
+  </div>
+  ) : camposComparar.length === 0 ? (
  <p className="text-center text-gray-400 py-8">No se encontraron campos para comparar.</p>
  ) : (
  <div className="space-y-1">

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
-import { GET_BITACORA } from '../api/bitacora.queries';
-import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Activity, X, Braces, Filter } from 'lucide-react';
+import { GET_BITACORA, PURGAR_BITACORA, GET_BITACORA_RANGO_FECHAS } from '../api/bitacora.queries';
+import { ShieldCheck, Edit, Trash2, FilePlus, Eye, ChevronLeft, ChevronRight, Activity, X, Braces, Filter, AlertTriangle } from 'lucide-react';
 import { formatDateTime } from '../lib/utils';
 import { gql } from 'graphql-request';
 import MultiSelect from '../components/MultiSelect';
 import DetalleBienVisualModal from '../components/DetalleBienVisualModal';
 import DetalleIncidenciaWrapperModal from '../components/DetalleIncidenciaWrapperModal';
+import { useAuthStore } from '../store/auth.store';
 
 const GET_BITACORA_LOOKUPS = gql`
  query GetBitacoraLookups {
@@ -277,6 +278,46 @@ function DetalleJSONModal({ isOpen, onClose, log, catalogs, onVerBien, onVerInci
 
 
 export default function Auditoria() {
+ const ROL_MAESTRO = 1;
+ const usuario = useAuthStore(s => s.usuario);
+ const queryClient = useQueryClient();
+ const [showPurgeModal, setShowPurgeModal] = useState(false);
+ const [purgeDesde, setPurgeDesde] = useState('');
+ const [purgeHasta, setPurgeHasta] = useState('');
+ const [purgeConfirm, setPurgeConfirm] = useState(false);
+ const [purgeResult, setPurgeResult] = useState(null);
+
+ const purgeMut = useMutation({
+   mutationFn: (vars) => gqlClient.request(PURGAR_BITACORA, vars),
+   onSuccess: (data) => {
+     setPurgeResult(data.purgarBitacora);
+     setPurgeConfirm(false);
+     queryClient.invalidateQueries({ queryKey: ['bitacora'] });
+   },
+   onError: (e) => {
+     alert(e?.response?.errors?.[0]?.message ?? 'Error al purgar');
+     setPurgeConfirm(false);
+   }
+ });
+
+ const handlePurge = () => {
+   if (!purgeDesde || !purgeHasta) return;
+   purgeMut.mutate({
+     fechaDesde: new Date(purgeDesde).toISOString(),
+     fechaHasta: new Date(new Date(purgeHasta).setHours(23, 59, 59, 999)).toISOString(),
+   });
+ };
+
+ const { data: rangoData } = useQuery({
+   queryKey: ['bitacoraRangoFechas'],
+   queryFn: () => gqlClient.request(GET_BITACORA_RANGO_FECHAS),
+   enabled: showPurgeModal && usuario?.id_rol === ROL_MAESTRO,
+   staleTime: 30000,
+ });
+ const toDateInput = (iso) => iso ? new Date(iso).toISOString().slice(0, 10) : '';
+ const dateMin = toDateInput(rangoData?.bitacoraRangoFechas?.fechaMin);
+ const dateMax = toDateInput(new Date().toISOString());
+
  const [modalLog, setModalLog] = useState(null);
  const [visualModalBienId, setVisualModalBienId] = useState(null);
  const [visualModalIncidenciaId, setVisualModalIncidenciaId] = useState(null);
@@ -357,6 +398,15 @@ export default function Auditoria() {
  <ShieldCheck size={16} style={{ color: '#ca8a04' }} />
  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 dark:text-amber-300">Modo Supervisión</span>
  </div>
+ {usuario?.id_rol === ROL_MAESTRO && (
+  <button
+   onClick={() => { setShowPurgeModal(true); setPurgeResult(null); setPurgeConfirm(false); }}
+   className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20 text-xs font-semibold text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+  >
+   <Trash2 size={15} />
+   Purgar Bitácora
+  </button>
+ )}
  </div>
  </div>
 
@@ -808,6 +858,72 @@ export default function Auditoria() {
  id_incidencia={visualModalIncidenciaId} 
  onClose={() => setVisualModalIncidenciaId(null)} 
  />
+ )}
+
+ {/* ── Modal de Purga de Bitácora ─────────────────────────────── */}
+ {showPurgeModal && (
+ <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setShowPurgeModal(false)}>
+ <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+ {/* Header */}
+ <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-red-50 dark:bg-red-900/20">
+ <h3 className="text-base font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
+ <AlertTriangle size={18} />
+ Purgar Bitácora
+ </h3>
+ <button onClick={() => setShowPurgeModal(false)} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg">
+ <X size={18} />
+ </button>
+ </div>
+
+ <div className="p-6 space-y-4">
+ {purgeResult ? (
+ <div className="space-y-3">
+ <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl">
+ <p className="text-sm font-semibold text-green-700 dark:text-green-400">Purga completada</p>
+ <p className="text-xs text-green-600 dark:text-green-300 mt-1">{purgeResult.registrosBorrados} registros eliminados. La acción quedó registrada en la bitácora.</p>
+ </div>
+ <button onClick={() => setShowPurgeModal(false)} className="w-full py-2.5 rounded-xl text-white text-sm font-bold" style={{ background: 'linear-gradient(135deg,#006341,#004d32)' }}>
+ Cerrar
+ </button>
+ </div>
+ ) : purgeConfirm ? (
+ <div className="space-y-4">
+ <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl">
+ <p className="text-sm font-semibold text-red-700 dark:text-red-400">⚠ Esta acción es irreversible</p>
+ <p className="text-xs text-red-600 dark:text-red-300 mt-1">Se eliminarán todos los registros entre <strong>{purgeDesde}</strong> y <strong>{purgeHasta}</strong>. La purga quedará registrada en la bitácora.</p>
+ </div>
+ <div className="flex gap-3">
+ <button onClick={() => setPurgeConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancelar</button>
+ <button onClick={handlePurge} disabled={purgeMut.isPending} className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold bg-red-600 hover:bg-red-700 disabled:opacity-60 transition-colors">
+ {purgeMut.isPending ? 'Purgando...' : 'Confirmar Purga'}
+ </button>
+ </div>
+ </div>
+ ) : (
+ <div className="space-y-4">
+ <p className="text-xs text-gray-500 dark:text-gray-400">Selecciona el rango de fechas a eliminar. Los registros dentro de ese rango se borrarán permanentemente.</p>
+ <div className="grid grid-cols-2 gap-3">
+ <div>
+ <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Desde</label>
+ <input type="date" value={purgeDesde} min={dateMin} max={dateMax} onChange={e => setPurgeDesde(e.target.value)} className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-400 bg-white dark:bg-gray-900" />
+ </div>
+ <div>
+ <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Hasta</label>
+ <input type="date" value={purgeHasta} min={dateMin} max={dateMax} onChange={e => setPurgeHasta(e.target.value)} className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-400 bg-white dark:bg-gray-900" />
+ </div>
+ </div>
+ <button
+ onClick={() => setPurgeConfirm(true)}
+ disabled={!purgeDesde || !purgeHasta}
+ className="w-full py-2.5 rounded-xl text-white text-sm font-bold bg-red-600 hover:bg-red-700 disabled:opacity-40 transition-colors"
+ >
+ Continuar
+ </button>
+ </div>
+ )}
+ </div>
+ </div>
+ </div>
  )}
  </div>
  );

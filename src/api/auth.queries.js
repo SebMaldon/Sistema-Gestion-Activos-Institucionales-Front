@@ -30,9 +30,11 @@ export const ME_QUERY = gql`
       tipo_usuario
       id_rol
       id_unidad
+      clave_unidad
       estatus
       rol { id_rol nombre_rol }
       unidad: segmento { id_unidad: id_segmento nombre no_ref clave }
+      unidadFisica { descripcion }
     }
   }
 `;

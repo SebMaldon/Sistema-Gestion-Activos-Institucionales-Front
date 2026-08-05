@@ -161,6 +161,7 @@ export default function Aprobaciones() {
  {filtered.map((sol) => {
  const datosP = typeof sol.datos_nuevos === 'string' ? JSON.parse(sol.datos_nuevos) : sol.datos_nuevos;
  const esCreacion = datosP._esCreacion === true;
+ const esCambioUnidad = datosP._tipo === 'CAMBIO_UNIDAD';
  return (
  <tr key={sol.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-green-50/30 transition-colors animate-slide-down">
  <td className="px-5 py-4">
@@ -184,6 +185,13 @@ export default function Aprobaciones() {
  <div className="flex items-center gap-2">
  <Monitor className="w-4 h-4 text-gray-400" />
  <div>
+ {esCambioUnidad ? (
+ <>
+ <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{sol.solicitante?.nombre_completo || '—'}</p>
+ <p className="text-xs text-gray-400">→ {datosP.descripcion_unidad || datosP.clave_unidad_nueva}</p>
+ </>
+ ) : (
+ <>
  <p 
  className="text-sm font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
  onClick={() => {
@@ -198,16 +206,20 @@ export default function Aprobaciones() {
  <p className="text-xs text-gray-400">
  {sol.bien?.modelo?.descrip_disp || datosP.clave_modelo || 'Sin modelo'}
  </p>
+ </>
+ )}
  </div>
  </div>
  </td>
  <td className="px-5 py-4">
  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
- esCreacion
+ esCambioUnidad
+ ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50'
+ : esCreacion
  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 dark:border-blue-800/50'
  : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 dark:border-amber-800/50'
  }`}>
- {esCreacion ? 'Creación' : 'Actualización'}
+ {esCambioUnidad ? 'Cambio de Unidad' : esCreacion ? 'Creación' : 'Actualización'}
  </span>
  </td>
  <td className="px-5 py-4 text-center">

@@ -27,3 +27,23 @@ export const GET_BITACORA = gql`
     }
   }
 `;
+
+export const PURGAR_BITACORA = gql`
+  mutation PurgarBitacora($fechaDesde: DateTime!, $fechaHasta: DateTime!) {
+    purgarBitacora(fechaDesde: $fechaDesde, fechaHasta: $fechaHasta) {
+      registrosBorrados
+      fechaDesde
+      fechaHasta
+    }
+  }
+`;
+
+export const GET_BITACORA_RANGO_FECHAS = gql`
+  query GetBitacoraRangoFechas {
+    bitacoraRangoFechas {
+      fechaMin
+      fechaMax
+    }
+  }
+`;
+

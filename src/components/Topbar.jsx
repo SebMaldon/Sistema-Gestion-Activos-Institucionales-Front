@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuthStore } from '../store/auth.store';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useThemeStore } from '../store/theme.store';
 import { Bell, User, Shield, UserCog, Menu, MousePointerClick, Moon, Sun } from 'lucide-react';
 import { gqlClient } from '../api/client';
@@ -24,7 +25,9 @@ const ROL_CONFIG = {
 export default function Topbar() {
  const navigate = useNavigate();
  const { sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed, hoverZoomEnabled, toggleHoverZoom } = useApp();
- const usuario = useAuthStore((s) => s.usuario);
+ const { data: currentUserData } = useCurrentUser();
+ const usuarioLocal = useAuthStore((s) => s.usuario);
+ const usuario = currentUserData || usuarioLocal;
  const { darkMode, toggleDarkMode } = useThemeStore();
  const [showNotif, setShowNotif] = useState(false);
  const [notificaciones, setNotificaciones] = useState([]);
@@ -124,7 +127,7 @@ export default function Topbar() {
  : '?';
 
  const displayName = usuario?.nombre_completo ?? 'Usuario';
- const unidad = usuario?.unidad?.nombre ?? '';
+ const unidad = usuario?.unidadFisica?.descripcion || usuario?.unidad?.nombre || usuario?.clave_unidad || '';
 
  return (
  <header className="h-14 sm:h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-3 sm:px-6 flex-shrink-0 z-20">

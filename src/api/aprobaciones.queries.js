@@ -48,6 +48,10 @@ export const GET_SOLICITUDES_PENDIENTES = gql`
         id_usuario
         nombre_completo
         matricula
+        clave_unidad
+        unidadFisica {
+          descripcion
+        }
       }
     }
   }
@@ -62,5 +66,26 @@ export const APROBAR_CAMBIO = gql`
 export const RECHAZAR_CAMBIO = gql`
   mutation RechazarCambio($solicitudId: Int!, $motivo: String) {
     rechazarCambio(solicitudId: $solicitudId, motivo: $motivo)
+  }
+`;
+
+export const SOLICITAR_CAMBIO_UNIDAD = gql`
+  mutation SolicitarCambioUnidad($clave_unidad_nueva: String!) {
+    solicitarCambioUnidad(clave_unidad_nueva: $clave_unidad_nueva) {
+      id
+      estado
+      datos_nuevos
+    }
+  }
+`;
+
+export const GET_MI_SOLICITUD_CAMBIO_UNIDAD = gql`
+  query GetMiSolicitudCambioUnidad {
+    miSolicitudCambioUnidad {
+      id
+      estado
+      datos_nuevos
+      fecha_solicitud
+    }
   }
 `;

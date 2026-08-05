@@ -303,6 +303,16 @@ export const GET_CAT_UNIDADES_QUERY = gql`
   }
 `;
 
+export const GET_TODAS_LAS_UNIDADES_QUERY = gql`
+  query GetTodasLasUnidades {
+    todasLasUnidades {
+      clave
+      descripcion
+      desc_corta
+    }
+  }
+`;
+
 export const GET_CAT_TIPO_UNIDADES = gql`
   query GetCatTipoUnidades {
     catTipoUnidades {
