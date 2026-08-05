@@ -303,8 +303,8 @@ export default function Auditoria() {
  const handlePurge = () => {
    if (!purgeDesde || !purgeHasta) return;
    purgeMut.mutate({
-     fechaDesde: new Date(purgeDesde).toISOString(),
-     fechaHasta: new Date(new Date(purgeHasta).setHours(23, 59, 59, 999)).toISOString(),
+     fechaDesde: new Date(`${purgeDesde}T00:00:00`).toISOString(),
+     fechaHasta: new Date(`${purgeHasta}T23:59:59`).toISOString(),
    });
  };
 
@@ -928,3 +928,4 @@ export default function Auditoria() {
  </div>
  );
 }
+
