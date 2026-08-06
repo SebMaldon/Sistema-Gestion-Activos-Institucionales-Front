@@ -14,6 +14,8 @@ export const GET_MONITOREO_IMPRESIONES = gql`
           nombre_ubicacion
           fecha_min
           fecha_max
+          limpieza_logica
+          wifi
         }
         cursor
       }
@@ -53,3 +55,9 @@ export async function getMonitoreoImpresiones(filters = {}, pagination = {}) {
   const { monitoreoImpresiones } = await gqlClient.request(GET_MONITOREO_IMPRESIONES, variables);
   return monitoreoImpresiones;
 }
+
+export const UPDATE_MONITOREO_LIMPIEZA = gql`
+  mutation UpdateMonitoreoLimpieza($noserie: String!, $limpieza_logica: Int, $wifi: Int) {
+    updateMonitoreoLimpieza(noserie: $noserie, limpieza_logica: $limpieza_logica, wifi: $wifi)
+  }
+`;

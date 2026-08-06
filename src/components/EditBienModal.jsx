@@ -1223,7 +1223,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
         if (showTI && targetId) {
           const tiData = parseTI();
           const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
-          if (hayDatosTI) upsertTI({ id_bien: targetId, ...tiData });
+          if (hayDatosTI || modalForm !== 'create') upsertTI({ id_bien: targetId, ...tiData });
           cuentasList.forEach(c => {
             const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
             if (c.id_cuenta && !c._new) updateCuentaPC({ id_cuenta: c.id_cuenta, data });
@@ -1590,7 +1590,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
   if (showTI) {
   const tiData = parseTI();
   const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
-  if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+  upsertTI({ id_bien: modalForm.id_bien, ...tiData });
   cuentasList.forEach(c => {
   const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };
   if (c.id_cuenta && !c._new) {
@@ -1630,7 +1630,7 @@ export function EditBienModal({ isOpen, onClose, asset, catalogos, mode = 'edit'
  if (showTI && modalForm.id_bien) {
  const tiData = parseTI();
  const hayDatosTI = Object.values(tiData).some((v) => v !== null && v !== '');
- if (hayDatosTI) upsertTI({ id_bien: modalForm.id_bien, ...tiData });
+ upsertTI({ id_bien: modalForm.id_bien, ...tiData });
  // Sync cuentas PC 1:N
  cuentasList.forEach(c => {
  const data = { cuenta_windows: c.cuenta_windows||null, correo: c.correo||null, tipo_user: c.tipo_user||null };

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, RefreshCw, Loader2, AlertTriangle, FileText,
-  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, MonitorSmartphone, FilterX
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, MonitorSmartphone, FilterX, Wifi, WifiOff
 } from 'lucide-react';
-import { getMonitoreoImpresiones, GET_MONITOREO_RESUMEN_UNIDADES } from '../api/monitoreo.queries';
+import { getMonitoreoImpresiones, GET_MONITOREO_RESUMEN_UNIDADES, UPDATE_MONITOREO_LIMPIEZA } from '../api/monitoreo.queries';
 import { useAuthStore } from '../store/auth.store';
 import { gqlClient } from '../api/client';
 import { GET_CATALOGOS_BIENES_QUERY } from '../api/inventario.queries';
@@ -27,9 +27,24 @@ const HighlightText = ({ text, highlight }) => {
 
 export default function MonitoreoLimpieza() {
   const usuario = useAuthStore((s) => s.usuario);
+  const qc = useQueryClient();
   const [filters, setFilters] = useState({ search: '', version: '', ubicacion: '', unidades: [], fechaInicio: '', fechaFin: '' });
   const [activeFilters, setActiveFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
+  const [pendingToggles, setPendingToggles] = useState({});
+
+  const { mutate: updateToggle } = useMutation({
+    mutationFn: (vars) => gqlClient.request(UPDATE_MONITOREO_LIMPIEZA, vars),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['monitoreoImpresiones'] }),
+  });
+
+  const handleToggle = (noserie, field, currentVal) => {
+    const newVal = currentVal === 1 ? 0 : 1;
+    setPendingToggles(p => ({ ...p, [`${noserie}_${field}`]: newVal }));
+    updateToggle({ noserie, [field]: newVal }, {
+      onSettled: () => setPendingToggles(p => { const n = { ...p }; delete n[`${noserie}_${field}`]; return n; }),
+    });
+  };
 
   // Pagination
   const PAGE_SIZE = 30;
@@ -269,7 +284,7 @@ export default function MonitoreoLimpieza() {
                 <p className="text-sm">No se encontraron registros</p>
               </div>
             ) : (
-              <table className="w-full text-left text-xs table-fixed" style={{ minWidth: '900px' }}>
+              <table className="w-full text-left text-xs table-fixed" style={{ minWidth: '1050px' }}>
                 <colgroup>
                   <col style={{ width: '12rem' }} />
                   <col style={{ width: '10rem' }} />
@@ -277,6 +292,8 @@ export default function MonitoreoLimpieza() {
                   <col style={{ minWidth: '150px' }} />
                   <col style={{ width: '8rem' }} />
                   <col style={{ width: '12rem' }} />
+                  <col style={{ width: '8rem' }} />
+                  <col style={{ width: '6rem' }} />
                   <col style={{ width: '11.5rem' }} />
                 </colgroup>
                 <thead className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-bold shadow-sm sticky top-0 z-10">
@@ -299,6 +316,8 @@ export default function MonitoreoLimpieza() {
                     <th className="px-3 py-2.5 whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('fecha')}>
                       Rango de Fecha <SortIcon columnKey="fecha" />
                     </th>
+                    <th className="px-3 py-2.5 text-center whitespace-nowrap">Limpieza Lógica</th>
+                    <th className="px-3 py-2.5 text-center whitespace-nowrap">WiFi</th>
                     <th className="px-3 py-2.5 text-center whitespace-nowrap cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onClick={() => handleSort('total_impresiones')}>
                       Total Impresiones <SortIcon columnKey="total_impresiones" />
                     </th>
@@ -336,6 +355,48 @@ export default function MonitoreoLimpieza() {
                           const maxD = item.fecha_max ? formatDate(item.fecha_max) : minD;
                           return minD === maxD ? minD : `${minD} - ${maxD}`;
                         })() : '—'}
+                      </td>
+                      {/* Toggle Limpieza Lógica */}
+                      <td className="px-3 py-2.5 text-center">
+                        {(() => {
+                          const key = `${item.num_serie}_limpieza_logica`;
+                          const val = key in pendingToggles ? pendingToggles[key] : item.limpieza_logica;
+                          const on = val === 1;
+                          return (
+                            <button
+                              onClick={() => handleToggle(item.num_serie, 'limpieza_logica', val)}
+                              title={on ? 'Limpieza lógica realizada' : 'Sin limpieza lógica'}
+                              className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors focus:outline-none ${
+                                on ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                              }`}
+                            >
+                              <span className={`inline-block w-3.5 h-3.5 bg-white rounded-full shadow transform transition-transform ${
+                                on ? 'translate-x-4' : 'translate-x-0.5'
+                              }`} />
+                            </button>
+                          );
+                        })()}
+                      </td>
+                      {/* Toggle WiFi */}
+                      <td className="px-3 py-2.5 text-center">
+                        {(() => {
+                          const key = `${item.num_serie}_wifi`;
+                          const val = key in pendingToggles ? pendingToggles[key] : item.wifi;
+                          const on = val === 1;
+                          return (
+                            <button
+                              onClick={() => handleToggle(item.num_serie, 'wifi', val)}
+                              title={on ? 'WiFi activo' : 'Sin WiFi'}
+                              className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors focus:outline-none ${
+                                on ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                              }`}
+                            >
+                              <span className={`inline-block w-3.5 h-3.5 bg-white rounded-full shadow transform transition-transform ${
+                                on ? 'translate-x-4' : 'translate-x-0.5'
+                              }`} />
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2.5 text-center font-bold text-gray-700 dark:text-gray-300">
                         {item.total_impresiones != null ? item.total_impresiones.toLocaleString() : '0'}

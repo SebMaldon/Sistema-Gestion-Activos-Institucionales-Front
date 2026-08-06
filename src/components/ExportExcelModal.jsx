@@ -220,15 +220,15 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
 
   // Sub-encabezados de grupo (fila de grupo visual)
   // Columnas por grupo:
-  // No. (0) | PRINCIPALES (9 cols: 1..9) | GENERALES (3 cols: 10..12) | TI (14 cols: 13..26) | GARANTÍA (3 cols: 27..29) | ADMIN (5 cols: 30..34)
+  // No. (0) | PRINCIPALES (9 cols: 1..9) | GENERALES (4 cols: 10..13) | TI (16 cols: 14..29) | GARANTÍA (3 cols: 30..32) | ADMIN (5 cols: 33..37)
   const groupRow = [
     '', // No.
     // Principales (9 cols)
     'DATOS PRINCIPALES', '', '', '', '', '', '', '', '',
-    // Datos Generales (3 cols)
-    'DATOS GENERALES', '', '',
-    // Especificaciones TI (14 cols)
-    'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '', '',
+    // Datos Generales (4 cols)
+    'DATOS GENERALES', '', '', '',
+    // Especificaciones TI (16 cols)
+    'ESPECIFICACIONES TI', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
     // Garantía (3 cols)
     'GARANTÍA', '', '',
     // Otros Datos Administrativos (5 cols)
@@ -241,15 +241,15 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
     'No.',
     // Principales (1..9)
     'TIPO DE DISPOSITIVO', 'MARCA', 'MODELO', 'SERIE', 'NNI', 'UNIDAD', 'UBICACIÓN', 'ESTATUS', 'DESCRIPCIÓN DISPOSITIVO',
-    // Datos Generales (10..12)
-    'CLAVE PRESUPUESTAL', 'SEGMENTO', 'RESGUARDO',
-    // TI (13..26)
+    // Datos Generales (10..13)
+    'CLAVE PRESUPUESTAL', 'SEGMENTO', 'RESGUARDO', 'MATRÍCULA RESGUARDO',
+    // TI (14..29)
     'CPU', 'RAM', 'ALMACENAMIENTO', 'DIR IP', 'DIR MAC',
     'MAC ADDRESS', 'NOMBRE HOST', 'S.O.', 'OFFICE', 'PUERTO RED', 'SWITCH',
-    'NO. SERIE WINDOWS', 'CUENTAS REGISTRADAS', 'ACTUALIZACION ANTIVIRUS',
-    // Garantía (27..29)
+    'NO. SERIE WINDOWS', 'CUENTA', 'CORREO', 'TIPO DE CUENTA', 'ACTUALIZACION ANTIVIRUS',
+    // Garantía (30..32)
     'GARANTIA', 'GARANTIA VENCE', 'PROVEEDOR GARANTIA',
-    // Otros Admin (30..34)
+    // Otros Admin (33..37)
     'FECHA ADQUISICIÓN', 'CATEGORIA', 'UNIDAD DE MEDIDA', 'CAPITALIZABLE', 'CANTIDAD',
   ];
   wsData.push(headers);
@@ -283,11 +283,12 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
       b.ubicacion || '',
       b.estatusOperativo || '',
       b.modelo?.descrip_disp || '',
-      // Datos Generales (10..12)
+      // Datos Generales
       b.clavePresupuestal === '—' ? '' : (b.clavePresupuestal || ''),
       segmentoNombre,
-      b.usuarioResguardo?.matricula ? `${b.usuarioResguardo.nombre_completo} - ${b.usuarioResguardo.matricula}` : (b.resguardo || ''),
-      // TI (13..26)
+      b.usuarioResguardo ? b.usuarioResguardo.nombre_completo : (b.resguardo || ''),
+      b.usuarioResguardo?.matricula || '',
+      // TI
       b.especificacionTI?.cpu_info || '',
       b.especificacionTI?.ram_gb ?? '',
       b.especificacionTI?.almacenamiento_gb ?? '',
@@ -300,7 +301,9 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
       b.especificacionTI?.puerto_red || '',
       b.especificacionTI?.switch_red || '',
       b.especificacionTI?.windows_serial || '',
-      (b.cuentasPC || []).map(c => `• ${c.cuenta_windows || 'Sin usuario'} | ${c.correo || 'Sin correo'} | ${c.tipo_user || 'Sin rol'}`).join('\n') || '',
+      (b.cuentasPC || []).map(c => c.cuenta_windows || 'Sin usuario').join('\n') || '',
+      (b.cuentasPC || []).map(c => c.correo || 'Sin correo').join('\n') || '',
+      (b.cuentasPC || []).map(c => c.tipo_user || 'Sin rol').join('\n') || '',
       fmtFecha(b.especificacionTI?.last_scan),
       // Garantía (27..29)
       g ? 'Sí' : 'No',
@@ -323,15 +326,15 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
     { wch: 5 },  // 0: No.
     // Principales (1..9)
     { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 32 },
-    // Datos Generales (10..12)
-    { wch: 20 }, { wch: 22 }, { wch: 26 },
-    // TI (13..26)
+    // Datos Generales (10..13)
+    { wch: 20 }, { wch: 22 }, { wch: 26 }, { wch: 22 },
+    // TI (14..29)
     { wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 16 }, { wch: 18 },
     { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
-    { wch: 14 }, { wch: 22 }, { wch: 45 }, { wch: 16 },
-    // Garantía (27..29)
+    { wch: 14 }, { wch: 22 }, { wch: 25 }, { wch: 35 }, { wch: 18 }, { wch: 16 },
+    // Garantía (30..32)
     { wch: 12 }, { wch: 16 }, { wch: 26 },
-    // Otros Admin (30..34)
+    // Otros Admin (33..37)
     { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 10 },
   ];
 
@@ -348,7 +351,7 @@ function buildWorkbook(bienes, { withDescription, descripcion, totalCount, catal
   // Rangos de grupos: [colStart, colEnd] (0-indexed)
   const groupRowIdx = dataStartRow;
   const groupRanges = [
-    [1, 9], [10, 12], [13, 26], [27, 29], [30, 34],
+    [1, 9], [10, 13], [14, 29], [30, 32], [33, 37],
   ];
   groupRanges.forEach(([start, end]) => {
     merges.push({ s: { r: groupRowIdx, c: start }, e: { r: groupRowIdx, c: end } });
