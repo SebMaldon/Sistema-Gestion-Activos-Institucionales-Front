@@ -26,7 +26,8 @@ import {
   GET_MARCAS_TIPOS_QUERY, CREATE_MARCA_MUTATION,
   CREATE_TIPO_DISPOSITIVO_MUTATION, CREATE_CAT_MODELO_MUTATION,
   GET_BIENES_MONITOR, ASIGNAR_MONITOR_MUTATION, DESASIGNAR_MONITOR_MUTATION,
-  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION, UPDATE_CAT_MODELO_MUTATION
+  SET_SYNC_PENDING_MUTATION, SET_SYNC_PENDING_ALL_MUTATION, UPDATE_CAT_MODELO_MUTATION,
+  GET_PROGRAMAS_INSTALADOS
 } from '../api/inventario.queries';
 import { GET_PROVEEDORES, CREATE_GARANTIA, UPDATE_GARANTIA, CREATE_PROVEEDOR } from '../api/garantias.queries';
 import { formatDate, formatDateTime, copyTextToClipboard } from '../lib/utils';
@@ -1074,6 +1075,8 @@ export default function Inventario() {
     fecha_adquisicion_hasta: '',
     fecha_actualizacion_desde: '',
     fecha_actualizacion_hasta: '',
+    // Programas Instalados
+    programas_instalados: [],
   });
 
   const EMPTY_ADV = {
@@ -1085,6 +1088,7 @@ export default function Inventario() {
     atributo_id: '', atributo_valor: '',
     con_notas_recientes: false, inconvenientes: false, tiene_agente: '',
     fecha_adquisicion_desde: '', fecha_adquisicion_hasta: '', fecha_actualizacion_desde: '', fecha_actualizacion_hasta: '',
+    programas_instalados: [],
   };
 
   const filtersContainerRef = useRef(null);
@@ -1110,6 +1114,7 @@ export default function Inventario() {
     if (advFilters.tipo_disp.length) count++;
     if (advFilters.clave_marca.length) count++;
     if (advFilters.id_categoria.length) count++;
+    if (advFilters.programas_instalados.length) count++;
     if (advFilters.ram_min || advFilters.ram_max) count++;
     if (advFilters.almacenamiento_min || advFilters.almacenamiento_max) count++;
     if (advFilters.modelo_so) count++;
@@ -1169,6 +1174,7 @@ export default function Inventario() {
     if (advFilters.inconvenientes) f.inconvenientes = true;
     if (advFilters.tiene_agente === 'true') f.tiene_agente = true;
     if (advFilters.tiene_agente === 'false') f.tiene_agente = false;
+    if (advFilters.programas_instalados && advFilters.programas_instalados.length > 0) f.programas_instalados = advFilters.programas_instalados;
     if (advFilters.fecha_adquisicion_desde) f.fecha_adquisicion_desde = advFilters.fecha_adquisicion_desde;
     if (advFilters.fecha_adquisicion_hasta) f.fecha_adquisicion_hasta = advFilters.fecha_adquisicion_hasta;
     if (advFilters.fecha_actualizacion_desde) f.fecha_actualizacion_desde = advFilters.fecha_actualizacion_desde;
@@ -1280,6 +1286,12 @@ export default function Inventario() {
     queryKey: ['cat-atributos', { soloActivos: true }],
     queryFn: () => gqlClient.request(GET_CAT_ATRIBUTOS, { soloActivos: true }),
   });
+
+  const { data: programasInstaladosData } = useQuery({
+    queryKey: ['programas-instalados'],
+    queryFn: () => gqlClient.request(GET_PROGRAMAS_INSTALADOS),
+  });
+  const programasInstalados = programasInstaladosData?.programasInstalados ?? [];
 
   const selectedEAVTiposObj = useMemo(() => {
     return (catalogos?.tipos ?? []).filter(t => advFilters.tipo_disp.includes(String(t.tipo_disp)));
@@ -2207,7 +2219,7 @@ export default function Inventario() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-3">
                           <div>
                             <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Sistema Operativo</label>
                             <input type="text" placeholder='Ej. "Windows", "Linux"'
@@ -2230,6 +2242,15 @@ export default function Inventario() {
                               value={advFilters.dir_ip}
                               onChange={e => { setAdvFilters(p => ({ ...p, dir_ip: e.target.value })); setCursor(null); setCursors([]); }}
                               className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-green-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Programas Instalados</label>
+                            <MultiSearchableSelect
+                              placeholder="Seleccionar..."
+                              value={advFilters.programas_instalados}
+                              onChange={(val) => { setAdvFilters(p => ({ ...p, programas_instalados: val })); setCursor(null); setCursors([]); }}
+                              options={programasInstalados.map(p => ({ value: p, label: p }))}
                             />
                           </div>
                         </div>

@@ -4,12 +4,12 @@ import { useAuthStore } from '../store/auth.store';
 import {
  AlertTriangle, Clock, CheckCircle, User, Calendar,
  Plus, MoreVertical, Edit2, Trash2, Building2, Loader2, RefreshCw, LayoutDashboard, List, Search, ChevronLeft, ChevronRight, Eye, AlignLeft,
- Hash, FileText, MapPin, Copy, FileSpreadsheet
+ Hash, FileText, MapPin, Copy, FileSpreadsheet, Filter, X
 } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 import { useQuery } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
-import { GET_INCIDENCIAS_QUERY } from '../api/incidencias.queries';
+import { GET_INCIDENCIAS_QUERY, GET_UNIDADES_QUERY, GET_TIPOS_INCIDENCIA_QUERY } from '../api/incidencias.queries';
 import IncidenciaModal from '../components/IncidenciaModal';
 import EditarIncidenciaModal from '../components/EditarIncidenciaModal';
 import ResolucionModal from '../components/ResolucionModal';
@@ -370,7 +370,10 @@ const IncidenciaCard = memo(function IncidenciaCard({
 
 function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, onStatusChange, onVerBien }) {
  const { showToast } = useApp();
+ const [showFilters, setShowFilters] = useState(false);
  const [estatusFiltro, setEstatusFiltro] = useState('');
+ const [tipoIncidenciaFiltro, setTipoIncidenciaFiltro] = useState('');
+ const [unidadFiltro, setUnidadFiltro] = useState('');
  const [fechaFiltroTipo, setFechaFiltroTipo] = useState(''); // 'creacion' o 'resolucion'
  const [fechaDesde, setFechaDesde] = useState('');
  const [fechaHasta, setFechaHasta] = useState('');
@@ -399,8 +402,38 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  setCurrentPage(1);
  };
 
+ const handleClearFilters = () => {
+   setEstatusFiltro('');
+   setTipoIncidenciaFiltro('');
+   setUnidadFiltro('');
+   setFechaFiltroTipo('');
+   setFechaDesde('');
+   setFechaHasta('');
+   setSearchQuery('');
+   setDebouncedSearch('');
+   setCurrentPage(1);
+ };
+
+ const { data: unidadesData } = useQuery({
+   queryKey: ['catUnidades'],
+   queryFn: async () => {
+     const res = await gqlClient.request(GET_UNIDADES_QUERY);
+     return res.catUnidades;
+   },
+   staleTime: 10 * 60 * 1000,
+ });
+
+ const { data: tiposData } = useQuery({
+   queryKey: ['catTiposIncidencia'],
+   queryFn: async () => {
+     const res = await gqlClient.request(GET_TIPOS_INCIDENCIA_QUERY);
+     return res.tiposIncidencia;
+   },
+   staleTime: 10 * 60 * 1000,
+ });
+
  const { data, isLoading, isError } = useQuery({
- queryKey: ['incidencias', 'historico', debouncedSearch, estatusFiltro, fechaFiltroTipo, fechaDesde, fechaHasta, currentPage],
+ queryKey: ['incidencias', 'historico', debouncedSearch, estatusFiltro, tipoIncidenciaFiltro, unidadFiltro, fechaFiltroTipo, fechaDesde, fechaHasta, currentPage],
  queryFn: async () => {
  let f_creacion_desde = undefined;
  let f_creacion_hasta = undefined;
@@ -417,6 +450,8 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
 
  const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
  estatus_reparacion: estatusFiltro || undefined,
+ id_tipo_incidencia: tipoIncidenciaFiltro ? parseInt(tipoIncidenciaFiltro) : undefined,
+ id_unidad: unidadFiltro || undefined,
  search: debouncedSearch || undefined,
  fecha_creacion_desde: f_creacion_desde,
  fecha_creacion_hasta: f_creacion_hasta,
@@ -460,6 +495,8 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
 
   const res = await gqlClient.request(GET_INCIDENCIAS_QUERY, {
   estatus_reparacion: estatusFiltro || undefined,
+  id_tipo_incidencia: tipoIncidenciaFiltro ? parseInt(tipoIncidenciaFiltro) : undefined,
+  id_unidad: unidadFiltro || undefined,
   search: debouncedSearch || undefined,
   fecha_creacion_desde: f_creacion_desde,
   fecha_creacion_hasta: f_creacion_hasta,
@@ -589,69 +626,122 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  </button>
  </div>
 
- {/* Filtro estatus + buscador (apilados en móvil, en fila en desktop) */}
- <div className="flex flex-col sm:flex-row gap-2">
- <select
- value={estatusFiltro}
- onChange={(e) => handleEstatusChange(e.target.value)}
- className="w-full sm:w-auto px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 "
- >
- <option value="">Todos los estatus</option>
- <option value="Pendiente">Pendiente</option>
- <option value="En proceso">En proceso</option>
- <option value="Resuelto">Resuelto</option>
- </select>
- <div className="relative flex-1">
- <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
- <input
- type="text"
- placeholder="Buscar serie, falla, o requerimiento..."
- value={searchQuery}
- onChange={e => handleSearch(e.target.value)}
- className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 "
- />
- </div>
+ {/* Buscador y botón de filtros (Fila principal) */}
+ <div className="flex flex-col sm:flex-row md:items-center justify-between gap-4">
+   <div className="relative flex-1 max-w-xl">
+     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+     <input type="text" placeholder="Buscar serie, falla, o requerimiento..."
+            value={searchQuery} onChange={e => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm" />
+   </div>
+
+   <button
+     onClick={() => setShowFilters(!showFilters)}
+     className={`flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all flex-shrink-0 ${
+       showFilters || estatusFiltro || tipoIncidenciaFiltro || unidadFiltro || fechaFiltroTipo
+       ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 shadow-sm'
+       : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+     }`}
+   >
+     <Filter size={16} />
+     <span>Filtros avanzados {(estatusFiltro || tipoIncidenciaFiltro || unidadFiltro || fechaFiltroTipo) ? '(Activos)' : ''}</span>
+   </button>
  </div>
 
- {/* Filtros de Fecha */}
- <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm border-t border-gray-200 dark:border-gray-700/60 pt-2">
- <span className="text-gray-500 dark:text-gray-400 font-medium text-xs uppercase tracking-wide whitespace-nowrap">Filtro por fecha:</span>
- <select
- value={fechaFiltroTipo}
- onChange={(e) => { setFechaFiltroTipo(e.target.value); handleFilterChange(); }}
- className="w-full sm:w-auto px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 "
- >
- <option value="">Sin filtro de fecha</option>
- <option value="creacion">Fecha de Creación</option>
- <option value="resolucion">Fecha de Resolución</option>
- </select>
+ {/* Contenedor colapsable de filtros */}
+ {showFilters && (
+   <div className="mt-3 p-5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700/80 rounded-2xl shadow-inner animate-in fade-in slide-in-from-top-1 duration-250">
+     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+       
+       <div>
+         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Estatus</label>
+         <select
+           value={estatusFiltro}
+           onChange={(e) => handleEstatusChange(e.target.value)}
+           className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+         >
+           <option value="">Todos los estatus</option>
+           <option value="Pendiente">Pendiente</option>
+           <option value="En proceso">En proceso</option>
+           <option value="Resuelto">Resuelto</option>
+         </select>
+       </div>
 
- {fechaFiltroTipo && (
- <div className="flex flex-wrap items-center gap-2">
- <input
- type="date"
- value={fechaDesde}
- onChange={(e) => { setFechaDesde(e.target.value); handleFilterChange(); }}
- className="flex-1 min-w-[130px] px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 "
- />
- <span className="text-gray-400 text-xs">hasta</span>
- <input
- type="date"
- value={fechaHasta}
- onChange={(e) => { setFechaHasta(e.target.value); handleFilterChange(); }}
- className="flex-1 min-w-[130px] px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 "
- />
- {(fechaDesde || fechaHasta) && (
- <button
- onClick={() => { setFechaDesde(''); setFechaHasta(''); setFechaFiltroTipo(''); handleFilterChange(); }}
- className="px-2 py-1.5 text-xs text-red-500 hover:text-red-700 dark:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
- >
- Limpiar
- </button>
+       <div>
+         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Tipo de Incidencia</label>
+         <select
+           value={tipoIncidenciaFiltro}
+           onChange={(e) => { setTipoIncidenciaFiltro(e.target.value); handleFilterChange(); }}
+           className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+         >
+           <option value="">Todos los tipos</option>
+           {tiposData?.map(t => (
+             <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>{t.nombre_tipo}</option>
+           ))}
+         </select>
+       </div>
+
+       <div>
+         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Unidad</label>
+         <select
+           value={unidadFiltro}
+           onChange={(e) => { setUnidadFiltro(e.target.value); handleFilterChange(); }}
+           className="w-full px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+         >
+           <option value="">Todas las unidades</option>
+           {unidadesData?.map(u => (
+             <option key={u.clave} value={u.clave}>{u.descripcion}</option>
+           ))}
+         </select>
+       </div>
+
+       <div className="sm:col-span-2 md:col-span-3">
+         <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Filtro por fecha</label>
+         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+           <select
+             value={fechaFiltroTipo}
+             onChange={(e) => { setFechaFiltroTipo(e.target.value); handleFilterChange(); }}
+             className="w-full sm:w-auto px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+           >
+             <option value="">Sin filtro de fecha</option>
+             <option value="creacion">Fecha de Creación</option>
+             <option value="resolucion">Fecha de Resolución</option>
+           </select>
+           
+           {fechaFiltroTipo && (
+             <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+               <input
+                 type="date"
+                 value={fechaDesde}
+                 onChange={(e) => { setFechaDesde(e.target.value); handleFilterChange(); }}
+                 className="flex-1 min-w-[130px] px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-600 dark:text-gray-400"
+               />
+               <span className="text-gray-400 text-xs font-medium">hasta</span>
+               <input
+                 type="date"
+                 value={fechaHasta}
+                 onChange={(e) => { setFechaHasta(e.target.value); handleFilterChange(); }}
+                 className="flex-1 min-w-[130px] px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-600 dark:text-gray-400"
+               />
+             </div>
+           )}
+         </div>
+       </div>
+
+     </div>
+
+     {/* Limpiar Filtros */}
+     <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700/80 flex justify-end">
+       <button
+         onClick={handleClearFilters}
+         className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+       >
+         <X size={14} className="text-gray-400" />
+         Limpiar Todos los Filtros
+       </button>
+     </div>
+   </div>
  )}
- </div>
- )}
- </div>
  </div>
 
  {/* ─── Tabla: scroll-x en móvil, scroll completo (x+y) en desktop ───── */}
@@ -670,6 +760,7 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Estatus</th>
  <th className="px-3 py-2.5 font-semibold">Falla</th>
  <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Requerimiento</th>
+ <th className="px-3 py-2.5 font-semibold whitespace-nowrap">Reportado Por</th>
  <th className="px-3 py-2.5 font-semibold whitespace-nowrap">F. Creación</th>
  <th className="px-3 py-2.5 font-semibold whitespace-nowrap">F. Resolución</th>
  <th className="px-3 py-2.5 font-semibold text-center whitespace-nowrap">Acciones</th>
@@ -735,6 +826,9 @@ function TablaHistorico({ canEdit, canDelete, onEdit, onDelete, onViewDetail, on
  ) : (
  '—'
  )}
+ </td>
+ <td className="px-3 py-2.5 text-gray-800 dark:text-gray-200 font-medium whitespace-nowrap max-w-[130px] truncate" title={inc.generadoPor || 'Personal IMSS'}>
+   {highlightText(inc.generadoPor || 'Personal IMSS', debouncedSearch)}
  </td>
  <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{inc.fecha}</td>
  <td className="px-3 py-2.5 text-green-700 dark:text-green-400 dark:text-green-300 font-medium whitespace-nowrap">

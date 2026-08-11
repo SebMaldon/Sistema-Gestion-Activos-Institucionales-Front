@@ -162,6 +162,12 @@ export const BIEN_FIELDS = gql`
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
+export const GET_PROGRAMAS_INSTALADOS = gql`
+  query GetProgramasInstalados {
+    programasInstalados
+  }
+`;
+
 export const GET_BIENES_REPORTE_QUERY = gql`
   query GetBienesReporte($filter: BienesFilterInput, $pagination: PaginationInput) {
     bienes(filter: $filter, pagination: $pagination) {

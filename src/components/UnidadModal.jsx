@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Info, MapPin, Phone, Settings, Loader2, Plus, Network, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { X, Save, Info, MapPin, Phone, Settings, Loader2, Plus, Network, ChevronDown, ChevronUp, Trash2, Map as MapIcon, Pencil, Check } from 'lucide-react';
 import ReactDOM from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { useCatTipoUnidades } from '../hooks/useUnidades';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gqlClient } from '../api/client';
 import { GET_USUARIOS } from '../api/usuarios.queries';
+import { GET_UBICACIONES_POR_UNIDAD, CREATE_UBICACION, UPDATE_UBICACION, DELETE_UBICACION } from '../api/unidades.queries';
 import SearchableSelect from './SearchableSelect';
 
 export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, isLoading }) {
  const { showToast } = useApp();
+ const queryClient = useQueryClient();
  const [formData, setFormData] = useState({
  clave: '',
  descripcion: '',
@@ -42,6 +44,56 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'ubicacion' | 'tecnico' | 'segmentos'
  const [errors, setErrors] = useState({});
  const [expandedSegmentIndex, setExpandedSegmentIndex] = useState(null);
+
+ const { data: ubicacionesData, isLoading: isLoadingUbicaciones } = useQuery({
+   queryKey: ['ubicacionesUnidad', unidadToEdit?.clave],
+   queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: unidadToEdit.clave }),
+   enabled: isOpen && !!unidadToEdit?.clave && activeTab === 'ubicacionesFisicas',
+   initialData: unidadToEdit?.ubicaciones ? { ubicacionesPorUnidad: unidadToEdit.ubicaciones } : undefined,
+ });
+ const ubicaciones = ubicacionesData?.ubicacionesPorUnidad || [];
+
+ const [newUbicacionName, setNewUbicacionName] = useState('');
+ const [editingUbicacion, setEditingUbicacion] = useState(null);
+
+ const createUbiMut = useMutation({
+   mutationFn: (nombre) => gqlClient.request(CREATE_UBICACION, { id_unidad: unidadToEdit.clave, nombre_ubicacion: nombre }),
+   onSuccess: () => {
+     queryClient.invalidateQueries(['ubicacionesUnidad', unidadToEdit?.clave]);
+     setNewUbicacionName('');
+     showToast('Ubicación agregada', 'success');
+   },
+   onError: (err) => showToast('Error: ' + err.message, 'error')
+ });
+
+ const updateUbiMut = useMutation({
+   mutationFn: ({ id, nombre }) => gqlClient.request(UPDATE_UBICACION, { id_ubicacion: id, nombre_ubicacion: nombre }),
+   onSuccess: () => {
+     queryClient.invalidateQueries(['ubicacionesUnidad', unidadToEdit?.clave]);
+     setEditingUbicacion(null);
+     showToast('Ubicación actualizada', 'success');
+   },
+   onError: (err) => showToast('Error: ' + err.message, 'error')
+ });
+
+ const deleteUbiMut = useMutation({
+   mutationFn: (id) => gqlClient.request(DELETE_UBICACION, { id_ubicacion: id }),
+   onSuccess: () => {
+     queryClient.invalidateQueries(['ubicacionesUnidad', unidadToEdit?.clave]);
+     showToast('Ubicación eliminada', 'success');
+   },
+   onError: (err) => showToast('Error: ' + err.message, 'error')
+ });
+
+ const handleAddUbicacion = () => {
+   if (!newUbicacionName.trim()) return;
+   createUbiMut.mutate(newUbicacionName.trim());
+ };
+
+ const handleUpdateUbicacion = () => {
+   if (!editingUbicacion?.nombre_ubicacion.trim()) return;
+   updateUbiMut.mutate({ id: editingUbicacion.id_ubicacion, nombre: editingUbicacion.nombre_ubicacion.trim() });
+ };
 
  // Catalogs for consistency (Using the ones from Unidades)
  const { data: tipoUnidades, isLoading: loadingTipos } = useCatTipoUnidades();
@@ -482,6 +534,16 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  <span className="absolute top-2 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
  )}
  </button>
+ {unidadToEdit && (
+ <button 
+ type="button"
+ onClick={() => setActiveTab('ubicacionesFisicas')}
+ className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 relative ${activeTab === 'ubicacionesFisicas' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
+ >
+ <MapIcon size={16} /> 
+ Ubicaciones ({ubicaciones?.length || 0})
+ </button>
+ )}
  </div>
 
  {/* Body */}
@@ -1083,6 +1145,96 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  </div>
  );
  })}
+ </div>
+ )}
+ </div>
+ )}
+ 
+ {activeTab === 'ubicacionesFisicas' && unidadToEdit && (
+ <div className="space-y-6 animate-in fade-in duration-300">
+ <div className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 flex gap-3 items-end">
+ <div className="flex-1">
+ <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Nueva Ubicación Física</label>
+ <input 
+ type="text"
+ value={newUbicacionName}
+ onChange={e => setNewUbicacionName(e.target.value)}
+ placeholder="Ej. Piso 1, Consultorio 3, Bodega Principal..."
+ className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+ />
+ </div>
+ <button
+ type="button"
+ onClick={handleAddUbicacion}
+ disabled={!newUbicacionName.trim() || createUbiMut.isLoading}
+ className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg flex items-center gap-2 text-sm font-semibold transition-colors shrink-0"
+ >
+ {createUbiMut.isLoading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+ Agregar
+ </button>
+ </div>
+ 
+ {isLoadingUbicaciones ? (
+ <div className="flex items-center justify-center p-8">
+ <Loader2 size={24} className="animate-spin text-blue-600" />
+ </div>
+ ) : ubicaciones.length > 0 ? (
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ {ubicaciones.map(ubi => (
+ <div key={ubi.id_ubicacion} className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-between group hover:border-blue-300 transition-colors">
+ {editingUbicacion?.id_ubicacion === ubi.id_ubicacion ? (
+ <div className="flex items-center gap-2 flex-1 mr-2">
+ <input 
+ type="text"
+ value={editingUbicacion.nombre_ubicacion}
+ onChange={e => setEditingUbicacion({...editingUbicacion, nombre_ubicacion: e.target.value})}
+ className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+ autoFocus
+ />
+ <button type="button" onClick={handleUpdateUbicacion} disabled={updateUbiMut.isLoading} className="text-green-600 hover:text-green-700 p-1">
+ {updateUbiMut.isLoading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+ </button>
+ <button type="button" onClick={() => setEditingUbicacion(null)} className="text-gray-400 hover:text-gray-600 p-1">
+ <X size={16} />
+ </button>
+ </div>
+ ) : (
+ <>
+ <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
+ <MapIcon size={16} className="text-blue-500" />
+ {ubi.nombre_ubicacion}
+ </div>
+ <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+ <button 
+ type="button"
+ onClick={() => setEditingUbicacion(ubi)}
+ className="p-1.5 text-gray-400 hover:text-blue-600 rounded bg-gray-50 hover:bg-blue-50 transition-colors"
+ >
+ <Pencil size={14} />
+ </button>
+ <button 
+ type="button"
+ onClick={() => {
+ if (window.confirm(`¿Seguro que deseas eliminar la ubicación "${ubi.nombre_ubicacion}"?`)) {
+ deleteUbiMut.mutate(ubi.id_ubicacion);
+ }
+ }}
+ disabled={deleteUbiMut.isLoading}
+ className="p-1.5 text-gray-400 hover:text-red-600 rounded bg-gray-50 hover:bg-red-50 transition-colors disabled:opacity-50"
+ >
+ {deleteUbiMut.isLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+ </button>
+ </div>
+ </>
+ )}
+ </div>
+ ))}
+ </div>
+ ) : (
+ <div className="p-8 text-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-dashed">
+ <MapIcon size={32} className="mx-auto text-gray-400 mb-3" />
+ <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No hay ubicaciones registradas.</p>
+ <p className="text-xs text-gray-500 mt-1">Usa el formulario de arriba para agregar la primera ubicación.</p>
  </div>
  )}
  </div>

@@ -87,6 +87,10 @@ export const GET_UNIDADES_FISICAS_QUERY = gql`
             clave
             ip_init
           }
+          ubicaciones {
+            id_ubicacion
+            nombre_ubicacion
+          }
         }
         cursor
       }
@@ -112,6 +116,53 @@ export const GET_DISTINCT_FILTROS_QUERY = gql`
       velocidades
       proveedores
     }
+  }
+`;
+
+export const ACTUALIZAR_UNIDAD = gql`
+  mutation ActualizarUnidad($clave: String!, $input: UnidadInput!) {
+    updateUnidad(clave: $clave, input: $input) {
+      clave
+      descripcion
+    }
+  }
+`;
+
+// ─── QUERIES / MUTATIONS — Ubicaciones Físicas ─────────────────────────────────────────
+
+export const GET_UBICACIONES_POR_UNIDAD = gql`
+  query GetUbicacionesPorUnidad($id_unidad: String!) {
+    ubicacionesPorUnidad(id_unidad: $id_unidad) {
+      id_ubicacion
+      id_unidad
+      nombre_ubicacion
+    }
+  }
+`;
+
+export const CREATE_UBICACION = gql`
+  mutation CreateUbicacion($id_unidad: String!, $nombre_ubicacion: String!) {
+    createUbicacion(id_unidad: $id_unidad, nombre_ubicacion: $nombre_ubicacion) {
+      id_ubicacion
+      id_unidad
+      nombre_ubicacion
+    }
+  }
+`;
+
+export const UPDATE_UBICACION = gql`
+  mutation UpdateUbicacion($id_ubicacion: ID!, $nombre_ubicacion: String!) {
+    updateUbicacion(id_ubicacion: $id_ubicacion, nombre_ubicacion: $nombre_ubicacion) {
+      id_ubicacion
+      id_unidad
+      nombre_ubicacion
+    }
+  }
+`;
+
+export const DELETE_UBICACION = gql`
+  mutation DeleteUbicacion($id_ubicacion: ID!) {
+    deleteUbicacion(id_ubicacion: $id_ubicacion)
   }
 `;
 

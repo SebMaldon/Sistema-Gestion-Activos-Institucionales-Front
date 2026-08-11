@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, RefreshCw, Loader2, AlertTriangle, FileText,
-  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, MonitorSmartphone, FilterX, Wifi, WifiOff
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, MonitorSmartphone, FilterX, Wifi, WifiOff,
+  FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { getMonitoreoImpresiones, GET_MONITOREO_RESUMEN_UNIDADES, UPDATE_MONITOREO_LIMPIEZA } from '../api/monitoreo.queries';
 import { useAuthStore } from '../store/auth.store';
 import { gqlClient } from '../api/client';
@@ -25,6 +27,118 @@ const HighlightText = ({ text, highlight }) => {
   );
 };
 
+// ── Export helpers ────────────────────────────────────────────────────────────
+async function fetchAllMonitoreo(filters) {
+  let all = [];
+  let page = 1;
+  const PAGE = 500;
+  while (true) {
+    const res = await getMonitoreoImpresiones(
+      { ...filters },
+      { first: PAGE, page }
+    );
+    const nodes = (res.edges || []).map(e => e.node);
+    all = all.concat(nodes);
+    if (!res.pageInfo?.hasNextPage || nodes.length < PAGE) break;
+    page++;
+  }
+  return all;
+}
+
+function formatSingleDate(fecha) {
+  if (!fecha) return '';
+  const [y, m, d] = fecha.split('T')[0].split('-'); 
+  return `${d}/${m}/${y}`;
+}
+
+function buildMonitoreoWorkbook(rows, filters) {
+  const COLOR_VERDE = '006341';
+  const COLOR_VERDE_M = '107c41';
+  const COLOR_TEXT = '374151';
+  const COLOR_GRIS = 'F3F4F6';
+  const COLOR_WHITE = 'FFFFFF';
+
+  const today = new Date();
+  
+  let filtrosTexto = [];
+  if (filters?.search) filtrosTexto.push(`Búsqueda: "${filters.search}"`);
+  if (filters?.version) filtrosTexto.push(`Versión: "${filters.version}"`);
+  if (filters?.ubicacion) filtrosTexto.push(`Ubicación: "${filters.ubicacion}"`);
+  if (filters?.unidades?.length > 0) filtrosTexto.push(`Unidades: ${filters.unidades.join(', ')}`);
+  if (filters?.fechaInicio || filters?.fechaFin) {
+    filtrosTexto.push(`Fecha: ${filters.fechaInicio || 'Inicio'} a ${filters.fechaFin || 'Hoy'}`);
+  }
+  const textoFiltrosAplicados = filtrosTexto.length > 0 
+    ? `Filtros aplicados ─ ${filtrosTexto.join(' | ')}` 
+    : `Filtros aplicados ─ Ninguno (Todo el historial)`;
+
+  const headers = ['NÚM. SERIE', 'DIRECCIÓN IP', 'UNIDAD', 'UBICACIÓN', 'FECHA INICIO', 'FECHA FIN', 'TOTAL IMPRESIONES'];
+
+  const wsData = [
+    ['SISTEMA INTEGRAL DE INFRAESTRUCTURA TECNOLOGICA — IMSS Delegación Nayarit'],
+    [`Reporte de: Monitoreo de Limpieza e Impresiones — ${textoFiltrosAplicados}`],
+    [`Fecha de exportación: ${today.toLocaleString('es-MX')}`],
+    [`Total de registros: ${rows.length}`],
+    [],
+    headers
+  ];
+
+  rows.forEach(r => {
+    wsData.push([
+      r.num_serie || '',
+      r.dir_ip || '',
+      r.descripcion || '',
+      r.nombre_ubicacion || '',
+      formatSingleDate(r.fecha_min),
+      formatSingleDate(r.fecha_max) || formatSingleDate(r.fecha_min),
+      r.total_impresiones != null ? r.total_impresiones : 0,
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 30 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 18 }];
+
+  for (let i = 0; i < 4; i++) {
+    const addr = XLSX.utils.encode_cell({ r: i, c: 0 });
+    if (ws[addr]) {
+      ws[addr].s = { font: { bold: true, sz: 11, color: { rgb: i === 0 ? COLOR_VERDE : COLOR_TEXT } } };
+    }
+  }
+
+  headers.forEach((_, c) => {
+    const addr = XLSX.utils.encode_cell({ r: 5, c });
+    if (!ws[addr]) ws[addr] = { v: headers[c] };
+    ws[addr].s = {
+      font: { bold: true, sz: 10, color: { rgb: COLOR_WHITE } },
+      fill: { fgColor: { rgb: COLOR_VERDE } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: { bottom: { style: 'medium', color: { rgb: COLOR_VERDE_M } }, right: { style: 'thin', color: { rgb: COLOR_VERDE_M } } },
+    };
+  });
+
+  rows.forEach((_, ri) => {
+    const r = ri + 6;
+    const isEven = ri % 2 === 0;
+    headers.forEach((__, c) => {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { v: '' };
+      ws[addr].s = {
+        font: { sz: 9, color: { rgb: COLOR_TEXT } },
+        fill: { fgColor: { rgb: isEven ? COLOR_WHITE : COLOR_GRIS } },
+        alignment: { horizontal: c === 6 ? 'center' : 'left', vertical: 'center' },
+        border: { right: { style: 'hair', color: { rgb: 'E5E7EB' } }, bottom: { style: 'hair', color: { rgb: 'E5E7EB' } } },
+      };
+    });
+  });
+
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 5, c: 0 }, e: { r: Math.max(5, rows.length + 5), c: headers.length - 1 } }) };
+  ws['!freeze'] = { xSplit: 0, ySplit: 6 };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Monitoreo');
+  return wb;
+}
+
 export default function MonitoreoLimpieza() {
   const usuario = useAuthStore((s) => s.usuario);
   const qc = useQueryClient();
@@ -32,6 +146,22 @@ export default function MonitoreoLimpieza() {
   const [activeFilters, setActiveFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
   const [pendingToggles, setPendingToggles] = useState({});
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const rows = await fetchAllMonitoreo(activeFilters);
+      const wb = buildMonitoreoWorkbook(rows, activeFilters);
+      const fecha = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Monitoreo_${fecha}.xlsx`);
+    } catch (e) {
+      console.error('Error exportando:', e);
+      alert('Error al generar el archivo.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const { mutate: updateToggle } = useMutation({
     mutationFn: (vars) => gqlClient.request(UPDATE_MONITOREO_LIMPIEZA, vars),
@@ -174,6 +304,17 @@ export default function MonitoreoLimpieza() {
               </p>
             </div>
           )}
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting || isLoading}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-[#006341] hover:bg-[#004d32] rounded-xl shadow-sm transition-colors disabled:opacity-50"
+            title="Exportar a Excel"
+          >
+            {exporting
+              ? <Loader2 size={18} className="animate-spin" />
+              : <FileSpreadsheet size={18} />}
+            Exportar Excel
+          </button>
           <button
             onClick={() => refetch()}
             className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"

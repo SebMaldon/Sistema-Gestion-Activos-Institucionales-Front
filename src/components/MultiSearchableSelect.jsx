@@ -195,15 +195,18 @@ export default function MultiSearchableSelect({
  return (
  <label
  key={opt.value}
- className="w-full flex items-center px-3 py-2 text-sm rounded-lg text-left transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 "
+ className="w-full flex items-start px-3 py-2 text-sm rounded-lg text-left transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 "
  >
  <input
  type="checkbox"
  checked={isSelected}
  onChange={() => toggleOption(opt.value)}
- className="mr-3 rounded border-gray-300 dark:border-gray-600 text-green-600 dark:text-green-400 focus:ring-green-500 w-4 h-4"
+ className="mr-3 mt-0.5 rounded border-gray-300 dark:border-gray-600 text-green-600 dark:text-green-400 focus:ring-green-500 flex-shrink-0 w-4 h-4"
  />
- <span className={`block truncate min-w-0 flex-1 ${isSelected ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300 '}`}>
+ <span 
+   className={`block whitespace-normal break-words leading-tight min-w-0 flex-1 ${isSelected ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-700 dark:text-gray-300 '}`}
+   title={opt.label}
+ >
  {opt.label}
  </span>
  {opt.extra && <span className="ml-2 flex-shrink-0">{opt.extra}</span>}

@@ -1,13 +1,24 @@
 import React from 'react';
-import { X, Building2, MapPin, User, Phone, Hash, Layers, Info, Settings, Shield, Network } from 'lucide-react';
+import { X, Building2, MapPin, User, Phone, Hash, Layers, Info, Settings, Shield, Network, Map } from 'lucide-react';
 import ReactDOM from 'react-dom';
 import { useCatTipoUnidades } from '../hooks/useUnidades';
 import DetalleSegmentoModal from './DetalleSegmentoModal';
+import { useQuery } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { GET_UBICACIONES_POR_UNIDAD } from '../api/unidades.queries';
 
 export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  const { data: catTipos } = useCatTipoUnidades();
  const [activeTab, setActiveTab] = React.useState('general');
  const [selectedSegmento, setSelectedSegmento] = React.useState(null);
+
+ const { data: ubicacionesData } = useQuery({
+   queryKey: ['ubicacionesUnidad', unidad?.clave],
+   queryFn: () => gqlClient.request(GET_UBICACIONES_POR_UNIDAD, { id_unidad: unidad.clave }),
+   enabled: isOpen && !!unidad?.clave && activeTab === 'ubicacionesFisicas',
+   initialData: unidad?.ubicaciones ? { ubicacionesPorUnidad: unidad.ubicaciones } : undefined,
+ });
+ const ubicaciones = ubicacionesData?.ubicacionesPorUnidad || [];
 
  if (!isOpen || !unidad) return null;
 
@@ -86,6 +97,12 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'segmentos' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
  >
  <Network size={16} /> Segmentos Asociados
+ </button>
+ <button 
+ onClick={() => setActiveTab('ubicacionesFisicas')}
+ className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'ubicacionesFisicas' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 '}`}
+ >
+ <Map size={16} /> Ubicaciones ({ubicaciones?.length || 0})
  </button>
  </div>
 
@@ -202,6 +219,37 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  <div className="p-6 text-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-dashed">
  <Network size={24} className="mx-auto text-gray-400 mb-2" />
  <p className="text-sm font-medium text-gray-600 dark:text-gray-400 ">No hay segmentos de red asociados a esta unidad</p>
+ </div>
+ )}
+ </section>
+ )}
+
+ {/* Section: Ubicaciones Físicas */}
+ {activeTab === 'ubicacionesFisicas' && (
+ <section className="animate-in fade-in duration-300">
+ <div className="flex items-center gap-2 mb-4">
+ <div className="h-4 w-1 bg-indigo-600 rounded-full"></div>
+ <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight text-indigo-700 dark:text-indigo-400">Ubicaciones Físicas</h3>
+ </div>
+ 
+ {ubicaciones.length > 0 ? (
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+ {ubicaciones.map(ubi => (
+ <div 
+ key={ubi.id_ubicacion} 
+ className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 flex flex-col gap-1 transition-all"
+ >
+ <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider mb-1">
+ <Map size={14} />
+ {ubi.nombre_ubicacion}
+ </div>
+ </div>
+ ))}
+ </div>
+ ) : (
+ <div className="p-6 text-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-dashed">
+ <Map size={24} className="mx-auto text-gray-400 mb-2" />
+ <p className="text-sm font-medium text-gray-600 dark:text-gray-400 ">No hay ubicaciones registradas para esta unidad</p>
  </div>
  )}
  </section>

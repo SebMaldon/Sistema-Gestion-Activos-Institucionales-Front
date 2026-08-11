@@ -55,7 +55,7 @@ export default function SearchableSelect({
       }
     }
 
-    return result.slice(0, 100);
+    return result;
   }, [options, query, value, onInputChange, allowCustom]);
 
  useEffect(() => {
