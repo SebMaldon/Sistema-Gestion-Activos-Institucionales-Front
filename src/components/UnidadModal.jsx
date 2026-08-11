@@ -55,6 +55,8 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
 
  const [newUbicacionName, setNewUbicacionName] = useState('');
  const [editingUbicacion, setEditingUbicacion] = useState(null);
+ const [deleteConfirmUbicacion, setDeleteConfirmUbicacion] = useState(null);
+ const [searchUbicacion, setSearchUbicacion] = useState('');
 
  const createUbiMut = useMutation({
    mutationFn: (nombre) => gqlClient.request(CREATE_UBICACION, { id_unidad: unidadToEdit.clave, nombre_ubicacion: nombre }),
@@ -80,6 +82,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
    mutationFn: (id) => gqlClient.request(DELETE_UBICACION, { id_ubicacion: id }),
    onSuccess: () => {
      queryClient.invalidateQueries(['ubicacionesUnidad', unidadToEdit?.clave]);
+     setDeleteConfirmUbicacion(null);
      showToast('Ubicación eliminada', 'success');
    },
    onError: (err) => showToast('Error: ' + err.message, 'error')
@@ -1178,9 +1181,22 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  <div className="flex items-center justify-center p-8">
  <Loader2 size={24} className="animate-spin text-blue-600" />
  </div>
- ) : ubicaciones.length > 0 ? (
+ ) : (
+ <>
+   {ubicaciones.length > 0 && (
+     <div className="mb-4">
+       <input
+         type="text"
+         placeholder="Buscar ubicación..."
+         value={searchUbicacion}
+         onChange={e => setSearchUbicacion(e.target.value)}
+         className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+       />
+     </div>
+   )}
+   {ubicaciones.filter(u => u.nombre_ubicacion.toLowerCase().includes(searchUbicacion.toLowerCase())).length > 0 ? (
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
- {ubicaciones.map(ubi => (
+ {ubicaciones.filter(u => u.nombre_ubicacion.toLowerCase().includes(searchUbicacion.toLowerCase())).map(ubi => (
  <div key={ubi.id_ubicacion} className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-between group hover:border-blue-300 transition-colors">
  {editingUbicacion?.id_ubicacion === ubi.id_ubicacion ? (
  <div className="flex items-center gap-2 flex-1 mr-2">
@@ -1214,11 +1230,7 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  </button>
  <button 
  type="button"
- onClick={() => {
- if (window.confirm(`¿Seguro que deseas eliminar la ubicación "${ubi.nombre_ubicacion}"?`)) {
- deleteUbiMut.mutate(ubi.id_ubicacion);
- }
- }}
+ onClick={() => setDeleteConfirmUbicacion(ubi)}
  disabled={deleteUbiMut.isLoading}
  className="p-1.5 text-gray-400 hover:text-red-600 rounded bg-gray-50 hover:bg-red-50 transition-colors disabled:opacity-50"
  >
@@ -1231,12 +1243,50 @@ export default function UnidadModal({ isOpen, onClose, unidadToEdit, onSubmit, i
  ))}
  </div>
  ) : (
- <div className="p-8 text-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-dashed">
- <MapIcon size={32} className="mx-auto text-gray-400 mb-3" />
- <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No hay ubicaciones registradas.</p>
- <p className="text-xs text-gray-500 mt-1">Usa el formulario de arriba para agregar la primera ubicación.</p>
+ <div className="text-center p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+ <p className="text-sm text-gray-500 dark:text-gray-400">No hay ubicaciones registradas o no coinciden con la búsqueda.</p>
  </div>
  )}
+ </>
+ )}
+
+ {/* Delete Confirmation Modal */}
+ {deleteConfirmUbicacion && (
+ <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-transparent backdrop-blur-[1px] p-4">
+   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+     <div className="p-6">
+       <div className="flex items-center gap-3 text-red-600 mb-4">
+         <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
+           <Trash2 size={24} />
+         </div>
+         <h3 className="text-lg font-bold">Eliminar Ubicación</h3>
+       </div>
+       <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+         ¿Seguro que deseas eliminar la ubicación <span className="font-semibold">"{deleteConfirmUbicacion.nombre_ubicacion}"</span>? Esta acción no se puede deshacer.
+       </p>
+       <div className="flex justify-end gap-3">
+         <button
+           type="button"
+           onClick={() => setDeleteConfirmUbicacion(null)}
+           className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+         >
+           Cancelar
+         </button>
+         <button
+           type="button"
+           onClick={() => deleteUbiMut.mutate(deleteConfirmUbicacion.id_ubicacion)}
+           disabled={deleteUbiMut.isLoading}
+           className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg transition-colors flex items-center gap-2"
+         >
+           {deleteUbiMut.isLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+           Eliminar
+         </button>
+       </div>
+     </div>
+   </div>
+ </div>
+ )}
+ 
  </div>
  )}
  </form>

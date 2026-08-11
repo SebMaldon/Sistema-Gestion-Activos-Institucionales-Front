@@ -11,6 +11,7 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  const { data: catTipos } = useCatTipoUnidades();
  const [activeTab, setActiveTab] = React.useState('general');
  const [selectedSegmento, setSelectedSegmento] = React.useState(null);
+ const [searchUbicacion, setSearchUbicacion] = React.useState('');
 
  const { data: ubicacionesData } = useQuery({
    queryKey: ['ubicacionesUnidad', unidad?.clave],
@@ -232,9 +233,21 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight text-indigo-700 dark:text-indigo-400">Ubicaciones Físicas</h3>
  </div>
  
- {ubicaciones.length > 0 ? (
+ {ubicaciones.length > 0 && (
+  <div className="mb-4">
+    <input
+      type="text"
+      placeholder="Buscar ubicación..."
+      value={searchUbicacion}
+      onChange={e => setSearchUbicacion(e.target.value)}
+      className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+    />
+  </div>
+ )}
+ 
+ {ubicaciones.filter(u => u.nombre_ubicacion.toLowerCase().includes(searchUbicacion.toLowerCase())).length > 0 ? (
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
- {ubicaciones.map(ubi => (
+ {ubicaciones.filter(u => u.nombre_ubicacion.toLowerCase().includes(searchUbicacion.toLowerCase())).map(ubi => (
  <div 
  key={ubi.id_ubicacion} 
  className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 flex flex-col gap-1 transition-all"
@@ -249,7 +262,7 @@ export default function DetalleUnidadModal({ isOpen, onClose, unidad }) {
  ) : (
  <div className="p-6 text-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 border-dashed">
  <Map size={24} className="mx-auto text-gray-400 mb-2" />
- <p className="text-sm font-medium text-gray-600 dark:text-gray-400 ">No hay ubicaciones registradas para esta unidad</p>
+ <p className="text-sm font-medium text-gray-600 dark:text-gray-400 ">No hay ubicaciones registradas o no coinciden con la búsqueda.</p>
  </div>
  )}
  </section>
