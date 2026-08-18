@@ -6,7 +6,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { getMonitoreoImpresiones, GET_MONITOREO_RESUMEN_UNIDADES, UPDATE_MONITOREO_LIMPIEZA } from '../api/monitoreo.queries';
+import { getMonitoreoImpresiones, GET_MONITOREO_RESUMEN_UNIDADES, UPDATE_MONITOREO_LIMPIEZA, GET_MONITOREO_FILTROS } from '../api/monitoreo.queries';
 import { useAuthStore } from '../store/auth.store';
 import { gqlClient } from '../api/client';
 import { GET_CATALOGOS_BIENES_QUERY } from '../api/inventario.queries';
@@ -142,7 +142,7 @@ function buildMonitoreoWorkbook(rows, filters) {
 export default function MonitoreoLimpieza() {
   const usuario = useAuthStore((s) => s.usuario);
   const qc = useQueryClient();
-  const [filters, setFilters] = useState({ search: '', version: '', ubicacion: '', unidades: [], fechaInicio: '', fechaFin: '' });
+  const [filters, setFilters] = useState({ search: '', version: [], ubicacion: [], unidades: [], fechaInicio: '', fechaFin: '', retrasoMayorA3Dias: false });
   const [activeFilters, setActiveFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: '', direction: '' });
   const [pendingToggles, setPendingToggles] = useState({});
@@ -204,12 +204,24 @@ export default function MonitoreoLimpieza() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: filtrosDbData } = useQuery({
+    queryKey: ['monitoreoFiltros', filters.unidades],
+    queryFn: async () => {
+      const vars = {
+        unidades: filters.unidades && filters.unidades.length > 0 ? filters.unidades : undefined
+      };
+      const res = await gqlClient.request(GET_MONITOREO_FILTROS, vars);
+      return res.monitoreoFiltros;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const unidadesOpciones = (catData?.unidades || []).map(u => {
     const resumen = (resumenData || []).find(r => r.clave === u.clave);
     const total = resumen ? resumen.total_impresiones : null;
     return {
       value: u.clave,
-      label: u.descripcion || u.desc_corta || u.clave,
+      label: `${u.clave} - ${u.descripcion}${total != null ? ` (${total} impresiones)` : ''}`,
       extra: total != null ? (
         <span className="text-gray-400 font-mono text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
           {total.toLocaleString()}
@@ -217,6 +229,9 @@ export default function MonitoreoLimpieza() {
       ) : null
     };
   });
+
+  const versionesOpciones = (filtrosDbData?.versiones || []).map(v => ({ value: v, label: v }));
+  const ubicacionesOpciones = (filtrosDbData?.ubicaciones || []).map(u => ({ value: u, label: u }));
 
   const monitoreoData = data?.edges?.map(e => e.node) || [];
   const pageInfo = data?.pageInfo;
@@ -248,11 +263,12 @@ export default function MonitoreoLimpieza() {
     const timer = setTimeout(() => {
       const newFilters = {};
       if (filters.search) newFilters.search = filters.search;
-      if (filters.version) newFilters.version = filters.version;
-      if (filters.ubicacion) newFilters.ubicacion = filters.ubicacion;
+      if (filters.version && filters.version.length > 0) newFilters.version = filters.version;
+      if (filters.ubicacion && filters.ubicacion.length > 0) newFilters.ubicacion = filters.ubicacion;
       if (filters.unidades && filters.unidades.length > 0) newFilters.unidades = filters.unidades;
       if (filters.fechaInicio) newFilters.fechaInicio = filters.fechaInicio;
       if (filters.fechaFin) newFilters.fechaFin = filters.fechaFin;
+      if (filters.retrasoMayorA3Dias) newFilters.retrasoMayorA3Dias = true;
       setActiveFilters(newFilters);
     }, 400);
     return () => clearTimeout(timer);
@@ -269,7 +285,7 @@ export default function MonitoreoLimpieza() {
   };
 
   const handleReset = () => {
-    setFilters({ search: '', version: '', ubicacion: '', unidades: [], fechaInicio: '', fechaFin: '' });
+    setFilters({ search: '', version: [], ubicacion: [], unidades: [], fechaInicio: '', fechaFin: '', retrasoMayorA3Dias: false });
     setSortConfig({ key: '', direction: '' });
   };
 
@@ -348,48 +364,86 @@ export default function MonitoreoLimpieza() {
             />
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <input
-              type="text"
-              name="version"
-              value={filters.version}
-              onChange={handleFilterChange}
-              placeholder="Versión..."
-              className="flex-1 min-w-[120px] sm:flex-none sm:w-32 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
-            />
-            <input
-              type="text"
-              name="ubicacion"
-              value={filters.ubicacion}
-              onChange={handleFilterChange}
-              placeholder="Ubicación..."
-              className="flex-1 min-w-[150px] sm:flex-none sm:w-48 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-green-600 focus:bg-white dark:bg-gray-800 outline-none transition-all"
-            />
+            <div className="flex-1 min-w-[150px] sm:flex-none sm:w-40">
+              <MultiSearchableSelect
+                placeholder="Versión..."
+                value={filters.version}
+                onChange={(val) => setFilters(prev => ({ ...prev, version: val }))}
+                options={versionesOpciones}
+              />
+            </div>
+            <div className="flex-1 min-w-[200px] sm:flex-none sm:w-56">
+              <MultiSearchableSelect
+                placeholder="Ubicación..."
+                value={filters.ubicacion}
+                onChange={(val) => setFilters(prev => ({ ...prev, ubicacion: val }))}
+                options={ubicacionesOpciones}
+                disabled={!filters.unidades || filters.unidades.length === 0}
+              />
+            </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <div className="flex flex-1 items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-2 py-1.5 focus-within:ring-2 focus-within:ring-green-600 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all">
+              <div 
+                className="flex flex-1 items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-2 py-1.5 focus-within:ring-2 focus-within:ring-green-600 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all cursor-pointer"
+                onClick={() => { const el = document.getElementById('fechaInicioInput'); if (el && el.showPicker) el.showPicker(); }}
+              >
                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Desde</span>
                 <input
+                  id="fechaInicioInput"
                   type="date"
                   name="fechaInicio"
                   value={filters.fechaInicio}
-                  max={filters.fechaFin || new Date().toISOString().split('T')[0]}
-                  onChange={handleFilterChange}
-                  className="bg-transparent border-none outline-none text-sm w-full sm:w-[110px] text-gray-700 dark:text-gray-200 cursor-pointer"
+                  min={filtrosDbData?.fechaMinGlobal || undefined}
+                  max={filters.fechaFin || filtrosDbData?.fechaMaxGlobal || undefined}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    const max = filters.fechaFin || filtrosDbData?.fechaMaxGlobal;
+                    const min = filtrosDbData?.fechaMinGlobal;
+                    if (val && max && val > max) val = max;
+                    if (val && min && val < min) val = min;
+                    setFilters(prev => ({ ...prev, fechaInicio: val }));
+                  }}
+                  className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
                 />
               </div>
-              <div className="flex flex-1 items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-2 py-1.5 focus-within:ring-2 focus-within:ring-green-600 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all">
+              <div 
+                className="flex flex-1 items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-3 pr-2 py-1.5 focus-within:ring-2 focus-within:ring-green-600 focus-within:bg-white dark:focus-within:bg-gray-800 transition-all cursor-pointer"
+                onClick={() => { const el = document.getElementById('fechaFinInput'); if (el && el.showPicker) el.showPicker(); }}
+              >
                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Hasta</span>
                 <input
+                  id="fechaFinInput"
                   type="date"
                   name="fechaFin"
                   value={filters.fechaFin}
-                  min={filters.fechaInicio}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={handleFilterChange}
-                  className="bg-transparent border-none outline-none text-sm w-full sm:w-[110px] text-gray-700 dark:text-gray-200 cursor-pointer"
+                  min={filters.fechaInicio || filtrosDbData?.fechaMinGlobal || undefined}
+                  max={filtrosDbData?.fechaMaxGlobal || undefined}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    const min = filters.fechaInicio || filtrosDbData?.fechaMinGlobal;
+                    const max = filtrosDbData?.fechaMaxGlobal;
+                    if (val && max && val > max) val = max;
+                    if (val && min && val < min) val = min;
+                    setFilters(prev => ({ ...prev, fechaFin: val }));
+                  }}
+                  className="w-full bg-transparent border-none p-0 text-sm focus:ring-0 text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
                 />
               </div>
             </div>
-            {Object.values(filters).some(v => Array.isArray(v) ? v.length > 0 : v !== '') && (
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl transition-all">
+              <input
+                type="checkbox"
+                name="retrasoMayorA3Dias"
+                checked={filters.retrasoMayorA3Dias}
+                onChange={(e) => setFilters(prev => ({ ...prev, retrasoMayorA3Dias: e.target.checked }))}
+                className="rounded border-gray-300 text-red-600 focus:ring-red-600"
+              />
+              <span className="font-medium">Retraso &gt; 3 días</span>
+            </label>
+            {Object.values(filters).some(v => Array.isArray(v) ? v.length > 0 : (typeof v === 'boolean' ? v : v !== '')) && (
               <button
                 onClick={handleReset}
                 className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-900/50 rounded-xl transition-colors w-full sm:w-auto"
@@ -465,38 +519,56 @@ export default function MonitoreoLimpieza() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {monitoreoData.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50/80 dark:hover:bg-gray-700/80 transition-colors group">
-                      <td className="px-3 py-2.5 font-bold text-gray-800 dark:text-gray-200">
-                        <HighlightText text={item.num_serie || '—'} highlight={activeFilters.search} />
-                      </td>
-                      <td className="px-3 py-2.5 text-blue-600 dark:text-blue-400 font-semibold font-mono text-sm">
-                        <HighlightText text={item.dir_ip || '—'} highlight={activeFilters.search} />
-                      </td>
-                      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 align-top leading-snug">
-                        {item.descripcion || '—'}
-                      </td>
-                      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 align-top leading-snug">
-                        <HighlightText text={item.nombre_ubicacion || '—'} highlight={activeFilters.ubicacion} />
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        {item.version ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            <HighlightText text={item.version} highlight={activeFilters.version} />
-                          </span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap text-[11px] font-medium tracking-wide">
-                        {item.fecha_min ? (() => {
-                          const formatDate = (isoStr) => {
-                            const [year, month, day] = isoStr.split('T')[0].split('-');
-                            return `${day}/${month}/${year}`;
-                          };
-                          const minD = formatDate(item.fecha_min);
-                          const maxD = item.fecha_max ? formatDate(item.fecha_max) : minD;
-                          return minD === maxD ? minD : `${minD} - ${maxD}`;
-                        })() : '—'}
-                      </td>
+                  {monitoreoData.map((item, idx) => {
+                    let isDelayed = false;
+                    if (item.fecha_max) {
+                      const today = new Date();
+                      today.setHours(0,0,0,0);
+                      const [y, m, d] = item.fecha_max.split('T')[0].split('-');
+                      const maxDateObj = new Date(y, m - 1, d);
+                      const diffDays = (today - maxDateObj) / (1000 * 60 * 60 * 24);
+                      isDelayed = diffDays > 3;
+                    }
+
+                    const rowClass = isDelayed 
+                      ? "bg-red-50 dark:bg-red-900/10 border-l-[3px] border-l-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors group"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50/80 dark:hover:bg-gray-700/80 transition-colors group";
+
+                    return (
+                      <tr key={idx} className={rowClass}>
+                        <td className="px-3 py-2.5 font-bold text-gray-800 dark:text-gray-200">
+                          <HighlightText text={item.num_serie || '—'} highlight={activeFilters.search} />
+                        </td>
+                        <td className="px-3 py-2.5 text-blue-600 dark:text-blue-400 font-semibold font-mono text-sm">
+                          <HighlightText text={item.dir_ip || '—'} highlight={activeFilters.search} />
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 align-top leading-snug">
+                          {item.descripcion || '—'}
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400 align-top leading-snug">
+                          <HighlightText text={item.nombre_ubicacion || '—'} highlight={activeFilters.ubicacion} />
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {item.version ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              <HighlightText text={item.version} highlight={activeFilters.version} />
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap text-[11px] font-medium tracking-wide">
+                          {item.fecha_min ? (() => {
+                            const formatDate = (isoStr) => {
+                              const [year, month, day] = isoStr.split('T')[0].split('-');
+                              return `${day}/${month}/${year}`;
+                            };
+                            const minD = formatDate(item.fecha_min);
+                            const maxD = item.fecha_max ? formatDate(item.fecha_max) : minD;
+                            
+                            const textClass = isDelayed ? "text-red-600 dark:text-red-400 font-bold" : "text-gray-600 dark:text-gray-400";
+
+                            return <span className={textClass}>{minD === maxD ? minD : `${minD} - ${maxD}`}</span>;
+                          })() : '—'}
+                        </td>
                       {/* Toggle Limpieza Lógica */}
                       <td className="px-3 py-2.5 text-center">
                         {(() => {
@@ -543,7 +615,8 @@ export default function MonitoreoLimpieza() {
                         {item.total_impresiones != null ? item.total_impresiones.toLocaleString() : '0'}
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             )}

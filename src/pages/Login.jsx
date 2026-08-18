@@ -79,8 +79,8 @@ export default function Login() {
           {/* Enlaces de descarga (Panel Izquierdo Desktop) */}
           <div className="pt-3 flex flex-col gap-3">
             <a
-              href="/descargas/SGHI.rar"
-              download="SGHI.rar"
+              href="/descargas/SGH.rar"
+              download="SGH.rar"
               className="flex items-center justify-between p-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all group text-white no-underline shadow-lg cursor-pointer"
               title="Descargar herramienta complementaria para Windows (Escritorio)"
             >
