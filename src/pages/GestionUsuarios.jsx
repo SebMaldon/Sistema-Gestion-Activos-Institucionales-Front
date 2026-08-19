@@ -614,6 +614,13 @@ export default function GestionUsuarios() {
 
  const usuarios = usuariosData?.edges?.map(e => e.node) ?? [];
 
+ // Matrículas duplicadas en la página actual
+ const matriculaCount = usuarios.reduce((acc, u) => {
+   if (u.matricula) acc[u.matricula] = (acc[u.matricula] || 0) + 1;
+   return acc;
+ }, {});
+ const matriculasDup = new Set(Object.keys(matriculaCount).filter(m => matriculaCount[m] > 1));
+
  const pageInfo = usuariosData?.pageInfo;
  const totalCount = pageInfo?.totalCount ?? 0;
  const totalPages = totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : 1;
@@ -786,8 +793,9 @@ export default function GestionUsuarios() {
  ) : usuarios.map(u => {
  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
  const ufLabel = unidadFisicaLabel(u);
+ const isDup = matriculasDup.has(u.matricula);
  return (
- <tr key={u.id_usuario} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors">
+ <tr key={u.id_usuario} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors ${isDup ? 'bg-red-50 dark:bg-red-900/10 border-l-4 border-l-red-500' : ''}`}>
  <td className="px-5 py-4">
  <div className="flex items-center gap-3">
  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
@@ -795,7 +803,14 @@ export default function GestionUsuarios() {
  {getInitials(u.nombre_completo)}
  </div>
  <div>
- <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{highlightText(u.nombre_completo, debouncedSearch)}</p>
+ <div className="flex items-center gap-1.5">
+   <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{highlightText(u.nombre_completo, debouncedSearch)}</p>
+   {isDup && (
+     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800/50" title="Matrícula duplicada en el sistema">
+       ⚠ Dup.
+     </span>
+   )}
+ </div>
  <p className="text-xs text-gray-400">{highlightText(u.matricula, debouncedSearch)} {u.correo_electronico && <>• {highlightText(u.correo_electronico, debouncedSearch)}</>}</p>
  </div>
  </div>
@@ -863,15 +878,23 @@ export default function GestionUsuarios() {
  ) : usuarios.map(u => {
  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
  const ufLabel = unidadFisicaLabel(u);
+ const isDup = matriculasDup.has(u.matricula);
  return (
- <div key={u.id_usuario} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
+ <div key={u.id_usuario} className={`bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 ${isDup ? 'border-red-300 dark:border-red-700 border-l-4 border-l-red-500' : 'border-gray-100 dark:border-gray-800'}`}>
  <div className="flex items-center gap-3 mb-3">
  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
  style={{ background: u.estatus ? avatarColor(u.id_usuario) : '#d1d5db' }}>
  {getInitials(u.nombre_completo)}
  </div>
  <div className="flex-1 min-w-0">
- <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{highlightText(u.nombre_completo, debouncedSearch)}</p>
+ <div className="flex items-center gap-1.5">
+   <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{highlightText(u.nombre_completo, debouncedSearch)}</p>
+   {isDup && (
+     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
+       ⚠ Dup.
+     </span>
+   )}
+ </div>
  <p className="text-xs text-gray-400">{highlightText(u.matricula, debouncedSearch)}</p>
  </div>
  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.color} border ${badge.border || 'border-transparent'}`}>
