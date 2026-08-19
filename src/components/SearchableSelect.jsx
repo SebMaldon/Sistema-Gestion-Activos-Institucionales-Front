@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useId } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -14,38 +14,59 @@ export default function SearchableSelect({
  isLoading = false,
  allowCustom = false
 }) {
- const [isOpen, setIsOpen] = useState(false);
- const [query, setQuery] = useState('');
- const containerRef = useRef(null);
- const inputRef = useRef(null);
- const [dropdownStyles, setDropdownStyles] = useState({});
+  const id = useId();
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+  const [dropdownStyles, setDropdownStyles] = useState({});
 
  const selectedOption = useMemo(() => 
  (options || []).find(opt => opt && opt.value === value),
  [options, value]);
 
   const filteredOptions = useMemo(() => {
-    const safeOptions = options || [];
-    let result = safeOptions;
+    const safeOptions = (() => {
+      const seen = new Set();
+      return (options || []).filter(opt => {
+        if (!opt || seen.has(opt.value)) return false;
+        seen.add(opt.value);
+        return true;
+      });
+    })();
     const normalize = (str) => (str || '').toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const MAX = 100;
 
+    let result;
     if (query && !onInputChange) {
       const normQuery = normalize(query);
-      result = safeOptions.filter(opt => {
+      const words = normQuery.split(/\s+/).filter(Boolean);
+      const filtered = safeOptions.filter(opt => {
         if (!opt) return false;
-        const labelStr = normalize(opt.label);
-        const searchKeyStr = normalize(opt.searchKey);
-        return labelStr.includes(normQuery) || searchKeyStr.includes(normQuery);
+        const haystack = normalize(opt.label) + ' ' + normalize(opt.searchKey || '');
+        return words.every(w => haystack.includes(w));
       });
-    }
 
-    result = [...result].sort((a, b) => {
-      const aSelected = a.value === value;
-      const bSelected = b.value === value;
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      return 0;
-    });
+      // Ordenar por relevancia: exact value > exact label > startsWith > includes
+      filtered.sort((a, b) => {
+        const score = (opt) => {
+          const v = normalize(opt.value);
+          const l = normalize(opt.label);
+          const s = normalize(opt.searchKey || '');
+          if (v === normQuery || l === normQuery) return 0;
+          if (v.startsWith(normQuery) || s.startsWith(normQuery)) return 1;
+          return 2;
+        };
+        return score(a) - score(b);
+      });
+
+      result = filtered.slice(0, MAX);
+    } else {
+      // Sin query: seleccionado primero + primeros MAX
+      const selected = value ? safeOptions.filter(o => o?.value === value) : [];
+      const rest = safeOptions.filter(o => o?.value !== value).slice(0, MAX - selected.length);
+      result = [...selected, ...rest];
+    }
 
     if (allowCustom && query && query.trim() !== '') {
       const normQuery = normalize(query);
@@ -58,23 +79,34 @@ export default function SearchableSelect({
     return result;
   }, [options, query, value, onInputChange, allowCustom]);
 
+
+
  useEffect(() => {
- const handleClickOutside = (event) => {
- if (containerRef.current && !containerRef.current.contains(event.target)) {
- if (event.target.closest('.searchable-select-portal-menu')) return;
- 
- if (allowCustom && query.trim() !== '') {
- onChange(query.trim());
- }
- 
- setIsOpen(false);
- setQuery('');
- if (onInputChange) onInputChange('');
- }
- };
- document.addEventListener('mousedown', handleClickOutside);
- return () => document.removeEventListener('mousedown', handleClickOutside);
- }, [onInputChange, allowCustom, query, onChange]);
+  const handleClickOutside = (event) => {
+    if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (event.target.closest('.searchable-select-portal-menu')) return;
+      if (allowCustom && query.trim() !== '') onChange(query.trim());
+      setIsOpen(false);
+      setQuery('');
+      if (onInputChange) onInputChange('');
+    }
+  };
+  // Cerrar cuando otro SearchableSelect abre
+  const handleOtherOpen = (e) => {
+    if (e.detail?.id !== id) {
+      if (allowCustom && query.trim() !== '') onChange(query.trim());
+      setIsOpen(false);
+      setQuery('');
+      if (onInputChange) onInputChange('');
+    }
+  };
+  document.addEventListener('mousedown', handleClickOutside);
+  document.addEventListener('searchable-select-open', handleOtherOpen);
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+    document.removeEventListener('searchable-select-open', handleOtherOpen);
+  };
+ }, [id, onInputChange, allowCustom, query, onChange]);
 
  useEffect(() => {
  if (isOpen && containerRef.current) {
@@ -142,9 +174,10 @@ export default function SearchableSelect({
  if (!isOpen) setIsOpen(true);
  }}
  onFocus={() => {
- setIsOpen(true);
- setQuery(''); 
- if (onInputChange) onInputChange('');
+  document.dispatchEvent(new CustomEvent('searchable-select-open', { detail: { id } }));
+  setIsOpen(true);
+  setQuery('');
+  if (onInputChange) onInputChange('');
  }}
  onKeyDown={(e) => {
  if (e.key === 'Enter') {
