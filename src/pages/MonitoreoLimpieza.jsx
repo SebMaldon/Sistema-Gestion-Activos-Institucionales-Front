@@ -221,7 +221,7 @@ export default function MonitoreoLimpieza() {
     const total = resumen ? resumen.total_impresiones : null;
     return {
       value: u.clave,
-      label: `${u.clave} - ${u.descripcion}${total != null ? ` (${total} impresiones)` : ''}`,
+      label: `${u.descripcion}${total != null ? ` (${total} impresiones)` : ''}`,
       extra: total != null ? (
         <span className="text-gray-400 font-mono text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
           {total.toLocaleString()}
