@@ -12,7 +12,7 @@ import {
  Users, Plus, Edit, UserX, Search, RefreshCw,
  ChevronLeft, ChevronRight, Shield,
  Trash2, UserCheck, UserMinus, X, Eye, EyeOff, Copy, CheckCircle,
- Building2, Radio,
+ Building2, Radio, AlertTriangle
 } from 'lucide-react';
 import MultiSelect from '../components/MultiSelect';
 import SearchableSelect from '../components/SearchableSelect';
@@ -553,6 +553,7 @@ export default function GestionUsuarios() {
  const [debouncedSearch, setDebouncedSearch] = useState('');
  const [filterEstatus, setFilterEstatus] = useState('');
  const [filterRoles, setFilterRoles] = useState([]);
+ const [filterDuplicados, setFilterDuplicados] = useState(false);
  // Filtro por unidad física (clave_unidad → unidades.clave) — filtrado en cliente
  const [filterUnidadesFisicas, setFilterUnidadesFisicas] = useState([]);
  const [currentPage, setCurrentPage] = useState(1);
@@ -601,18 +602,19 @@ export default function GestionUsuarios() {
 
  // ── Query principal de usuarios
  const { data: usuariosData, isLoading, isError, refetch, isFetching } = useQuery({
-  queryKey: ['usuarios', filterEstatus, filterRoles, filterUnidadesFisicas, debouncedSearch, currentPage],
+  queryKey: ['usuarios', filterEstatus, filterRoles, filterUnidadesFisicas, debouncedSearch, currentPage, filterDuplicados],
   queryFn: () => gqlClient.request(GET_USUARIOS, {
   estatus: filterEstatus === '' ? undefined : filterEstatus === 'activos',
   search: debouncedSearch || undefined,
   roles: filterRoles.length > 0 ? filterRoles.map(Number) : undefined,
   claves_unidades: filterUnidadesFisicas.length > 0 ? filterUnidadesFisicas : undefined,
+  duplicados: filterDuplicados || undefined,
   pagination: { first: PAGE_SIZE, page: currentPage },
   }),
  select: d => d.usuarios,
  });
 
- const usuarios = usuariosData?.edges?.map(e => e.node) ?? [];
+ let usuarios = usuariosData?.edges?.map(e => e.node) ?? [];
 
  // Matrículas duplicadas en la página actual
  const matriculaCount = usuarios.reduce((acc, u) => {
@@ -747,12 +749,22 @@ export default function GestionUsuarios() {
  />
  </div>
 
+ <button
+  onClick={() => { setFilterDuplicados(p => !p); resetPage(); }}
+  className={`h-[38px] flex items-center justify-center gap-1.5 px-3 rounded-lg border transition-colors shrink-0 ${filterDuplicados ? 'bg-red-50 border-red-300 text-red-700 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50 shadow-sm' : 'border-gray-200 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/50'}`}
+  title="Filtrar matrículas duplicadas"
+ >
+  <AlertTriangle size={15} className={filterDuplicados ? '' : 'text-gray-400'} />
+  <span className="text-xs font-semibold hidden md:inline">Duplicados</span>
+ </button>
+
  <button onClick={() => {
  setSearch('');
  setDebouncedSearch('');
  setFilterEstatus('');
  setFilterUnidadesFisicas([]);
  setFilterRoles([]);
+ setFilterDuplicados(false);
  setCursor(null);
  setCursors([]);
  qc.invalidateQueries({ queryKey: ['usuarios'] });
@@ -793,7 +805,7 @@ export default function GestionUsuarios() {
  ) : usuarios.map(u => {
  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
  const ufLabel = unidadFisicaLabel(u);
- const isDup = matriculasDup.has(u.matricula);
+ const isDup = filterDuplicados || matriculasDup.has(u.matricula);
  return (
  <tr key={u.id_usuario} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 transition-colors ${isDup ? 'bg-red-50 dark:bg-red-900/10 border-l-4 border-l-red-500' : ''}`}>
  <td className="px-5 py-4">
@@ -878,7 +890,7 @@ export default function GestionUsuarios() {
  ) : usuarios.map(u => {
  const badge = ROLE_BADGE[u.id_rol] || ROLE_BADGE[3];
  const ufLabel = unidadFisicaLabel(u);
- const isDup = matriculasDup.has(u.matricula);
+ const isDup = filterDuplicados || matriculasDup.has(u.matricula);
  return (
  <div key={u.id_usuario} className={`bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4 ${isDup ? 'border-red-300 dark:border-red-700 border-l-4 border-l-red-500' : 'border-gray-100 dark:border-gray-800'}`}>
  <div className="flex items-center gap-3 mb-3">
