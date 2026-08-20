@@ -988,7 +988,7 @@ export default function GestionUsuarios() {
  <button className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-[#006341] text-white shadow-sm flex-shrink-0">
  {currentPage}
  </button>
- {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
+ {currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999) && (
  <button onClick={handleNextPage}
  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 flex-shrink-0">
  {currentPage + 1}

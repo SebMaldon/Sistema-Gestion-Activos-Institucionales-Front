@@ -15,11 +15,13 @@ import { useApp } from '../context/AppContext';
 const HighlightText = ({ text, highlight }) => {
  if (!highlight || !text) return <>{text}</>;
  const strText = String(text);
- const parts = strText.split(new RegExp(`(${highlight})`, 'gi'));
+ const escaped = String(highlight).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+ if (!escaped) return <>{text}</>;
+ const parts = strText.split(new RegExp(`(${escaped})`, 'gi'));
  return (
  <>
  {parts.map((part, i) =>
- part.toLowerCase() === highlight.toLowerCase()
+ part.toLowerCase() === String(highlight).toLowerCase()
  ? <span key={i} className="bg-yellow-200 text-yellow-900 font-bold">{part}</span>
  : part
  )}
@@ -465,7 +467,7 @@ export default function Correspondencia() {
  >
  {currentPage}
  </button>
- {currentPage < (typeof totalPages !== undefined ? totalPages : 9999) && (
+ {currentPage < (typeof totalPages !== 'undefined' ? totalPages : 9999) && (
  <button
  onClick={handleNextPage}
  className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 flex-shrink-0"

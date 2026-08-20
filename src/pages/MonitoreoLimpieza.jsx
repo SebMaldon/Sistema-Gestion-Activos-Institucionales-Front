@@ -13,14 +13,30 @@ import { GET_CATALOGOS_BIENES_QUERY } from '../api/inventario.queries';
 import MultiSearchableSelect from '../components/MultiSearchableSelect';
 
 const HighlightText = ({ text, highlight }) => {
-  if (!highlight || !text) return <>{text}</>;
+  if (!highlight || !text || (Array.isArray(highlight) && highlight.length === 0)) return <>{text}</>;
+  
   const strText = String(text);
-  const parts = strText.split(new RegExp(`(${highlight})`, 'gi'));
+  
+  const regexPattern = Array.isArray(highlight) 
+    ? highlight.map(h => String(h).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+    : String(highlight).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+  if (!regexPattern) return <>{text}</>;
+
+  const parts = strText.split(new RegExp(`(${regexPattern})`, 'gi'));
+  
+  const matchesHighlight = (part) => {
+    if (Array.isArray(highlight)) {
+      return highlight.some(h => String(h).toLowerCase() === part.toLowerCase());
+    }
+    return String(highlight).toLowerCase() === part.toLowerCase();
+  };
+
   return (
     <>
       {parts.map((part, i) =>
-        part.toLowerCase() === highlight.toLowerCase()
-          ? <span key={i} className="bg-yellow-200 text-yellow-900 font-bold">{part}</span>
+        matchesHighlight(part)
+          ? <span key={i} className="bg-yellow-200 text-yellow-900 font-bold dark:text-yellow-950">{part}</span>
           : part
       )}
     </>
